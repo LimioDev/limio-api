@@ -3,6 +3,7 @@ package com.limio.api.modulos.auth.sessao;
 import java.time.Instant;
 
 import com.limio.api.comum.base.BaseEntity;
+import com.limio.api.modulos.auth.actions.helper.RefreshTokenHelper;
 import com.limio.api.modulos.auth.usuario.Usuario;
 
 import jakarta.persistence.Column;
@@ -60,5 +61,16 @@ public class Sessao extends BaseEntity {
 
     public boolean isAtiva(Instant agora) {
         return revogadaEm == null && agora.isBefore(expiraEm);
+    }
+
+    /**
+     * Abre ou rotaciona a sessão com tokens recém-emitidos: troca o hash (o
+     * refresh token anterior deixa de valer) e empurra a expiração pra frente.
+     * Não persiste — quem chama salva.
+     */
+    public void rotacionar(TokensSessao tokens, Instant agora) {
+        this.refreshTokenHash = RefreshTokenHelper.hash(tokens.refreshToken());
+        this.ultimoUsoEm = agora;
+        this.expiraEm = tokens.refreshTokenExpiraEm();
     }
 }

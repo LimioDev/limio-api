@@ -62,12 +62,15 @@ class RenovarSessaoUseCaseTest {
     void deveRotacionarSessaoAtivaEDevolverTokensNovos() {
         Sessao sessao = sessaoAtiva(StatusConta.ATIVA);
         when(sessaoService.buscarPorRefreshTokenHashParaRenovar(HASH)).thenReturn(Optional.of(sessao));
-        var novos = new TokensSessao("jwt-novo", Instant.now(), "refresh-novo", PapelUsuario.EMPREGADOR);
-        when(tokenService.emitir(eq(sessao), any(Instant.class))).thenReturn(novos);
+        Instant expiraEm = Instant.now().plus(Duration.ofDays(30));
+        var novos = new TokensSessao("jwt-novo", Instant.now(), "refresh-novo", expiraEm, PapelUsuario.EMPREGADOR);
+        when(tokenService.emitir(eq(sessao.getUsuario()), any(Instant.class))).thenReturn(novos);
 
         assertThat(useCase.executar(REFRESH_TOKEN)).isSameAs(novos);
 
         verify(sessaoService).salvar(sessao);
+        assertThat(sessao.getRefreshTokenHash()).isEqualTo(RefreshTokenHelper.hash("refresh-novo"));
+        assertThat(sessao.getExpiraEm()).isEqualTo(expiraEm);
     }
 
     @Test

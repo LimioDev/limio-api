@@ -35,8 +35,6 @@ import jakarta.validation.Valid;
 @RequestMapping("/auth")
 public class AuthController {
 
-    private static final int TAMANHO_MAXIMO_DISPOSITIVO = 255;
-
     private final CadastrarUsuarioUseCase cadastrarUsuarioUseCase;
     private final AutenticarUsuarioUseCase autenticarUsuarioUseCase;
     private final RenovarSessaoUseCase renovarSessaoUseCase;
@@ -95,19 +93,8 @@ public class AuthController {
         return ResponseEntity.ok(usuarioMapper.toPapelAtivoResponse(atualizado));
     }
 
-    /**
-     * Texto livre que vai pro banco: sem caractere de controle (o Postgres
-     * recusa byte nulo em coluna de texto — virava 500) e no máximo 255.
-     */
+    /** Sem dispositivo informado, identifica o aparelho pelo User-Agent. Normalização fica no usecase. */
     private static String dispositivo(LoginRequest request, HttpServletRequest http) {
-        String informado = request.dispositivo() != null ? request.dispositivo() : http.getHeader(HttpHeaders.USER_AGENT);
-        if (informado == null) {
-            return null;
-        }
-        String limpo = informado.replaceAll("\\p{Cntrl}", "").strip();
-        if (limpo.isEmpty()) {
-            return null;
-        }
-        return limpo.length() <= TAMANHO_MAXIMO_DISPOSITIVO ? limpo : limpo.substring(0, TAMANHO_MAXIMO_DISPOSITIVO);
+        return request.dispositivo() != null ? request.dispositivo() : http.getHeader(HttpHeaders.USER_AGENT);
     }
 }

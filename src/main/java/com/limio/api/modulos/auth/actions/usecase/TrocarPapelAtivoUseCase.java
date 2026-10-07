@@ -6,9 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
-import com.limio.api.modulos.auth.excecao.ContaSuspensaException;
 import com.limio.api.modulos.auth.excecao.PapelInvalidoException;
-import com.limio.api.modulos.auth.excecao.SessaoInvalidaException;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
 
@@ -36,12 +34,7 @@ public class TrocarPapelAtivoUseCase {
             throw new PapelInvalidoException();
         }
         Usuario usuario = usuarioService.buscarPorIdOuFalhar(usuarioId);
-        if (usuario.isEncerrada()) {
-            throw new SessaoInvalidaException();
-        }
-        if (usuario.isSuspensa()) {
-            throw new ContaSuspensaException();
-        }
+        usuario.exigirAtiva();
 
         usuario.setPapelAtivo(novoPapel);
         return usuarioService.salvar(usuario);

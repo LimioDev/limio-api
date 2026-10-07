@@ -38,18 +38,12 @@ public class TokenService {
     }
 
     /**
-     * Abre ou rotaciona a sessão: gera refresh token novo (o hash anterior é
-     * substituído, então o token antigo deixa de valer), empurra a expiração
-     * pra frente e emite token de acesso com o papel ativo atual do usuário.
-     * Não persiste — quem chama salva a sessão.
+     * Gera refresh token novo e token de acesso com o papel ativo atual do
+     * usuário. Não mexe na sessão — quem chama aplica os tokens com
+     * {@link Sessao#rotacionar(TokensSessao, Instant)} e salva.
      */
-    public TokensSessao emitir(Sessao sessao, Instant agora) {
+    public TokensSessao emitir(Usuario usuario, Instant agora) {
         String refreshToken = RefreshTokenHelper.gerar();
-        sessao.setRefreshTokenHash(RefreshTokenHelper.hash(refreshToken));
-        sessao.setUltimoUsoEm(agora);
-        sessao.setExpiraEm(agora.plus(validadeRefreshToken));
-
-        Usuario usuario = sessao.getUsuario();
         // exp do JWT tem precisão de segundos
         Instant expiraEm = agora.plus(validadeTokenAcesso).truncatedTo(ChronoUnit.SECONDS);
         JwtClaimsSet claims = JwtClaimsSet.builder()
@@ -62,6 +56,7 @@ public class TokenService {
                 .encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
                 .getTokenValue();
 
-        return new TokensSessao(tokenAcesso, expiraEm, refreshToken, usuario.getPapelAtivo());
+        return new TokensSessao(tokenAcesso, expiraEm, refreshToken, agora.plus(validadeRefreshToken),
+                usuario.getPapelAtivo());
     }
 }

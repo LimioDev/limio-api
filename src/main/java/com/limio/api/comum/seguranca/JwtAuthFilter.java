@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
@@ -11,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.security.oauth2.jwt.JwtValidationException;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
@@ -36,6 +39,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private static final String PREFIXO_BEARER = "Bearer ";
 
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
+
     private final JwtDecoder jwtDecoder;
 
     public JwtAuthFilter(JwtDecoder jwtDecoder) {
@@ -56,8 +61,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         UsuarioAutenticado usuario;
         try {
             usuario = lerUsuario(jwtDecoder.decode(token));
+        } catch (JwtValidationException e) {
+            return; // expirado (ou fora da validade): uso normal do app, segue anônimo sem log
         } catch (JwtException | IllegalArgumentException e) {
-            return; // assinatura inválida, expirado ou claim malformada: segue anônimo
+            // assinatura inválida, token malformado ou claim inválida: segue anônimo, mas deixa rastro
+            // pra distinguir tentativa de forjar token de tráfego normal. Nunca logar o token.
+            log.debug("token de acesso recusado ({}): {}", e.getClass().getSimpleName(), e.getMessage());
+            return;
         }
         if (usuario == null) {
             return;

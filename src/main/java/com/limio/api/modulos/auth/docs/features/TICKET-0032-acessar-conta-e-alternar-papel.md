@@ -118,5 +118,5 @@ Demais decisões:
 - Rate limit é só por e-mail: não há limite por IP (um atacante pode testar uma senha em muitos e-mails), e qualquer um
   consegue bloquear o login de um e-mail alheio por 15 min errando a senha de propósito. Mitigação fica pra infra
   (limite por IP no proxy) ou CAPTCHA.
-- `JWT_SECRET` precisa ser definido no ambiente de produção: o default está no repositório, e com ele qualquer um
-  assina token válido. Sugestão pro tech lead: tirar o default (e o de `CPF_HMAC_SECRET`) e falhar na subida sem a env.
+- `JWT_SECRET` e `CPF_HMAC_SECRET` não têm mais default: a aplicação não sobe sem as duas envs (inclusive dev local
+  via `mvn spring-boot:run`). Testes e `TestLimioApiApplication` usam `src/test/resources/config/application.properties`.

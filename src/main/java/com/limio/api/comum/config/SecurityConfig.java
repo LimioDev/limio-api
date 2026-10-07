@@ -37,9 +37,12 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtAuthFilter(jwtDecoder), UsernamePasswordAuthenticationFilter.class)
-                // 401 sai pelo GlobalExceptionHandler como qualquer outro erro (ErroResponse + NAO_AUTENTICADO)
-                .exceptionHandling(erro -> erro.authenticationEntryPoint(
-                        (request, response, ex) -> exceptionResolver.resolveException(request, response, null, ex)));
+                // 401/403 saem pelo GlobalExceptionHandler como qualquer outro erro (ErroResponse + NAO_AUTENTICADO/ACESSO_NEGADO)
+                .exceptionHandling(erro -> erro
+                        .authenticationEntryPoint(
+                                (request, response, ex) -> exceptionResolver.resolveException(request, response, null, ex))
+                        .accessDeniedHandler(
+                                (request, response, ex) -> exceptionResolver.resolveException(request, response, null, ex)));
         return http.build();
     }
 }

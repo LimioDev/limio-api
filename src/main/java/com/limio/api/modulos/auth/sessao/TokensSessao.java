@@ -9,5 +9,6 @@ import com.limio.api.comum.seguranca.enums.PapelUsuario;
  * guardar. É o único lugar em que o refresh token existe em texto puro — no
  * banco fica só o hash.
  */
-public record TokensSessao(String tokenAcesso, Instant tokenAcessoExpiraEm, String refreshToken, PapelUsuario papel) {
+public record TokensSessao(String tokenAcesso, Instant tokenAcessoExpiraEm, String refreshToken,
+        Instant refreshTokenExpiraEm, PapelUsuario papel) {
 }

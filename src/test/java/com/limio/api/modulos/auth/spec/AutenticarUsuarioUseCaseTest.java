@@ -93,8 +93,8 @@ class AutenticarUsuarioUseCaseTest {
         when(usuarioService.buscarPorEmail(EMAIL)).thenReturn(Optional.of(usuario));
         tentativaLiberada();
         when(senhaHasher.confere(SENHA, "hash-bcrypt")).thenReturn(true);
-        var emitidos = new TokensSessao("jwt", Instant.now(), "refresh", PapelUsuario.PRESTADOR);
-        when(tokenService.emitir(any(Sessao.class), any(Instant.class))).thenReturn(emitidos);
+        var emitidos = new TokensSessao("jwt", Instant.now(), "refresh", Instant.now(), PapelUsuario.PRESTADOR);
+        when(tokenService.emitir(eq(usuario), any(Instant.class))).thenReturn(emitidos);
 
         TokensSessao tokens = useCase.executar(EMAIL, SENHA, DISPOSITIVO, IP);
 
@@ -108,12 +108,27 @@ class AutenticarUsuarioUseCaseTest {
     }
 
     @Test
+    void deveNormalizarODispositivoAntesDeGravarNaSessao() {
+        when(usuarioService.buscarPorEmail(EMAIL)).thenReturn(Optional.of(usuario(StatusConta.ATIVA)));
+        tentativaLiberada();
+        when(senhaHasher.confere(SENHA, "hash-bcrypt")).thenReturn(true);
+        when(tokenService.emitir(any(Usuario.class), any(Instant.class)))
+                .thenReturn(new TokensSessao("jwt", Instant.now(), "refresh", Instant.now(), PapelUsuario.PRESTADOR));
+
+        useCase.executar(EMAIL, SENHA, "  iPhone\u0000 da Maria  " + "x".repeat(300), IP);
+
+        ArgumentCaptor<Sessao> sessao = ArgumentCaptor.forClass(Sessao.class);
+        verify(sessaoService).salvar(sessao.capture());
+        assertThat(sessao.getValue().getDispositivo()).startsWith("iPhone da Maria").hasSize(255);
+    }
+
+    @Test
     void deveAutenticarContaAindaPendenteDeVerificacao() {
         when(usuarioService.buscarPorEmail(EMAIL)).thenReturn(Optional.of(usuario(StatusConta.PENDENTE_VERIFICACAO)));
         tentativaLiberada();
         when(senhaHasher.confere(SENHA, "hash-bcrypt")).thenReturn(true);
-        when(tokenService.emitir(any(Sessao.class), any(Instant.class)))
-                .thenReturn(new TokensSessao("jwt", Instant.now(), "refresh", PapelUsuario.PRESTADOR));
+        when(tokenService.emitir(any(Usuario.class), any(Instant.class)))
+                .thenReturn(new TokensSessao("jwt", Instant.now(), "refresh", Instant.now(), PapelUsuario.PRESTADOR));
 
         assertThat(useCase.executar(EMAIL, SENHA, DISPOSITIVO, IP)).isNotNull();
     }

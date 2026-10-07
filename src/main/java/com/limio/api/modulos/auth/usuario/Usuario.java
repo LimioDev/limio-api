@@ -5,6 +5,8 @@ import java.time.LocalDate;
 
 import com.limio.api.comum.base.BaseEntity;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
+import com.limio.api.modulos.auth.excecao.ContaSuspensaException;
+import com.limio.api.modulos.auth.excecao.SessaoInvalidaException;
 import com.limio.api.modulos.auth.usuario.enums.StatusConta;
 
 import jakarta.persistence.Column;
@@ -80,5 +82,19 @@ public class Usuario extends BaseEntity {
             case ATIVA, PENDENTE_VERIFICACAO -> false; // UC05: login pode acontecer antes de confirmar o e-mail
             case BLOQUEADA -> true;
         };
+    }
+
+    /**
+     * Guarda de quem já tem sessão (renovar, trocar papel): conta encerrada
+     * derruba a sessão, suspensa responde como suspensa. O login não usa —
+     * lá conta encerrada responde igual a e-mail inexistente.
+     */
+    public void exigirAtiva() {
+        if (isEncerrada()) {
+            throw new SessaoInvalidaException();
+        }
+        if (isSuspensa()) {
+            throw new ContaSuspensaException();
+        }
     }
 }

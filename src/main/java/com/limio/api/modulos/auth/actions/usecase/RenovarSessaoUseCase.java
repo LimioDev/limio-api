@@ -7,7 +7,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.modulos.auth.actions.helper.RefreshTokenHelper;
 import com.limio.api.modulos.auth.actions.service.TokenService;
-import com.limio.api.modulos.auth.excecao.ContaSuspensaException;
 import com.limio.api.modulos.auth.excecao.SessaoInvalidaException;
 import com.limio.api.modulos.auth.sessao.Sessao;
 import com.limio.api.modulos.auth.sessao.SessaoService;
@@ -38,14 +37,10 @@ public class RenovarSessaoUseCase {
                 .orElseThrow(SessaoInvalidaException::new);
 
         Usuario usuario = sessao.getUsuario();
-        if (usuario.isEncerrada()) {
-            throw new SessaoInvalidaException();
-        }
-        if (usuario.isSuspensa()) {
-            throw new ContaSuspensaException();
-        }
+        usuario.exigirAtiva();
 
-        TokensSessao tokens = tokenService.emitir(sessao, agora);
+        TokensSessao tokens = tokenService.emitir(usuario, agora);
+        sessao.rotacionar(tokens, agora);
         sessaoService.salvar(sessao);
         return tokens;
     }

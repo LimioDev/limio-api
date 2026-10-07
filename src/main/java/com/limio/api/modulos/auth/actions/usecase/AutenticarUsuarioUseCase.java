@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
+import com.limio.api.modulos.auth.actions.helper.DispositivoHelper;
 import com.limio.api.modulos.auth.actions.helper.LimiteTentativasLogin;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
 import com.limio.api.modulos.auth.actions.service.TokenService;
@@ -31,6 +32,12 @@ import com.limio.api.modulos.auth.usuario.UsuarioService;
  * que sobra em {@code tentativa_login} são as falhas. Sem
  * {@code @Transactional} de propósito: a falha gravada não pode sumir no
  * rollback da exceção lançada logo em seguida.
+ *
+ * Efeito colateral aceito dessa escolha: apagar a tentativa e salvar a sessão
+ * são commits separados. Se o processo cair (ou {@code salvar} lançar) entre
+ * os dois, o usuário recebe 500 sem sessão aberta e a tentativa bem-sucedida
+ * já foi apagada — só a contagem do rate limit é afetada, as falhas
+ * anteriores continuam gravadas.
  */
 @Service
 public class AutenticarUsuarioUseCase {
@@ -74,8 +81,13 @@ public class AutenticarUsuarioUseCase {
             throw new ContaSuspensaException();
         }
 
-        Sessao sessao = Sessao.builder().usuario(usuario).dispositivo(dispositivo).ip(ip).build();
-        TokensSessao tokens = tokenService.emitir(sessao, agora);
+        Sessao sessao = Sessao.builder()
+                .usuario(usuario)
+                .dispositivo(DispositivoHelper.normalizar(dispositivo))
+                .ip(ip)
+                .build();
+        TokensSessao tokens = tokenService.emitir(usuario, agora);
+        sessao.rotacionar(tokens, agora);
         sessaoService.salvar(sessao);
         return tokens;
     }
