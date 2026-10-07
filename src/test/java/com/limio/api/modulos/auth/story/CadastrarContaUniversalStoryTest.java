@@ -22,13 +22,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.limio.api.TestcontainersConfiguration;
 
 import tools.jackson.databind.ObjectMapper;
+import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.auth.actions.helper.CpfHasher;
 import com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueado;
 import com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueadoRepository;
 import com.limio.api.modulos.auth.records.CadastroRequest;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioRepository;
-import com.limio.api.modulos.auth.usuario.enums.PapelUsuario;
 import com.limio.api.modulos.auth.usuario.enums.StatusConta;
 
 /**

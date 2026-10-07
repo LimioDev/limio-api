@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 import com.limio.api.comum.base.BaseEntity;
-import com.limio.api.modulos.auth.usuario.enums.PapelUsuario;
+import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.auth.usuario.enums.StatusConta;
 
 import jakarta.persistence.Column;
@@ -64,4 +64,21 @@ public class Usuario extends BaseEntity {
 
     @Column(name = "anonimizado_em")
     private Instant anonimizadoEm;
+
+    /**
+     * Conta encerrada pelo titular (UC10): o encerramento anonimiza os dados, então
+     * {@code anonimizadoEm} preenchido é o que marca a conta como encerrada — o
+     * {@link StatusConta} do diagrama não tem valor próprio pra isso.
+     */
+    public boolean isEncerrada() {
+        return anonimizadoEm != null;
+    }
+
+    /** Suspensa por moderação: não autentica, não renova sessão, não troca de papel. */
+    public boolean isSuspensa() {
+        return switch (statusConta) {
+            case ATIVA, PENDENTE_VERIFICACAO -> false; // UC05: login pode acontecer antes de confirmar o e-mail
+            case BLOQUEADA -> true;
+        };
+    }
 }

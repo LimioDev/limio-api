@@ -7,9 +7,16 @@ package com.limio.api.comum.excecao.enums;
 public enum CodigoErro {
 
     VALIDACAO_FALHOU("Há campos inválidos no formulário."),
+    REQUISICAO_INVALIDA("Requisição inválida."),
     CADASTRO_IDADE_MINIMA("É necessário ter 18 anos ou mais para se cadastrar."),
     CADASTRO_CPF_INVALIDO("CPF inválido."),
     CADASTRO_DADOS_INDISPONIVEIS("Não foi possível concluir o cadastro com os dados informados."),
+    CREDENCIAIS_INVALIDAS("E-mail ou senha incorretos."),
+    LOGIN_TEMPORARIAMENTE_BLOQUEADO("Muitas tentativas de login. Aguarde alguns minutos e tente novamente."),
+    CONTA_SUSPENSA("Sua conta está suspensa. Fale com o suporte."),
+    NAO_AUTENTICADO("Faça login para continuar."),
+    SESSAO_INVALIDA("Sua sessão expirou. Faça login novamente."),
+    PAPEL_INVALIDO("Só é possível alternar entre Empregador e Prestador."),
     ENTIDADE_NAO_ENCONTRADA("Registro não encontrado."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
