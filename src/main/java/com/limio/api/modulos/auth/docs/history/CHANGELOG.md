@@ -27,3 +27,31 @@ Mensagens de `@NotBlank`/`@Email`/`@Pattern`/`@Size`/`@Past` de `CadastroRequest
 `ValidationMessages.properties` (chave `{modulo.campo.regra}`) — Bean Validation exige literal/placeholder
 constante na anotação, não aceita chamada de método de enum ali; texto de exceção de negócio continua 100% via
 `CodigoErro.mensagemPadrao()`, sem string solta em nenhuma classe Java.
+
+## 2026-10-07 — TICKET-0044: `auth` deixa de ser lar de tudo que referencia `usuario_id`
+
+Revisão de DER + diagrama de classes mostrou ~35 tabelas com FK pra `usuario`; só duas (`usuario`,
+`cpf_bloqueado`) tinham código. Pra não virar monólito, criado o pacote-esqueleto (`package-info.java`, mesmo
+padrão que `auth` teve antes da implementação) de cada bounded context que o DER revela:
+`modulos.{perfil,anuncio,moderacao,financeiro,chat,notificacao,administracao,auditoria,privacidade}`.
+`auth` continua dono só de `Usuario`/`CpfBloqueado` — `sessao`, `verificacao_contato`, `aceite_termo` ficam
+reservados pra entrar aqui num ticket futuro (ciclo de vida da própria conta).
+
+Além disso, `CpfBloqueado` corrigido pra bater com o DER: campo `cpf` (texto puro) virou `cpfHmac`
+(HMAC-SHA256 via novo helper `CpfHasher`, chave em `security.cpf.hmac-secret`) — tabela só precisa conferir
+igualdade, não precisa do CPF legível. Ganhou também `bloqueadoEm` e `liberadoEm` explícitos (antes só existia
+`criadoEm` herdado, sem suportar liberação antecipada do cooldown). `Usuario` ganhou `anonimizadoEm` (coluna do
+DER que faltava). Migration `V3__ajustar_usuario_e_cpf_bloqueado.sql`. Detalhe completo da decisão em
+`docs/features/TICKET-0044-separacao-modulos-por-subentidade.md` e em ADR-0001 revisão 3.
+
+Dentro do próprio `auth`, `Usuario`/`UsuarioRepository`/`UsuarioService`/`enums/` moveram pra subpasta
+`usuario/`, e `CpfBloqueado`/`CpfBloqueadoRepository`/`CpfBloqueadoService` pra `cpfbloqueado/` —
+`Usuario` e `CpfBloqueado` não têm relação pai-filho (sem FK entre si, ciclos de vida independentes), então
+não deveriam ficar soltas lado a lado na raiz do módulo. `records/`, `excecao/` e `actions/` continuam no
+nível de `auth` (representam o fluxo UC01, não uma entidade isolada). Padrão novo documentado em ADR-0001
+§3.5 e no skill `limio-architecture`.
+
+Nome de papel `CONTRATANTE` renomeado pra `EMPREGADOR` (nome correto de produto) em todo o projeto — enum,
+testes, migration `V4__renomear_papel_contratante_para_empregador.sql` (`UPDATE` + troca do `CHECK`), docs e
+ADR. DER/diagrama de classes anexados ainda mostram "contratante" (ferramenta externa) — anotado como
+pendência de nomenclatura a resolver quando o módulo `perfil` for implementado.
