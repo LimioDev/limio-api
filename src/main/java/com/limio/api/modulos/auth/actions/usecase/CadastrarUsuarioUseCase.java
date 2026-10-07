@@ -7,14 +7,14 @@ import java.time.ZoneOffset;
 
 import org.springframework.stereotype.Service;
 
-import com.limio.api.modulos.auth.CpfBloqueadoService;
-import com.limio.api.modulos.auth.Usuario;
-import com.limio.api.modulos.auth.UsuarioService;
 import com.limio.api.modulos.auth.actions.helper.CpfValidator;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
+import com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueadoService;
 import com.limio.api.modulos.auth.excecao.CadastroIndisponivelException;
 import com.limio.api.modulos.auth.excecao.CpfInvalidoException;
 import com.limio.api.modulos.auth.excecao.IdadeMinimaNaoAtingidaException;
+import com.limio.api.modulos.auth.usuario.Usuario;
+import com.limio.api.modulos.auth.usuario.UsuarioService;
 
 /**
  * Regra de negócio do UC01 (cadastrar conta universal). Não conhece HTTP nem

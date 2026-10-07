@@ -7,11 +7,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.limio.api.modulos.auth.Usuario;
 import com.limio.api.modulos.auth.actions.mapper.UsuarioMapper;
 import com.limio.api.modulos.auth.actions.usecase.CadastrarUsuarioUseCase;
 import com.limio.api.modulos.auth.records.CadastroRequest;
 import com.limio.api.modulos.auth.records.UsuarioResponse;
+import com.limio.api.modulos.auth.usuario.Usuario;
 
 import jakarta.validation.Valid;
 

@@ -1,11 +1,11 @@
-package com.limio.api.modulos.auth;
+package com.limio.api.modulos.auth.usuario;
 
 import java.time.Instant;
 import java.time.LocalDate;
 
 import com.limio.api.comum.base.BaseEntity;
-import com.limio.api.modulos.auth.enums.PapelUsuario;
-import com.limio.api.modulos.auth.enums.StatusConta;
+import com.limio.api.modulos.auth.usuario.enums.PapelUsuario;
+import com.limio.api.modulos.auth.usuario.enums.StatusConta;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -61,4 +61,7 @@ public class Usuario extends BaseEntity {
 
     @Column(name = "email_confirmado_em")
     private Instant emailConfirmadoEm;
+
+    @Column(name = "anonimizado_em")
+    private Instant anonimizadoEm;
 }

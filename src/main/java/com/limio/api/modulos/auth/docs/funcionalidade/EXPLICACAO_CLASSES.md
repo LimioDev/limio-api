@@ -5,7 +5,7 @@
 1. `AuthController.cadastrar` recebe o corpo HTTP e desserializa em `CadastroRequest` (record). Bean Validation
    roda nas anotações do record (`@NotBlank`, `@Email`, `@Pattern`, `@Past`, `@Size`); o compact constructor
    normaliza strings (trim, lowercase de e-mail, remove não-dígitos de telefone/CPF).
-2. `Controller` chama `UsuarioMapper.toEntity(request)` — monta um `Usuario` com papel `CONTRATANTE` e status
+2. `Controller` chama `UsuarioMapper.toEntity(request)` — monta um `Usuario` com papel `EMPREGADOR` e status
    `ATIVA` por padrão, sem senha hasheada ainda.
 3. `Controller` chama `CadastrarUsuarioUseCase.executar(usuarioCandidato, request.senha())`. O usecase não conhece
    `HttpServletRequest`, nem o record de entrada, nem repository diretamente — só os `Service` do módulo.

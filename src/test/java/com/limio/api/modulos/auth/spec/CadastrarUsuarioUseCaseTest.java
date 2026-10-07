@@ -17,16 +17,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.limio.api.modulos.auth.CpfBloqueadoService;
-import com.limio.api.modulos.auth.Usuario;
-import com.limio.api.modulos.auth.UsuarioService;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
 import com.limio.api.modulos.auth.actions.usecase.CadastrarUsuarioUseCase;
-import com.limio.api.modulos.auth.enums.PapelUsuario;
-import com.limio.api.modulos.auth.enums.StatusConta;
+import com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueadoService;
 import com.limio.api.modulos.auth.excecao.CadastroIndisponivelException;
 import com.limio.api.modulos.auth.excecao.CpfInvalidoException;
 import com.limio.api.modulos.auth.excecao.IdadeMinimaNaoAtingidaException;
+import com.limio.api.modulos.auth.usuario.Usuario;
+import com.limio.api.modulos.auth.usuario.UsuarioService;
+import com.limio.api.modulos.auth.usuario.enums.PapelUsuario;
+import com.limio.api.modulos.auth.usuario.enums.StatusConta;
 
 @ExtendWith(MockitoExtension.class)
 class CadastrarUsuarioUseCaseTest {
@@ -117,7 +117,7 @@ class CadastrarUsuarioUseCaseTest {
     }
 
     @Test
-    void deveCadastrarComSucessoDefinindoPapelContratanteComoPadrao() {
+    void deveCadastrarComSucessoDefinindoPapelEmpregadorComoPadrao() {
         Usuario candidato = candidatoMaiorDeIdade();
         when(usuarioService.existePorEmail(anyString())).thenReturn(false);
         when(usuarioService.existePorCpf(anyString())).thenReturn(false);
@@ -125,13 +125,13 @@ class CadastrarUsuarioUseCaseTest {
         when(senhaHasher.hash("senha12345")).thenReturn("hash-fake");
         when(usuarioService.salvar(candidato)).thenReturn(candidato);
 
-        candidato.setPapelAtivo(PapelUsuario.CONTRATANTE);
+        candidato.setPapelAtivo(PapelUsuario.EMPREGADOR);
         candidato.setStatusConta(StatusConta.ATIVA);
 
         Usuario salvo = useCase.executar(candidato, "senha12345");
 
         assertThat(salvo.getSenhaHash()).isEqualTo("hash-fake");
-        assertThat(salvo.getPapelAtivo()).isEqualTo(PapelUsuario.CONTRATANTE);
+        assertThat(salvo.getPapelAtivo()).isEqualTo(PapelUsuario.EMPREGADOR);
         verify(usuarioService).salvar(candidato);
     }
 }

@@ -138,6 +138,34 @@ Schema só existe pra servir a entidade pai, sem ciclo de vida próprio (ex.: it
 um pedido) → `subentidade/` aninhada, com seu próprio `actions/`. Tem ciclo de vida e
 regras próprias → entidade principal nova (pacote irmão em `modulos/`).
 
+## Entidade raiz independente dentro do mesmo módulo (ADR-0001 §3.5)
+
+Duas (ou mais) entidades do **mesmo** módulo sem relação pai-filho entre si (nenhuma
+é dona da outra, nenhuma FK de uma pra outra, ciclos de vida independentes) não ficam
+soltas lado a lado na raiz do módulo. Cada uma ganha subpasta própria, nomeada em
+minúsculo com o nome da entidade:
+
+```
+modulos/<modulo>/<entidade-a>/
+├── <EntidadeA>.java
+├── <EntidadeA>Repository.java
+├── <EntidadeA>Service.java    <- se existir
+└── enums/                     <- enum que descreve só essa entidade
+
+modulos/<modulo>/<entidade-b>/
+└── ... (mesma estrutura, irmã da anterior)
+```
+
+`records/`, `excecao/` e `actions/{controller,usecase,mapper,service,helper}` **não**
+entram nessa subpasta — continuam no nível do módulo, porque representam o
+fluxo/feature que orquestra as entidades, não uma entidade isolada.
+
+Exemplo real: `modulos/auth/usuario/` (`Usuario`, `UsuarioRepository`,
+`UsuarioService`, `enums/`) e `modulos/auth/cpfbloqueado/` (`CpfBloqueado`,
+`CpfBloqueadoRepository`, `CpfBloqueadoService`) — subpastas irmãs; `CpfBloqueado`
+nem tem FK pra `Usuario` (compara por hash). `CadastrarUsuarioUseCase`
+(`auth/actions/usecase/`) é quem importa das duas pra orquestrar o cadastro.
+
 ## docs/ — o que registrar e quando
 
 - **history/**: só o que não fica óbvio lendo código — motivo de mudança de regra,
