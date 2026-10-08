@@ -1,6 +1,7 @@
 package com.limio.api.modulos.auth.records;
 
 import java.time.LocalDate;
+import java.util.Locale;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -19,6 +20,7 @@ public record CadastroRequest(
 
         @NotBlank(message = "{cadastro.email.obrigatorio}")
         @Email(message = "{cadastro.email.formato}")
+        @Size(max = 255, message = "{cadastro.email.tamanho}")
         String email,
 
         @NotBlank(message = "{cadastro.telefone.obrigatorio}")
@@ -41,7 +43,7 @@ public record CadastroRequest(
 
     public CadastroRequest {
         nomeCompleto = normalizar(nomeCompleto);
-        email = email == null ? null : email.trim().toLowerCase();
+        email = email == null ? null : email.trim().toLowerCase(Locale.ROOT);
         telefone = somenteDigitos(telefone);
         cpf = somenteDigitos(cpf);
         cidadeUf = normalizar(cidadeUf);

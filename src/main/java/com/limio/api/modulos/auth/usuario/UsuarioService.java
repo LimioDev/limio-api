@@ -1,5 +1,6 @@
 package com.limio.api.modulos.auth.usuario;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Component;
@@ -12,6 +13,11 @@ public class UsuarioService extends BaseService<Usuario, UUID, UsuarioRepository
 
     public UsuarioService(UsuarioRepository repository) {
         super(repository);
+    }
+
+    /** Vazio é fluxo normal no login (e-mail inexistente vira credencial inválida), por isso não lança. */
+    public Optional<Usuario> buscarPorEmail(String email) {
+        return repository.findByEmailIgnoreCase(email);
     }
 
     public boolean existePorEmail(String email) {
