@@ -11,7 +11,7 @@ Visitante cria uma conta única (CPF + e-mail) via `POST /auth/cadastro`. Crité
 - CPF de conta excluída há menos de 12 meses bloqueia novo cadastro (`CpfBloqueadoRepository`, tabela `cpf_bloqueado`).
 - Duplicidade de CPF/e-mail e bloqueio por exclusão recente retornam o mesmo erro genérico
   (`CadastroIndisponivelException` → `CADASTRO_DADOS_INDISPONIVEIS`) — anti-enumeração, não revela qual campo colidiu.
-- Papel ativo padrão após cadastro: `CONTRATANTE` (rótulo de produto "Empregador").
+- Papel ativo padrão após cadastro: `EMPREGADOR`.
 
 ## Decisão técnica
 

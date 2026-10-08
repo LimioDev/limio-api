@@ -1,4 +1,4 @@
-package com.limio.api.modulos.auth;
+package com.limio.api.modulos.auth.usuario;
 
 import java.util.UUID;
 

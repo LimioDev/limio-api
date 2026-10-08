@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -21,13 +22,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.limio.api.TestcontainersConfiguration;
 
 import tools.jackson.databind.ObjectMapper;
-import com.limio.api.modulos.auth.CpfBloqueado;
-import com.limio.api.modulos.auth.CpfBloqueadoRepository;
-import com.limio.api.modulos.auth.Usuario;
-import com.limio.api.modulos.auth.UsuarioRepository;
-import com.limio.api.modulos.auth.enums.PapelUsuario;
-import com.limio.api.modulos.auth.enums.StatusConta;
+import com.limio.api.modulos.auth.actions.helper.CpfHasher;
+import com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueado;
+import com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueadoRepository;
 import com.limio.api.modulos.auth.records.CadastroRequest;
+import com.limio.api.modulos.auth.usuario.Usuario;
+import com.limio.api.modulos.auth.usuario.UsuarioRepository;
+import com.limio.api.modulos.auth.usuario.enums.PapelUsuario;
+import com.limio.api.modulos.auth.usuario.enums.StatusConta;
 
 /**
  * BDD ponta a ponta (controller -> banco real) do UC01 — cadastrar conta
@@ -53,6 +55,9 @@ class CadastrarContaUniversalStoryTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private CpfHasher cpfHasher;
+
     @BeforeEach
     void limparBase() {
         usuarioRepository.deleteAll();
@@ -71,18 +76,18 @@ class CadastrarContaUniversalStoryTest {
     }
 
     @Test
-    void dadoVisitanteComDadosValidos_quandoCadastra_entaoContaCriadaComPapelContratante() throws Exception {
+    void dadoVisitanteComDadosValidos_quandoCadastra_entaoContaCriadaComPapelEmpregador() throws Exception {
         CadastroRequest request = requestValido("52998224725", "maria@example.com");
 
         mockMvc.perform(post("/auth/cadastro")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.papelAtivo", is("CONTRATANTE")))
+                .andExpect(jsonPath("$.papelAtivo", is("EMPREGADOR")))
                 .andExpect(jsonPath("$.email", is("maria@example.com")));
 
         Usuario salvo = usuarioRepository.findAll().get(0);
-        assertThat(salvo.getPapelAtivo()).isEqualTo(PapelUsuario.CONTRATANTE);
+        assertThat(salvo.getPapelAtivo()).isEqualTo(PapelUsuario.EMPREGADOR);
         assertThat(salvo.getStatusConta()).isEqualTo(StatusConta.ATIVA);
         assertThat(passwordEncoder.matches("senhaForte123", salvo.getSenhaHash())).isTrue();
     }
@@ -128,7 +133,7 @@ class CadastrarContaUniversalStoryTest {
                 .cpf("11144477735")
                 .dataNascimento(LocalDate.now().minusYears(30))
                 .cidadeUf("Rio de Janeiro/RJ")
-                .papelAtivo(PapelUsuario.CONTRATANTE)
+                .papelAtivo(PapelUsuario.EMPREGADOR)
                 .statusConta(StatusConta.ATIVA)
                 .build());
 
@@ -145,7 +150,8 @@ class CadastrarContaUniversalStoryTest {
     void dadoCpfExcluidoHaMenosDe12Meses_quandoCadastra_entaoBloqueiaComErroGenerico() throws Exception {
         String cpfExcluido = "52998224725";
         CpfBloqueado bloqueio = new CpfBloqueado();
-        bloqueio.setCpf(cpfExcluido);
+        bloqueio.setCpfHmac(cpfHasher.hash(cpfExcluido));
+        bloqueio.setBloqueadoEm(Instant.now());
         cpfBloqueadoRepository.save(bloqueio);
 
         CadastroRequest request = requestValido(cpfExcluido, "novo@example.com");
