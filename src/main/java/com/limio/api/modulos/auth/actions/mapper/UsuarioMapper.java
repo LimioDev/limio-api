@@ -3,10 +3,11 @@ package com.limio.api.modulos.auth.actions.mapper;
 import org.springframework.stereotype.Component;
 
 import com.limio.api.comum.base.BaseMapper;
+import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.auth.records.CadastroRequest;
+import com.limio.api.modulos.auth.records.PapelAtivoResponse;
 import com.limio.api.modulos.auth.records.UsuarioResponse;
 import com.limio.api.modulos.auth.usuario.Usuario;
-import com.limio.api.modulos.auth.usuario.enums.PapelUsuario;
 import com.limio.api.modulos.auth.usuario.enums.StatusConta;
 
 /** Anti-corruption layer entre {@link Usuario} e os records HTTP do módulo. Chamado só pelo controller. */
@@ -35,5 +36,9 @@ public class UsuarioMapper implements BaseMapper<Usuario, CadastroRequest, Usuar
                 entity.getEmail(),
                 entity.getPapelAtivo(),
                 entity.getCriadoEm());
+    }
+
+    public PapelAtivoResponse toPapelAtivoResponse(Usuario entity) {
+        return new PapelAtivoResponse(entity.getPapelAtivo());
     }
 }

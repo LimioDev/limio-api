@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
 import com.limio.api.modulos.auth.actions.usecase.CadastrarUsuarioUseCase;
 import com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueadoService;
@@ -25,7 +26,6 @@ import com.limio.api.modulos.auth.excecao.CpfInvalidoException;
 import com.limio.api.modulos.auth.excecao.IdadeMinimaNaoAtingidaException;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
-import com.limio.api.modulos.auth.usuario.enums.PapelUsuario;
 import com.limio.api.modulos.auth.usuario.enums.StatusConta;
 
 @ExtendWith(MockitoExtension.class)

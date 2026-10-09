@@ -55,3 +55,33 @@ Nome de papel `CONTRATANTE` renomeado pra `EMPREGADOR` (nome correto de produto)
 testes, migration `V4__renomear_papel_contratante_para_empregador.sql` (`UPDATE` + troca do `CHECK`), docs e
 ADR. DER/diagrama de classes anexados ainda mostram "contratante" (ferramenta externa) — anotado como
 pendência de nomenclatura a resolver quando o módulo `perfil` for implementado.
+
+## 2026-10-07 — TICKET-0032: login, sessão por aparelho e troca de papel ativo
+
+Implementados UC03 (login), UC08 (logout do dispositivo), UC09 (alternar papel) e a renovação do token de acesso.
+`auth` ganhou as subpastas `sessao/` (entity do DER + `expira_em`, que o DER não tem) e `tentativalogin/` (tabela
+nova, não está no DER — base do rate limit). Migrations `V5__criar_tabela_sessao.sql` e
+`V6__criar_tabela_tentativa_login.sql`. `comum/seguranca/` deixou de ser só previsto: `JwtAuthFilter` +
+`UsuarioAutenticado`.
+
+`PapelUsuario` saiu de `auth/usuario/enums/` pra `comum/seguranca/enums/`: `UsuarioAutenticado` (em `comum/`)
+carrega o papel e `comum/` não pode importar módulo.
+
+O card fala em status SUSPENSA e ENCERRADA, mas o diagrama de classes só tem `ATIVA`, `PENDENTE_VERIFICACAO` e
+`BLOQUEADA`. O enum foi mantido como no diagrama: `BLOQUEADA` é tratada como suspensa e conta encerrada é
+`anonimizadoEm` preenchido (UC10 encerra anonimizando). Se o grupo criar valores próprios, ajustar
+`Usuario.isSuspensa`/`isEncerrada` — o `switch` sem `default` acusa valor novo na compilação.
+
+`SecurityConfig` deixou de liberar `/auth/**` inteiro: agora só `POST /auth/cadastro`, `/auth/login` e
+`/auth/refresh` são públicas — logout e troca de papel exigem token. Detalhe completo em
+`docs/features/TICKET-0032-acessar-conta-e-alternar-papel.md`.
+
+## 2026-10-07 — TICKET-0032: endurecimento do login após revisão de segurança
+
+Rate limit passou a gravar a tentativa antes de conferir a senha, com lock por e-mail no Postgres
+(`pg_advisory_xact_lock`), e a apagar se a senha conferir: uma rajada paralela passava inteira pela checagem antes de
+qualquer falha ser gravada. O contador de conta existente passou a ser o e-mail gravado (grafias que o `upper` do
+Postgres iguala, como "ı" sem ponto, ganhavam contador próprio). Também: `Locale.ROOT` na normalização do e-mail
+(login e cadastro), e-mail limitado a 255, caracteres de controle removidos do `dispositivo`, e erros 4xx do Spring
+(415/405/404) com `REQUISICAO_INVALIDA` em vez de 500. Detalhe em
+`docs/features/TICKET-0032-acessar-conta-e-alternar-papel.md`, seção "Endurecimento".

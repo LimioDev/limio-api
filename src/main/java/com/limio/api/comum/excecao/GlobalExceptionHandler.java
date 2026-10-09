@@ -2,8 +2,14 @@ package com.limio.api.comum.excecao;
 
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -18,6 +24,8 @@ import com.limio.api.comum.records.ErroResponse;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(NegocioException.class)
     public ResponseEntity<ErroResponse> tratarNegocio(NegocioException ex, WebRequest request) {
@@ -34,8 +42,44 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(corpo);
     }
 
+    /** JSON malformado ou valor fora de um enum (ex.: papel inexistente) — erro do cliente, não 500. */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErroResponse> tratarCorpoIlegivel(HttpMessageNotReadableException ex, WebRequest request) {
+        ErroResponse corpo = ErroResponse.de(CodigoErro.VALIDACAO_FALHOU, CodigoErro.VALIDACAO_FALHOU.mensagemPadrao(), caminho(request));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(corpo);
+    }
+
+    /**
+     * Rota protegida sem token de acesso válido. Chega aqui pelo entry point do
+     * {@code SecurityConfig}, que delega ao {@code HandlerExceptionResolver}.
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErroResponse> tratarNaoAutenticado(AuthenticationException ex, WebRequest request) {
+        ErroResponse corpo = ErroResponse.de(CodigoErro.NAO_AUTENTICADO, CodigoErro.NAO_AUTENTICADO.mensagemPadrao(), caminho(request));
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(corpo);
+    }
+
+    /**
+     * Autenticado, mas sem permissão pra rota (checagem de papel). Chega aqui
+     * pelo {@code @PreAuthorize} ou pelo access denied handler do {@code SecurityConfig}.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErroResponse> tratarAcessoNegado(AccessDeniedException ex, WebRequest request) {
+        ErroResponse corpo = ErroResponse.de(CodigoErro.ACESSO_NEGADO, CodigoErro.ACESSO_NEGADO.mensagemPadrao(), caminho(request));
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(corpo);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErroResponse> tratarInesperado(Exception ex, WebRequest request) {
+        // Erro de cliente detectado pelo próprio Spring (Content-Type não suportado, método errado, rota inexistente):
+        // mantém o status 4xx em vez de virar 500.
+        if (ex instanceof ErrorResponse erroDoFramework && erroDoFramework.getStatusCode().is4xxClientError()) {
+            log.debug("requisição recusada pelo framework em {}: {}", caminho(request), ex.getMessage());
+            ErroResponse corpo = ErroResponse.de(CodigoErro.REQUISICAO_INVALIDA, CodigoErro.REQUISICAO_INVALIDA.mensagemPadrao(), caminho(request));
+            return ResponseEntity.status(erroDoFramework.getStatusCode()).body(corpo);
+        }
+        // Única trilha de um 500 em produção: sem este log o erro some sem stacktrace.
+        log.error("erro inesperado em {}", caminho(request), ex);
         ErroResponse corpo = ErroResponse.de(CodigoErro.ERRO_INTERNO, CodigoErro.ERRO_INTERNO.mensagemPadrao(), caminho(request));
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(corpo);
     }
