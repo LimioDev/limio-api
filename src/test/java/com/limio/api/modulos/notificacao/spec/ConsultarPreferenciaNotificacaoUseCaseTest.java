@@ -54,16 +54,8 @@ class ConsultarPreferenciaNotificacaoUseCaseTest {
         assertThat(resultado.getUsuarioId()).isEqualTo(USUARIO_ID);
         assertThat(resultado.getPush()).isTrue();
         assertThat(resultado.getEmail()).isFalse();
+        assertThat(resultado.getSms()).isFalse();
+        assertThat(resultado.getWhatsapp()).isFalse();
         verify(preferenciaNotificacaoService, never()).salvar(any());
-    }
-
-    @Test
-    void semRegistroSmsEWhatsappFicamSemPadraoEnquantoPendenciasNaoForemResolvidas() {
-        when(preferenciaNotificacaoService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.empty());
-
-        PreferenciaNotificacao resultado = useCase.executar(USUARIO_ID);
-
-        assertThat(resultado.getSms()).isNull();
-        assertThat(resultado.getWhatsapp()).isNull();
     }
 }

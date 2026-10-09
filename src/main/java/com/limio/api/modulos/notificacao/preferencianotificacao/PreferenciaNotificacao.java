@@ -18,9 +18,8 @@ import lombok.Setter;
  * um registro por {@code usuarioId}. {@code usuarioId} é UUID cru, nunca
  * relação JPA pro {@code Usuario} de {@code modulos.auth} (ADR-0001 §1.6).
  *
- * Canais são {@link Boolean} (não primitivo): uma instância ainda não salva
- * pode carregar canal sem padrão definido (ver
- * {@code ConsultarPreferenciaNotificacaoUseCase}); no banco os quatro são
+ * Canais são {@link Boolean} (não primitivo), no mesmo tipo do
+ * {@code PreferenciaNotificacaoRequest}; no banco os quatro são
  * {@code NOT NULL}.
  */
 @Entity

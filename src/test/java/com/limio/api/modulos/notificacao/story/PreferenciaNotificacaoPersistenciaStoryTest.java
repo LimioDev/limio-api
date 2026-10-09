@@ -20,9 +20,8 @@ import com.limio.api.modulos.notificacao.preferencianotificacao.PreferenciaNotif
 
 /**
  * BDD da ETI-34 contra banco real (Spring context + Testcontainers Postgres),
- * a partir do usecase. O controller (GET/PUT) ainda não existe — depende de
- * {@code UsuarioAutenticado} da tarefa de autenticação; quando entrar, estes
- * cenários ganham a versão HTTP (200/400/401) aqui mesmo.
+ * a partir do usecase: unicidade por usuário e padrões sem criar registro.
+ * Os cenários HTTP (200/400/401) ficam em {@link PreferenciaNotificacaoStoryTest}.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -52,6 +51,8 @@ class PreferenciaNotificacaoPersistenciaStoryTest {
 
         assertThat(resultado.getPush()).isTrue();
         assertThat(resultado.getEmail()).isFalse();
+        assertThat(resultado.getSms()).isFalse();
+        assertThat(resultado.getWhatsapp()).isFalse();
         assertThat(repository.count()).isZero();
     }
 

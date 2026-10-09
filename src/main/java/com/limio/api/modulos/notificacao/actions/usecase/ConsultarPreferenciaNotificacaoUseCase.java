@@ -27,16 +27,16 @@ public class ConsultarPreferenciaNotificacaoUseCase {
     }
 
     /**
-     * Padrões definidos no card: Push ligado, E-mail desligado. {@code sms} e
-     * {@code whatsapp} ficam {@code null} (sem padrão) de propósito: o card não
-     * define o do SMS e o do WhatsApp depende de um opt-in que o cadastro (UC01)
-     * ainda não coleta — pendências 1 e 2 de {@code docs/features/UC15-...md}.
+     * Padrões de conta nova: Push ligado; E-mail, SMS e WhatsApp desligados.
+     * WhatsApp fica {@code false} enquanto o cadastro (UC01) não coleta opt-in.
      */
     private PreferenciaNotificacao padraoContaNova(UUID usuarioId) {
         return PreferenciaNotificacao.builder()
                 .usuarioId(usuarioId)
                 .push(true)
                 .email(false)
+                .sms(false)
+                .whatsapp(false)
                 .build();
     }
 }
