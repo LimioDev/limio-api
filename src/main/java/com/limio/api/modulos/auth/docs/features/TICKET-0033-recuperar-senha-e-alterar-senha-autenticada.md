@@ -9,7 +9,7 @@ Relacionado: [auth] [BACK-END] Páginas web "Confirmar e-mail" e "Nova senha".
 
 ## Status
 
-Pendências do tech lead resolvidas (ver "Decisão técnica" abaixo) — liberado pra implementação.
+Implementado. UC06 (solicitar recuperação + redefinir pelo link) e UC07 (alterar senha logado).
 
 ## User Story
 
@@ -63,14 +63,16 @@ Não se aplica aqui — telas ficam no card par [FRONT-END] e no card das págin
 
 ## Contrato da API (compartilhado com o card [FRONT-END] e o card das páginas web)
 
-| Operação | Rota | Entrada | Saída |
-|---|---|---|---|
-| Solicitar recuperação | a definir | `{ email }` | resposta genérica |
-| Redefinir pelo link | a definir | `{ token, novaSenha }` | sucesso |
-| Alterar senha | a definir | `{ senhaAtual, novaSenha }` | novos tokens da sessão atual |
+| Operação | Rota | Autenticação | Entrada | Saída |
+|---|---|---|---|---|
+| Solicitar recuperação | `POST /auth/recuperar-senha` | pública | `{ email }` | 200, sem corpo (sempre o mesmo) |
+| Redefinir pelo link | `POST /auth/redefinir-senha` | pública | `{ token, novaSenha }` | 200, sem corpo |
+| Alterar senha | `PATCH /auth/senha` | `Bearer <token>` | `{ senhaAtual, novaSenha, refreshToken }` | 200 `{ token, expiraEm, papel, refreshToken }` |
 
-`CodigoErro` novos (nomes sugeridos pelo card): `TOKEN_RECUPERACAO_INVALIDO`, `SENHA_ATUAL_INCORRETA`,
-`SENHA_IGUAL_ANTERIOR`.
+`refreshToken` em "Alterar senha" não estava no esboço do card: é como o usecase sabe qual `Sessao` é "este
+aparelho" (o token de acesso/JWT não carrega id de sessão) — mesmo campo que `/auth/logout` já usa pra isso.
+
+`CodigoErro` novos: `TOKEN_RECUPERACAO_INVALIDO` (401), `SENHA_ATUAL_INCORRETA` (401), `SENHA_IGUAL_ANTERIOR` (422).
 
 ## Decisão técnica (tech lead)
 
@@ -80,6 +82,28 @@ Não se aplica aqui — telas ficam no card par [FRONT-END] e no card das págin
   (`EMAIL`/`SMS`, sem valor por operação). `VerificacaoContato` ganha campo novo de finalidade — enum
   `FinalidadeVerificacao` (`CONFIRMACAO_EMAIL`, `RECUPERACAO_SENHA`, ...) — separado do canal. Repõe o que o
   campo `proposito` fazia no diagrama antigo, sem acoplar finalidade ao meio de envio.
+
+## Detalhe da implementação
+
+- **Rate limit por conta, não pelo texto digitado**: e-mail inexistente nunca gera linha em
+  `verificacao_contato` (não há usuário pra associar o FK), então a contagem de 3/hora é por `usuario_id` —
+  equivalente a "por e-mail" já que o e-mail é único por conta, sem o risco de grafias diferentes abrirem
+  contadores separados (mesmo cuidado do rate limit do login, TICKET-0032).
+- **Conta encerrada não recebe e-mail de recuperação**: `Usuario.isEncerrada()` é checado antes de gerar token —
+  mandar link de redefinição pra uma conta anonimizada não serve a nada. Conta suspensa (`BLOQUEADA`) recebe
+  normalmente: resetar a senha não reabre o acesso por si só, o login continua checando a suspensão.
+- **Falha de envio pelo Resend nunca propaga**: `EmailService` loga e segue. Na recuperação, isso preserva a
+  resposta genérica (um erro de rede não pode se diferenciar de "e-mail não existe"); na notificação de "senha
+  alterada", a troca de senha já foi persistida e não deve ser desfeita só porque o aviso falhou.
+- **`SessaoService.revogarTodas(usuarioId, exceto, agora)`**: usado pelos dois fluxos — `exceto = null`
+  (redefinir pelo link, não há "aparelho atual") e `exceto = sessaoAtual.getId()` (alterar senha logado).
+
+## Fora de escopo
+
+- `FinalidadeVerificacao.CONFIRMACAO_EMAIL` existe no enum (decisão já tomada) mas nenhum usecase a emite ainda —
+  entra com a UC05 ("Confirmar e-mail"), card relacionado, não este.
+- `CanalVerificacao.SMS` idem: não usado por nenhum fluxo hoje (recuperação de senha e confirmação de e-mail
+  saem só por `EMAIL`).
 
 ## Nomenclatura
 
