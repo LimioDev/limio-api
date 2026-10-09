@@ -85,3 +85,37 @@ Postgres iguala, como "ı" sem ponto, ganhavam contador próprio). Também: `Loc
 (login e cadastro), e-mail limitado a 255, caracteres de controle removidos do `dispositivo`, e erros 4xx do Spring
 (415/405/404) com `REQUISICAO_INVALIDA` em vez de 500. Detalhe em
 `docs/features/TICKET-0032-acessar-conta-e-alternar-papel.md`, seção "Endurecimento".
+
+## 2026-10-09 — TICKET-0033: recuperar senha esquecida e alterar senha autenticada
+
+Implementados UC06 (solicitar recuperação por e-mail + redefinir pelo link) e UC07 (alterar senha logado).
+`auth` ganhou a subpasta `verificacaocontato/` (entity `VerificacaoContato`, tabela nova compartilhada com o
+Cadastro — UC01) e os enums `CanalVerificacao`/`FinalidadeVerificacao` em `verificacaocontato/enums/`. Migration
+`V7__criar_tabela_verificacao_contato.sql`.
+
+Rotas novas: `POST /auth/recuperar-senha` e `POST /auth/redefinir-senha` (públicas, liberadas no
+`SecurityConfig`) e `PATCH /auth/senha` (autenticada). Token de recuperação é opaco, válido por 1h, só o hash vai
+pro banco (`TokenRecuperacaoHelper`, mesma lógica do refresh token da `Sessao` — classe própria em vez de
+reaproveitar `RefreshTokenHelper`, token de outra família).
+
+Provedor de e-mail transacional: Resend (`com.resend:resend-java`, decisão do tech lead), encapsulado em
+`EmailService` (`actions/service`). `email.enviar=false` por padrão fora de produção — só loga, não chama a API,
+pra dev local e os testes (incluindo o story novo) não dependerem de rede nem de uma API key real. Falha de
+envio nunca propaga (log apenas): preserva a resposta genérica da recuperação e não desfaz uma troca de senha já
+persistida.
+
+`SessaoService` ganhou `revogarTodas(usuarioId, exceto, agora)`, usada por UC06 (`exceto = null`, encerra tudo —
+não há "aparelho atual" num reset pelo link) e UC07 (`exceto` = sessão do `refreshToken` enviado no corpo —
+mantém o aparelho atual, encerra os outros). Esse `refreshToken` em "alterar senha" não estava no esboço
+original do card: é a única forma de o usecase saber qual `Sessao` é "este aparelho", já que o token de
+acesso (JWT) não carrega id de sessão — mesmo campo que `/auth/logout` já usa pra isso.
+
+`CodigoErro` novos: `TOKEN_RECUPERACAO_INVALIDO` (401), `SENHA_ATUAL_INCORRETA` (401), `SENHA_IGUAL_ANTERIOR`
+(422). Regra de senha (8–72 caracteres, ao menos 1 letra e 1 número) via `@Pattern` nos records novos.
+
+Pendência do card resolvida com o tech lead: `FinalidadeVerificacao` (separado de `CanalVerificacao`) no lugar
+do campo `proposito` que saiu do diagrama de classes — diferencia o link de recuperação de senha do de
+confirmação de e-mail, já que os dois saem pelo mesmo canal (`EMAIL`). `FinalidadeVerificacao.CONFIRMACAO_EMAIL`
+e `CanalVerificacao.SMS` já existem no enum mas nenhum usecase os emite ainda — entram com a UC05 ("Confirmar
+e-mail"), fora deste card. Detalhe completo em
+`docs/features/TICKET-0033-recuperar-senha-e-alterar-senha-autenticada.md`.

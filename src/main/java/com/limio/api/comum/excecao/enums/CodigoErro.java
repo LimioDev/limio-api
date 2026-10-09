@@ -18,6 +18,9 @@ public enum CodigoErro {
     ACESSO_NEGADO("Você não tem permissão para acessar este recurso."),
     SESSAO_INVALIDA("Sua sessão expirou. Faça login novamente."),
     PAPEL_INVALIDO("Só é possível alternar entre Empregador e Prestador."),
+    TOKEN_RECUPERACAO_INVALIDO("Link de recuperação de senha inválido ou expirado."),
+    SENHA_ATUAL_INCORRETA("Senha atual incorreta."),
+    SENHA_IGUAL_ANTERIOR("A nova senha deve ser diferente da atual."),
     ENTIDADE_NAO_ENCONTRADA("Registro não encontrado."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
