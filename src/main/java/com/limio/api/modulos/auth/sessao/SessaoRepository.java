@@ -1,5 +1,6 @@
 package com.limio.api.modulos.auth.sessao;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,4 +21,6 @@ public interface SessaoRepository extends BaseRepository<Sessao, UUID> {
     Optional<Sessao> findByRefreshTokenHash(String refreshTokenHash);
 
     Optional<Sessao> findByRefreshTokenHashAndUsuarioId(String refreshTokenHash, UUID usuarioId);
+
+    List<Sessao> findByUsuarioIdAndRevogadaEmIsNull(UUID usuarioId);
 }

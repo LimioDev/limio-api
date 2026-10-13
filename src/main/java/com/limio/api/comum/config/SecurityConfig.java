@@ -31,8 +31,8 @@ public class SecurityConfig {
                 .sessionManagement(sessao -> sessao.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // públicas: quem chama ainda não tem token de acesso válido.
-                        // Recuperação de senha (UC06) entra nesta lista quando for implementada.
-                        .requestMatchers(HttpMethod.POST, "/auth/cadastro", "/auth/login", "/auth/refresh").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/cadastro", "/auth/login", "/auth/refresh",
+                                "/auth/recuperar-senha", "/auth/redefinir-senha").permitAll()
                         // health check do Railway: sem isso todo deploy falha com 401
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .anyRequest().authenticated())
