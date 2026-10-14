@@ -104,22 +104,31 @@ decisão consciente, não esquecimento:
   fugiria do padrão "um ticket de cada vez" que o resto do projeto segue (ver
   `TICKET-0044-separacao-modulos-por-subentidade.md`), e inventaria requisitos (quais campos são
   obrigatórios, como o upload de `Midia` funciona) que não são deste card.
-- "Consentimentos" (provavelmente `AceiteTermo` no diagrama — ver nota abaixo) também não existe em
-  código. O ADR-0001 já reservava `aceite_termo` pra um ticket futuro de `auth` (junto com `sessao`,
+- "Consentimentos" também não existe em código — é `AceiteTermo` no diagrama (ver "Decisão técnica"
+  abaixo). O ADR-0001 já reservava `aceite_termo` pra um ticket futuro de `auth` (junto com `sessao`,
   `verificacao_contato` — os outros dois já vieram nos TICKET-0032/0033).
-- Quando `perfil`/consentimento forem implementados, o listener deles importa
+- Quando `perfil` for implementado, o listener dele importa
   `com.limio.api.comum.eventos.ContaEncerradaEvent` e reage via `@EventListener` (ou
   `@TransactionalEventListener(phase = AFTER_COMMIT)`, se o trabalho não puder arriscar rollback junto
-  com a transação de `auth`) — zero mudança em `auth` quando isso acontecer.
+  com a transação de `auth`) — zero mudança em `auth` quando isso acontecer. `AceiteTermo` **não**
+  precisa de listener nenhum — ver decisão abaixo.
 
-## Pendência não resolvida: nome real da entidade "Consentimentos"
+### "Consentimentos" = `AceiteTermo`, e "encerra os ativos" não exige nenhum código
 
-O card chama de "Consentimentos" (e descreve "encerra os ativos, guarda histórico como registro
-legal"); o diagrama de classes tem uma entidade `AceiteTermo` (`documento`, `versao`, `origem`, `ip`,
-`aceitoEm`) sem nenhum campo de estado ativo/revogado — ou seja, "encerrar os ativos" não mapeia
-claramente pra uma mutação nesse entity como desenhado. Não investiguei mais fundo porque a
-implementação em si é fora de escopo (ver acima); quem pegar isso precisa confirmar com o grupo se
-"Consentimentos" é mesmo `AceiteTermo` e, se for, o que "ativo" significa ali.
+Resolvido (decisão de tech lead, sem precisar voltar pro grupo): "Consentimentos" do card é a
+entidade `AceiteTermo` do diagrama (`documento`, `versao`, `origem`, `ip`, `aceitoEm`, FK pra
+`Usuario`). Ela não tem campo de estado ativo/revogado porque não precisa — cada linha já é um fato
+imutável ("este usuário aceitou esta versão deste documento neste instante"); o consentimento
+"vigente" pra qualquer documento é implicitamente a linha mais recente por `(usuario, documento)`, sem
+precisar de flag.
+
+Por isso, "encerra os ativos" no contexto do UC10 não corresponde a nenhuma mutação em `AceiteTermo`:
+não existe um booleano "ativo" pra desligar, e já não existe mais usuário ativo pra aquele
+consentimento valer depois do encerramento (`Usuario.anonimizadoEm` cobre isso). "Guarda o histórico
+como registro legal" é automático — a tabela nunca tem `UPDATE`/`DELETE` por conta do encerramento de
+conta, só os `INSERT`s que já existiam. **Consequência prática**: quando `AceiteTermo` for
+implementado (ticket próprio de `auth`, como `sessao`/`verificacao_contato` foram), ele não precisa de
+listener de `ContaEncerradaEvent` — não há nada pra fazer ali quando uma conta encerra.
 
 ## Banco (Flyway)
 
