@@ -34,20 +34,20 @@ public class AlterarSenhaUseCase {
     private final SenhaHasher senhaHasher;
     private final TokenService tokenService;
     private final EmailService emailService;
-    private final String frontendUrl;
+    private final String deeplinkUrl;
 
     public AlterarSenhaUseCase(UsuarioService usuarioService,
             SessaoService sessaoService,
             SenhaHasher senhaHasher,
             TokenService tokenService,
             EmailService emailService,
-            @Value("${app.frontend.url}") String frontendUrl) {
+            @Value("${app.deeplink.url}") String deeplinkUrl) {
         this.usuarioService = usuarioService;
         this.sessaoService = sessaoService;
         this.senhaHasher = senhaHasher;
         this.tokenService = tokenService;
         this.emailService = emailService;
-        this.frontendUrl = frontendUrl;
+        this.deeplinkUrl = deeplinkUrl;
     }
 
     @Transactional
@@ -75,7 +75,7 @@ public class AlterarSenhaUseCase {
         sessaoService.salvar(sessaoAtual);
         sessaoService.revogarTodas(usuarioId, sessaoAtual.getId(), agora);
 
-        emailService.enviarSenhaAlterada(usuario.getEmail(), frontendUrl + "/recuperar-senha");
+        emailService.enviarSenhaAlterada(usuario.getEmail(), deeplinkUrl + "/recuperar-senha");
         return tokens;
     }
 }

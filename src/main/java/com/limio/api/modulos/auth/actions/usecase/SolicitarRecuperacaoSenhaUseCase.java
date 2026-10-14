@@ -35,7 +35,7 @@ public class SolicitarRecuperacaoSenhaUseCase {
     private final Duration validadeToken;
     private final int maxSolicitacoes;
     private final Duration janelaSolicitacoes;
-    private final String frontendUrl;
+    private final String deeplinkUrl;
 
     public SolicitarRecuperacaoSenhaUseCase(UsuarioService usuarioService,
             VerificacaoContatoService verificacaoContatoService,
@@ -43,14 +43,14 @@ public class SolicitarRecuperacaoSenhaUseCase {
             @Value("${auth.recuperacao-senha.validade-token}") Duration validadeToken,
             @Value("${auth.recuperacao-senha.max-solicitacoes}") int maxSolicitacoes,
             @Value("${auth.recuperacao-senha.janela-solicitacoes}") Duration janelaSolicitacoes,
-            @Value("${app.frontend.url}") String frontendUrl) {
+            @Value("${app.deeplink.url}") String deeplinkUrl) {
         this.usuarioService = usuarioService;
         this.verificacaoContatoService = verificacaoContatoService;
         this.emailService = emailService;
         this.validadeToken = validadeToken;
         this.maxSolicitacoes = maxSolicitacoes;
         this.janelaSolicitacoes = janelaSolicitacoes;
-        this.frontendUrl = frontendUrl;
+        this.deeplinkUrl = deeplinkUrl;
     }
 
     @Transactional
@@ -78,6 +78,6 @@ public class SolicitarRecuperacaoSenhaUseCase {
                 .build();
         verificacaoContatoService.salvar(verificacao);
 
-        emailService.enviarRecuperacaoSenha(usuario.getEmail(), frontendUrl + "/nova-senha?token=" + token);
+        emailService.enviarRecuperacaoSenha(usuario.getEmail(), deeplinkUrl + "/nova-senha?token=" + token);
     }
 }
