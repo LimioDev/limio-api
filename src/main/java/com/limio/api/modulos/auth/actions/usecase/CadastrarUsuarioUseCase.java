@@ -25,7 +25,6 @@ import com.limio.api.modulos.auth.usuario.UsuarioService;
 public class CadastrarUsuarioUseCase {
 
     private static final int IDADE_MINIMA = 18;
-    private static final int COOLDOWN_CPF_MESES = 12;
 
     private final UsuarioService usuarioService;
     private final CpfBloqueadoService cpfBloqueadoService;
@@ -72,8 +71,7 @@ public class CadastrarUsuarioUseCase {
     }
 
     private void validarCpfNaoBloqueado(Usuario usuario) {
-        Instant limiteCooldown = OffsetDateTime.now(ZoneOffset.UTC).minusMonths(COOLDOWN_CPF_MESES).toInstant();
-        if (cpfBloqueadoService.estaBloqueado(usuario.getCpf(), limiteCooldown)) {
+        if (cpfBloqueadoService.estaBloqueado(usuario.getCpf(), Instant.now())) {
             throw new CadastroIndisponivelException();
         }
     }
