@@ -3,15 +3,17 @@ package com.limio.api.modulos.notificacao.actions.usecase;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.limio.api.modulos.notificacao.excecao.WhatsappConsentimentoIndisponivelException;
 import com.limio.api.modulos.notificacao.preferencianotificacao.PreferenciaNotificacao;
 import com.limio.api.modulos.notificacao.preferencianotificacao.PreferenciaNotificacaoService;
 
 /**
  * Regra de negócio da ETI-34 (atualizar preferências). Estado completo: os
- * quatro canais da preferência nova substituem os atuais, cada um de forma
- * independente. Cria o registro do usuário na primeira gravação; depois
- * atualiza sempre o mesmo (um por usuário). Não conhece HTTP nem record.
+ * quatro canais recebidos substituem os atuais, cada um de forma
+ * independente. Upsert atômico (INSERT ... ON CONFLICT) por usuário:
+ * cria na primeira gravação e atualiza o mesmo registro depois, sem corrida entre PUTs concorrentes. Não conhece HTTP nem record.
  */
 @Service
 public class AtualizarPreferenciaNotificacaoUseCase {
@@ -22,19 +24,17 @@ public class AtualizarPreferenciaNotificacaoUseCase {
         this.preferenciaNotificacaoService = preferenciaNotificacaoService;
     }
 
-    public PreferenciaNotificacao executar(UUID usuarioId, PreferenciaNotificacao preferenciaNova) {
-        PreferenciaNotificacao preferencia = preferenciaNotificacaoService.buscarPorUsuario(usuarioId)
-                .orElseGet(() -> PreferenciaNotificacao.builder().usuarioId(usuarioId).build());
+    @Transactional
+    public PreferenciaNotificacao executar(UUID usuarioId, boolean push, boolean email, boolean sms, boolean whatsapp) {
+        // Dependência externa: ligar o WhatsApp deve gravar o consentimento em AceiteTermo (documento, versao,
+        // origem = configuracoes, ip, aceitoEm). AceiteTermo ainda não existe (reservado pra modulos.auth pelo
+        // TICKET-0044), então rejeita true até lá — ver "Dependências externas" em docs/features/UC15-...md.
+        if (whatsapp) {
+            throw new WhatsappConsentimentoIndisponivelException();
+        }
 
-        // Pendente (dependência externa): ligar o WhatsApp (false/sem registro -> true) deve gravar o
-        // consentimento em AceiteTermo (documento, versao, origem = configuracoes, ip, aceitoEm). AceiteTermo
-        // ainda não existe (reservado pra modulos.auth pelo TICKET-0044) e documento/versao/ip não têm
-        // origem definida — ver "Dependências externas" em docs/features/UC15-...md.
-        preferencia.setPush(preferenciaNova.getPush());
-        preferencia.setEmail(preferenciaNova.getEmail());
-        preferencia.setSms(preferenciaNova.getSms());
-        preferencia.setWhatsapp(preferenciaNova.getWhatsapp());
+        preferenciaNotificacaoService.gravarCanais(usuarioId, push, email, sms, whatsapp);
 
-        return preferenciaNotificacaoService.salvar(preferencia);
+        return preferenciaNotificacaoService.buscarPorUsuario(usuarioId).orElseThrow();
     }
 }

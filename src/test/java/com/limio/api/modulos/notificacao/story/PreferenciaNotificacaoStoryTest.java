@@ -1,6 +1,7 @@
 package com.limio.api.modulos.notificacao.story;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -16,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -115,11 +117,50 @@ class PreferenciaNotificacaoStoryTest {
     }
 
     @Test
+    void dadoUsuario_quandoAtualizaDuasVezes_entaoMantemUmUnicoRegistroComOUltimoEstado() throws Exception {
+        UUID usuarioId = UUID.randomUUID();
+
+        atualizar(usuarioId, "{\"push\":true,\"email\":false,\"sms\":false,\"whatsapp\":false}")
+                .andExpect(status().isOk());
+        atualizar(usuarioId, "{\"push\":false,\"email\":true,\"sms\":true,\"whatsapp\":false}")
+                .andExpect(status().isOk());
+
+        assertThat(repository.count()).isEqualTo(1);
+        PreferenciaNotificacao salva = repository.findByUsuarioId(usuarioId).orElseThrow();
+        assertThat(salva.getPush()).isFalse();
+        assertThat(salva.getEmail()).isTrue();
+        assertThat(salva.getSms()).isTrue();
+    }
+
+    @Test
+    void dadoRegistroExistente_quandoTentaGravarOutroDoMesmoUsuario_entaoBancoRecusa() {
+        UUID usuarioId = UUID.randomUUID();
+        repository.saveAndFlush(PreferenciaNotificacao.builder().usuarioId(usuarioId)
+                .push(true).email(false).sms(false).whatsapp(false).build());
+        PreferenciaNotificacao duplicada = PreferenciaNotificacao.builder().usuarioId(usuarioId)
+                .push(false).email(false).sms(false).whatsapp(false).build();
+
+        assertThatThrownBy(() -> repository.saveAndFlush(duplicada))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void dadoWhatsappTrue_quandoAtualiza_entaoRejeitaComWhatsappIndisponivelENadaGrava() throws Exception {
+        UUID usuarioId = UUID.randomUUID();
+
+        atualizar(usuarioId, "{\"push\":true,\"email\":false,\"sms\":false,\"whatsapp\":true}")
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.codigo").value("WHATSAPP_INDISPONIVEL"));
+
+        assertThat(repository.findByUsuarioId(usuarioId)).isEmpty();
+    }
+
+    @Test
     void dadoDoisUsuarios_quandoUmAtualiza_entaoSoAsPreferenciasDeleMudam() throws Exception {
         UUID usuarioA = UUID.randomUUID();
         UUID usuarioB = UUID.randomUUID();
 
-        atualizar(usuarioA, "{\"push\":false,\"email\":true,\"sms\":true,\"whatsapp\":true}")
+        atualizar(usuarioA, "{\"push\":false,\"email\":true,\"sms\":true,\"whatsapp\":false}")
                 .andExpect(status().isOk());
 
         consultar(usuarioB)
@@ -129,7 +170,7 @@ class PreferenciaNotificacaoStoryTest {
                 .andExpect(jsonPath("$.sms").value(false))
                 .andExpect(jsonPath("$.whatsapp").value(false));
         PreferenciaNotificacao doA = repository.findByUsuarioId(usuarioA).orElseThrow();
-        assertThat(doA.getWhatsapp()).isTrue();
+        assertThat(doA.getSms()).isTrue();
         assertThat(repository.findByUsuarioId(usuarioB)).isEmpty();
     }
 

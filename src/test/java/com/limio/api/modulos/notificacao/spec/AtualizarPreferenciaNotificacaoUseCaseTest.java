@@ -1,8 +1,9 @@
 package com.limio.api.modulos.notificacao.spec;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
@@ -11,11 +12,12 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.limio.api.modulos.notificacao.actions.usecase.AtualizarPreferenciaNotificacaoUseCase;
+import com.limio.api.modulos.notificacao.excecao.WhatsappConsentimentoIndisponivelException;
 import com.limio.api.modulos.notificacao.preferencianotificacao.PreferenciaNotificacao;
 import com.limio.api.modulos.notificacao.preferencianotificacao.PreferenciaNotificacaoService;
 
@@ -32,7 +34,6 @@ class AtualizarPreferenciaNotificacaoUseCaseTest {
     @BeforeEach
     void montarUseCase() {
         useCase = new AtualizarPreferenciaNotificacaoUseCase(preferenciaNotificacaoService);
-        when(preferenciaNotificacaoService.salvar(any())).thenAnswer(chamada -> chamada.getArgument(0));
     }
 
     private static PreferenciaNotificacao preferencia(boolean push, boolean email, boolean sms, boolean whatsapp) {
@@ -40,66 +41,34 @@ class AtualizarPreferenciaNotificacaoUseCaseTest {
     }
 
     @Test
-    void semRegistroDeveCriarPreferenciaDoUsuarioLogadoComOsQuatroCanais() {
-        when(preferenciaNotificacaoService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.empty());
+    void deveGravarOsQuatroCanaisDoUsuarioLogadoPorUpsertEDevolverOEstadoPersistido() {
+        PreferenciaNotificacao persistida = preferencia(true, false, true, false);
+        persistida.setUsuarioId(USUARIO_ID);
+        when(preferenciaNotificacaoService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.of(persistida));
 
-        PreferenciaNotificacao salva = useCase.executar(USUARIO_ID, preferencia(true, false, true, false));
+        PreferenciaNotificacao resultado = useCase.executar(USUARIO_ID, true, false, true, false);
 
-        assertThat(salva.getUsuarioId()).isEqualTo(USUARIO_ID);
-        assertThat(salva.getPush()).isTrue();
-        assertThat(salva.getEmail()).isFalse();
-        assertThat(salva.getSms()).isTrue();
-        assertThat(salva.getWhatsapp()).isFalse();
+        InOrder ordem = inOrder(preferenciaNotificacaoService);
+        ordem.verify(preferenciaNotificacaoService).gravarCanais(USUARIO_ID, true, false, true, false);
+        ordem.verify(preferenciaNotificacaoService).buscarPorUsuario(USUARIO_ID);
+        assertThat(resultado).isSameAs(persistida);
     }
 
     @Test
-    void comRegistroDeveAtualizarOMesmoRegistroEmVezDeCriarOutro() {
-        PreferenciaNotificacao atual = preferencia(true, false, false, false);
-        atual.setUsuarioId(USUARIO_ID);
-        when(preferenciaNotificacaoService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.of(atual));
+    void whatsappTrueDeveSerRejeitadoSemGravarNada() {
+        assertThatThrownBy(() -> useCase.executar(USUARIO_ID, true, false, false, true))
+                .isInstanceOf(WhatsappConsentimentoIndisponivelException.class);
 
-        useCase.executar(USUARIO_ID, preferencia(false, true, false, false));
-
-        ArgumentCaptor<PreferenciaNotificacao> salva = ArgumentCaptor.forClass(PreferenciaNotificacao.class);
-        verify(preferenciaNotificacaoService).salvar(salva.capture());
-        assertThat(salva.getValue()).isSameAs(atual);
-        assertThat(atual.getPush()).isFalse();
-        assertThat(atual.getEmail()).isTrue();
+        verifyNoInteractions(preferenciaNotificacaoService);
     }
 
     @Test
-    void cadaCanalDeveMudarDeFormaIndependente() {
-        PreferenciaNotificacao atual = preferencia(true, true, true, true);
-        atual.setUsuarioId(USUARIO_ID);
-        when(preferenciaNotificacaoService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.of(atual));
+    void cadaCanalDeveSerRepassadoDeFormaIndependente() {
+        PreferenciaNotificacao persistida = preferencia(true, true, false, false);
+        when(preferenciaNotificacaoService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.of(persistida));
 
-        PreferenciaNotificacao salva = useCase.executar(USUARIO_ID, preferencia(true, true, false, true));
+        useCase.executar(USUARIO_ID, true, true, false, false);
 
-        assertThat(salva.getPush()).isTrue();
-        assertThat(salva.getEmail()).isTrue();
-        assertThat(salva.getSms()).isFalse();
-        assertThat(salva.getWhatsapp()).isTrue();
-    }
-
-    @Test
-    void desligarWhatsappDeveGravarWhatsappFalse() {
-        PreferenciaNotificacao atual = preferencia(true, false, false, true);
-        atual.setUsuarioId(USUARIO_ID);
-        when(preferenciaNotificacaoService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.of(atual));
-
-        PreferenciaNotificacao salva = useCase.executar(USUARIO_ID, preferencia(true, false, false, false));
-
-        assertThat(salva.getWhatsapp()).isFalse();
-    }
-
-    @Test
-    void naoDeveTrocarODonoDaPreferenciaPeloQueVierNaEntidadeNova() {
-        when(preferenciaNotificacaoService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.empty());
-        PreferenciaNotificacao nova = preferencia(true, false, false, false);
-        nova.setUsuarioId(UUID.randomUUID());
-
-        PreferenciaNotificacao salva = useCase.executar(USUARIO_ID, nova);
-
-        assertThat(salva.getUsuarioId()).isEqualTo(USUARIO_ID);
+        org.mockito.Mockito.verify(preferenciaNotificacaoService).gravarCanais(USUARIO_ID, true, true, false, false);
     }
 }

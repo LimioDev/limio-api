@@ -17,14 +17,16 @@ Critérios de aceite cobertos:
   cadastro; enquanto o cadastro não coleta esse opt-in, o padrão é `false` (ver pendências).
 - Consultar: `200` com o estado salvo. Atualizar: `200` com o estado salvo. Sem login: `401`.
 - WhatsApp:
-  - **Ligar** grava o consentimento em `AceiteTermo` (`documento`, `versao`, `origem = configuracoes`, `ip`,
-    `aceitoEm`).
+  - **Ligar** deve gravar o consentimento em `AceiteTermo` (`documento`, `versao`, `origem = configuracoes`, `ip`,
+    `aceitoEm`). **Ainda não implementado:** `AceiteTermo` não existe, então `PUT` com `whatsapp = true` é rejeitado
+    com `422` (`WHATSAPP_INDISPONIVEL`) e nada é gravado. Só `false` é aceito até o aceite existir.
   - **Desligar** grava `whatsapp = false` em `PreferenciaNotificacao`.
   - Este canal é diferente do WhatsApp liberado como contato entre as partes depois da escolha do prestador
     (módulo prestador); não compartilham flag nem regra.
 - Regras de envio (contrato para quem notifica): sem consentimento ativo nada sai pelo WhatsApp; e-mails de segurança
   (senha alterada, exclusão de conta, novo login) saem sempre, mesmo com `email = false`.
-- Banco (Flyway): tabela `preferencia_notificacao`, criada somente se ainda não existir.
+- Banco (Flyway): migration `V8` cria a tabela `preferencia_notificacao` (`CREATE TABLE` simples, sem `IF NOT EXISTS`; o Flyway
+  garante a execução única).
 
 ### Contrato HTTP
 
@@ -85,3 +87,9 @@ rota. Sem token válido, o `SecurityConfig` responde `401` (`NAO_AUTENTICADO`) a
 7. **Coerção de tipo no JSON** (comportamento conhecido, mantido por decisão): o Jackson aceita `1`/`0` e
    `"true"`/`"false"` como booleano (resposta `200`). Valor não conversível (ex.: `"talvez"`) ou `null` dá `400`. A
    configuração global do Jackson não foi alterada.
+8. **Limpeza na exclusão de conta (registros órfãos)**: `usuario_id` é coluna crua, sem FK (ADR-0001 §1.6). O
+   mecanismo previsto no lugar — evento de domínio publicado por `modulos.auth` na exclusão da conta, com listener em
+   `notificacao` apagando a linha — **não existe**: o caso de uso de exclusão de conta ainda não foi implementado.
+   Hoje a linha permanece para sempre depois da exclusão. Além disso, um access token ainda válido de conta excluída
+   consegue criar registro novo via `PUT` até expirar. Resolver junto com a exclusão de conta: evento + listener de
+   remoção e, se necessário, rejeitar conta excluída/token revogado.

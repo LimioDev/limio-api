@@ -2,30 +2,17 @@ package com.limio.api.modulos.notificacao.actions.mapper;
 
 import org.springframework.stereotype.Component;
 
-import com.limio.api.comum.base.BaseMapper;
 import com.limio.api.modulos.notificacao.preferencianotificacao.PreferenciaNotificacao;
-import com.limio.api.modulos.notificacao.records.PreferenciaNotificacaoRequest;
 import com.limio.api.modulos.notificacao.records.PreferenciaNotificacaoResponse;
 
 /**
- * Anti-corruption layer entre {@link PreferenciaNotificacao} e os records HTTP do módulo. Chamado só pelo
- * controller. {@code toEntity} não preenche {@code usuarioId}: quem é o dono vem do usuário logado, nunca do corpo.
+ * Anti-corruption layer entre {@link PreferenciaNotificacao} e o record de resposta HTTP. Chamado só pelo
+ * controller. Não implementa {@code BaseMapper}: não há {@code toEntity} — o request vira argumentos primitivos do
+ * usecase (o dono vem do usuário logado, nunca do corpo), sem entidade parcial como transporte.
  */
 @Component
-public class PreferenciaNotificacaoMapper
-        implements BaseMapper<PreferenciaNotificacao, PreferenciaNotificacaoRequest, PreferenciaNotificacaoResponse> {
+public class PreferenciaNotificacaoMapper {
 
-    @Override
-    public PreferenciaNotificacao toEntity(PreferenciaNotificacaoRequest request) {
-        return PreferenciaNotificacao.builder()
-                .push(request.push())
-                .email(request.email())
-                .sms(request.sms())
-                .whatsapp(request.whatsapp())
-                .build();
-    }
-
-    @Override
     public PreferenciaNotificacaoResponse toResponse(PreferenciaNotificacao entity) {
         return new PreferenciaNotificacaoResponse(
                 entity.getPush(),

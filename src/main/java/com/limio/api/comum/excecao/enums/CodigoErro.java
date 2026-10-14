@@ -21,6 +21,7 @@ public enum CodigoErro {
     TOKEN_RECUPERACAO_INVALIDO("Link de recuperação de senha inválido ou expirado."),
     SENHA_ATUAL_INCORRETA("Senha atual incorreta."),
     SENHA_IGUAL_ANTERIOR("A nova senha deve ser diferente da atual."),
+    WHATSAPP_INDISPONIVEL("Ainda não é possível ativar notificações por WhatsApp."),
     ENTIDADE_NAO_ENCONTRADA("Registro não encontrado."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 

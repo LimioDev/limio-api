@@ -49,8 +49,8 @@ public class PreferenciaNotificacaoController {
     @PutMapping
     public ResponseEntity<PreferenciaNotificacaoResponse> atualizar(@AuthenticationPrincipal UsuarioAutenticado usuario,
             @Valid @RequestBody PreferenciaNotificacaoRequest request) {
-        PreferenciaNotificacao preferenciaNova = preferenciaNotificacaoMapper.toEntity(request);
-        PreferenciaNotificacao salva = atualizarPreferenciaNotificacaoUseCase.executar(usuario.id(), preferenciaNova);
+        PreferenciaNotificacao salva = atualizarPreferenciaNotificacaoUseCase.executar(usuario.id(),
+                request.push(), request.email(), request.sms(), request.whatsapp());
         return ResponseEntity.ok(preferenciaNotificacaoMapper.toResponse(salva));
     }
 }
