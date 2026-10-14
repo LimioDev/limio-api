@@ -96,7 +96,9 @@ Implementado — só a reação de `auth` (ver "Fora de escopo" abaixo pro resto
 Os reatores de `perfil` e "Consentimentos" ao `ContaEncerradaEvent` **não foram implementados** —
 decisão consciente, não esquecimento:
 
-- `PerfilContratante`, `PerfilPrestador`, `EnderecoSalvo` e `Midia` (card: anonimizar nome de exibição,
+- `PerfilEmpregador` (`PerfilContratante` no diagrama é o nome velho — regra de nomenclatura em
+  `perfil/package-info.java`: sempre "empregador", nunca "contratante"), `PerfilPrestador`,
+  `EnderecoSalvo` e `Midia` (card: anonimizar nome de exibição,
   apagar localização do prestador, apagar mídia do storage) não existem em código — `perfil` continua
   só o esqueleto do TICKET-0044. Construir essas entidades do zero só como efeito colateral deste card
   fugiria do padrão "um ticket de cada vez" que o resto do projeto segue (ver

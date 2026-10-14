@@ -131,7 +131,8 @@ enquanto — sobe pra `comum/` quando um 2º módulo precisar) e publica `ContaE
 (`comum/eventos/`, pasta nova: evento de domínio entre módulos só funciona se for importável por
 qualquer módulo que precisar escutá-lo, então não cabe no critério "2+ módulos usando hoje" de
 helper). Ninguém escuta o evento ainda — `perfil`/consentimento não têm as entidades que o card pede
-anonimizar (`PerfilContratante`, `PerfilPrestador`, `EnderecoSalvo`, `Midia`, `AceiteTermo`), ficou
+anonimizar (`PerfilEmpregador` — "PerfilContratante" no diagrama é o nome velho, ver nomenclatura no
+`perfil/package-info.java` —, `PerfilPrestador`, `EnderecoSalvo`, `Midia`, `AceiteTermo`), ficou
 fora de escopo de propósito (ver "Fora de escopo" no doc do ticket).
 
 Rotina diária de limpeza por retenção (`LimparRetencaoUseCase`, `@Scheduled`, `@EnableScheduling` novo
