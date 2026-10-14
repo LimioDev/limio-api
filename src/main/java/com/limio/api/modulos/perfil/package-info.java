@@ -15,8 +15,8 @@
  *   <li>{@code janela_atendimento}, {@code cota_mensal} — subentidade de {@code perfil_prestador}</li>
  * </ul>
  *
- * <p>Nome de produto correto é "empregador", não "contratante" — DER/diagrama de classes anexados na ADR-0001
- * ainda mostram {@code perfil_contratante}/{@code contratante_id} (ferramenta externa, não editável por aqui);
- * ao implementar este módulo, usar {@code empregador} nas colunas/tabelas novas.</p>
+ * <p>Nome de produto correto é "empregador", nunca "contratante" ou "solicitante" — DER/diagrama de classes
+ * anexados na ADR-0001 ainda mostram {@code perfil_contratante}/{@code contratante_id} (ferramenta externa, não
+ * editável por aqui); ao implementar este módulo, usar {@code empregador} nas colunas/tabelas novas.</p>
  */
 package com.limio.api.modulos.perfil;

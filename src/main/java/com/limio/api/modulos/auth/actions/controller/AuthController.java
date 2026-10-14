@@ -13,16 +13,22 @@ import org.springframework.web.bind.annotation.RestController;
 import com.limio.api.comum.seguranca.UsuarioAutenticado;
 import com.limio.api.modulos.auth.actions.mapper.SessaoMapper;
 import com.limio.api.modulos.auth.actions.mapper.UsuarioMapper;
+import com.limio.api.modulos.auth.actions.usecase.AlterarSenhaUseCase;
 import com.limio.api.modulos.auth.actions.usecase.AutenticarUsuarioUseCase;
 import com.limio.api.modulos.auth.actions.usecase.CadastrarUsuarioUseCase;
 import com.limio.api.modulos.auth.actions.usecase.EncerrarSessaoUseCase;
+import com.limio.api.modulos.auth.actions.usecase.RedefinirSenhaUseCase;
 import com.limio.api.modulos.auth.actions.usecase.RenovarSessaoUseCase;
+import com.limio.api.modulos.auth.actions.usecase.SolicitarRecuperacaoSenhaUseCase;
 import com.limio.api.modulos.auth.actions.usecase.TrocarPapelAtivoUseCase;
+import com.limio.api.modulos.auth.records.AlterarSenhaRequest;
 import com.limio.api.modulos.auth.records.CadastroRequest;
 import com.limio.api.modulos.auth.records.LoginRequest;
 import com.limio.api.modulos.auth.records.LoginResponse;
 import com.limio.api.modulos.auth.records.PapelAtivoResponse;
+import com.limio.api.modulos.auth.records.RedefinirSenhaRequest;
 import com.limio.api.modulos.auth.records.RefreshTokenRequest;
+import com.limio.api.modulos.auth.records.SolicitarRecuperacaoSenhaRequest;
 import com.limio.api.modulos.auth.records.TrocarPapelRequest;
 import com.limio.api.modulos.auth.records.UsuarioResponse;
 import com.limio.api.modulos.auth.sessao.TokensSessao;
@@ -40,6 +46,9 @@ public class AuthController {
     private final RenovarSessaoUseCase renovarSessaoUseCase;
     private final EncerrarSessaoUseCase encerrarSessaoUseCase;
     private final TrocarPapelAtivoUseCase trocarPapelAtivoUseCase;
+    private final SolicitarRecuperacaoSenhaUseCase solicitarRecuperacaoSenhaUseCase;
+    private final RedefinirSenhaUseCase redefinirSenhaUseCase;
+    private final AlterarSenhaUseCase alterarSenhaUseCase;
     private final UsuarioMapper usuarioMapper;
     private final SessaoMapper sessaoMapper;
 
@@ -48,6 +57,9 @@ public class AuthController {
             RenovarSessaoUseCase renovarSessaoUseCase,
             EncerrarSessaoUseCase encerrarSessaoUseCase,
             TrocarPapelAtivoUseCase trocarPapelAtivoUseCase,
+            SolicitarRecuperacaoSenhaUseCase solicitarRecuperacaoSenhaUseCase,
+            RedefinirSenhaUseCase redefinirSenhaUseCase,
+            AlterarSenhaUseCase alterarSenhaUseCase,
             UsuarioMapper usuarioMapper,
             SessaoMapper sessaoMapper) {
         this.cadastrarUsuarioUseCase = cadastrarUsuarioUseCase;
@@ -55,6 +67,9 @@ public class AuthController {
         this.renovarSessaoUseCase = renovarSessaoUseCase;
         this.encerrarSessaoUseCase = encerrarSessaoUseCase;
         this.trocarPapelAtivoUseCase = trocarPapelAtivoUseCase;
+        this.solicitarRecuperacaoSenhaUseCase = solicitarRecuperacaoSenhaUseCase;
+        this.redefinirSenhaUseCase = redefinirSenhaUseCase;
+        this.alterarSenhaUseCase = alterarSenhaUseCase;
         this.usuarioMapper = usuarioMapper;
         this.sessaoMapper = sessaoMapper;
     }
@@ -91,6 +106,27 @@ public class AuthController {
             @Valid @RequestBody TrocarPapelRequest request) {
         Usuario atualizado = trocarPapelAtivoUseCase.executar(usuario.id(), request.papel());
         return ResponseEntity.ok(usuarioMapper.toPapelAtivoResponse(atualizado));
+    }
+
+    /** Resposta sempre genérica (anti-enumeração) — exista o e-mail ou não, o 200 é o mesmo. */
+    @PostMapping("/recuperar-senha")
+    public ResponseEntity<Void> recuperarSenha(@Valid @RequestBody SolicitarRecuperacaoSenhaRequest request) {
+        solicitarRecuperacaoSenhaUseCase.executar(request.email());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/redefinir-senha")
+    public ResponseEntity<Void> redefinirSenha(@Valid @RequestBody RedefinirSenhaRequest request) {
+        redefinirSenhaUseCase.executar(request.token(), request.novaSenha());
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/senha")
+    public ResponseEntity<LoginResponse> alterarSenha(@AuthenticationPrincipal UsuarioAutenticado usuario,
+            @Valid @RequestBody AlterarSenhaRequest request) {
+        TokensSessao tokens = alterarSenhaUseCase.executar(usuario.id(), request.senhaAtual(), request.novaSenha(),
+                request.refreshToken());
+        return ResponseEntity.ok(sessaoMapper.toLoginResponse(tokens));
     }
 
     /** Sem dispositivo informado, identifica o aparelho pelo User-Agent. Normalização fica no usecase. */
