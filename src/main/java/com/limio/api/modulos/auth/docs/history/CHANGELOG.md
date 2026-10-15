@@ -119,3 +119,11 @@ confirmação de e-mail, já que os dois saem pelo mesmo canal (`EMAIL`). `Final
 e `CanalVerificacao.SMS` já existem no enum mas nenhum usecase os emite ainda — entram com a UC05 ("Confirmar
 e-mail"), fora deste card. Detalhe completo em
 `docs/features/TICKET-0033-recuperar-senha-e-alterar-senha-autenticada.md`.
+
+## 2026-10-15 — TICKET-0048 (proposta): troca de e-mail e telefone como operação do `auth`
+
+Proposta, **não implementada e não aprovada**: a troca de e-mail/telefone do card "Consultar e editar o perfil de
+Empregador" ficaria como usecase do `auth` (dono de `Usuario`), e o `perfil` não alteraria `Usuario`. Reaproveitaria
+`VerificacaoContato`/`CONFIRMACAO_EMAIL`/`EmailService`; SMS fica dependente da UC04 e o link de e-mail, da UC05.
+Também depende de decisão sobre adequar o telefone ao formato `+55DDNNNNNNNNN`, o que alteraria o cadastro (UC01).
+Detalhe em `modulos/perfil/docs/features/TICKET-0048-consultar-e-editar-perfil-empregador.md`.
