@@ -46,3 +46,26 @@ Code review: `ConsultarMeuPerfilUseCase` e `EditarNomeExibicaoUseCase` repetiam 
 `PerfilEmpregadorService.garantirPerfil(usuarioId)` faz a consulta à porta, o 404 e a criação, e devolve
 `MeuPerfilEmpregador`. O corte do nome inicial em 80 caracteres saiu do helper `NomeExibicaoInicial` para
 `PerfilEmpregador.nomeExibicaoInicialDe` (regra da entity; o service não pode importar `actions/helper`).
+
+## 2026-10-14 — TICKET-0054: perfil de atuação do Prestador
+
+Entram `categoria/` (entity raiz, taxonomia), `perfilprestador/` (entity raiz) e
+`perfilprestador/janelaatendimento/` (subentidade, sem ciclo de vida próprio), ao lado do `empregador/` do
+TICKET-0048. Migration `V11__criar_tabelas_perfil_prestador.sql` com a carga inicial das categorias — `V11` porque a
+`develop` já tem a `V10` (perfil do Empregador) e as PRs abertas #6 e #7 disputam a `V8`/`V9`.
+
+Desvios do DER: `categoria.grupo` e `categoria.ordem` (a tela agrupa e ordena; o DER não tem como). As quatro
+tabelas nasceram só com os campos que o card usa.
+
+Coordenadas do município-base vêm do Nominatim (OpenStreetMap) — escolha do dev, a validar com o tech lead. O
+servidor público tem política de uso (1 req/s, User-Agent próprio, cache, atribuição), então a URL é configurável e o
+usecase reaproveita coordenadas que algum perfil já gravou pro mesmo município antes de consultar. Se a
+geocodificação falha, o perfil não é salvo (503): sem coordenadas, o mural ficaria vazio sem aviso.
+
+`completo` usa critério provisório (exemplo do card: 1+ especialidade + município/UF + raio) enquanto o PO não
+decide. Fica num único método, `PerfilPrestador.calcularCompleto`.
+
+O perfil não exige papel ativo `PRESTADOR`, só o dono do token: a troca pra Prestador (UC09) tende a exigir perfil
+completo, e exigir o papel aqui criaria um ciclo em que ninguém consegue virar Prestador.
+
+Detalhe completo em `docs/features/TICKET-0054-salvar-perfil-de-atuacao-e-perfil-completo.md`.
