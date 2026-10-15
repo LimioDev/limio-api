@@ -22,6 +22,7 @@ public enum CodigoErro {
     SENHA_ATUAL_INCORRETA("Senha atual incorreta."),
     SENHA_IGUAL_ANTERIOR("A nova senha deve ser diferente da atual."),
     ENTIDADE_NAO_ENCONTRADA("Registro não encontrado."),
+    PERFIL_EMPREGADOR_NAO_ENCONTRADO("Perfil de empregador não encontrado."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;
