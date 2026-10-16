@@ -78,6 +78,6 @@ public class SolicitarRecuperacaoSenhaUseCase {
                 .build();
         verificacaoContatoService.salvar(verificacao);
 
-        emailService.enviarRecuperacaoSenha(usuario.getEmail(), deeplinkUrl + "/nova-senha?token=" + token);
+        emailService.enviarRecuperacaoSenha(usuario.getEmail(), deeplinkUrl + "nova-senha?token=" + token);
     }
 }

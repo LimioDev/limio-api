@@ -75,7 +75,7 @@ public class AlterarSenhaUseCase {
         sessaoService.salvar(sessaoAtual);
         sessaoService.revogarTodas(usuarioId, sessaoAtual.getId(), agora);
 
-        emailService.enviarSenhaAlterada(usuario.getEmail(), deeplinkUrl + "/recuperar-senha");
+        emailService.enviarSenhaAlterada(usuario.getEmail(), deeplinkUrl + "recuperar-senha");
         return tokens;
     }
 }

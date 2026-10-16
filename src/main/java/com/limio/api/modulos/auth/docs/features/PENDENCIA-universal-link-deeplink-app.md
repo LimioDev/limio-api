@@ -1,40 +1,32 @@
-# Pendência (sem ticket ainda) — Universal Link / Deep Link do app
+# Pendência (sem ticket ainda) — deep link do app pros fluxos de senha
 
 ## Contexto
 
 TICKET-0033 (recuperar senha) e TICKET-0034 (encerrar conta) geram link de e-mail que aponta pra
-`${app.deeplink.url}` + path (`/nova-senha?token=...`, `/recuperar-senha`). Produto é app **e** web —
-o core é app nativo, mas landing page e páginas pontuais (as próprias "Confirmar e-mail"/"Nova senha",
-card relacionado já citado no TICKET-0033) são web. Decidido em 2026-10-14 usar Universal Link (iOS) /
-App Link (Android) em vez de custom scheme (`limio://...`): o link do e-mail abre o app quando
-instalado, e cai de volta na página web normal (já outro card) quando não — **o fallback não é uma
-página nova, é a própria página web que já tá planejada**.
+`${app.deeplink.url}` + path (`/nova-senha?token=...`, `/recuperar-senha`).
 
-Hoje o link **não abre o app de verdade** — só existe pra não quebrar o boot (`app.deeplink.url` é
-`@Value` sem default) e sair um link sintaticamente válido no e-mail.
+Decisão 2026-10-16: **custom URL scheme**, não Universal Link/App Link. Recuperar/alterar senha é só
+app, sem fallback web nenhum atrás do link — sem página web pra cair, o setup de Universal Link
+(domínio https, `apple-app-site-association`, `assetlinks.json`, verificação Apple/Google) não compensa.
+Scheme registrado: **`limio`** (`limio://...`).
+
+`app.deeplink.url` já tem default fixo (`limio://`, em `application.properties`) — é igual em todo
+ambiente, não precisa mais de env var por deploy. O `APP_FRONTEND_URL` que tava setado na Railway
+(resquício de quando a ideia era Universal Link) pode ser removido.
 
 ## O que falta implementar, quando este card for aberto
 
-- [ ] `GET /.well-known/apple-app-site-association` no domínio onde a página web mora — JSON sem
-      extensão, Content-Type `application/json`, com `appID`/`paths` do app iOS
-      (`/nova-senha`, `/recuperar-senha`, `/confirmar-email` se existir).
-- [ ] `GET /.well-known/assetlinks.json` — mesma ideia pro Android (package name + SHA-256 do
-      certificado de assinatura, debug e release separados se forem diferentes).
-- [ ] Time mobile: Associated Domains (iOS) / App Links com `autoVerify` (Android) no projeto do app,
-      apontando pro mesmo domínio da página web.
-- [ ] Time mobile: telas que os paths abrem (`/nova-senha` lê `token` da query string) e o parsing.
-- [ ] Nenhuma mudança na página web em si — ela já é o fallback natural, não precisa de versão "sem
-      app" separada.
+- [ ] Confirmar que o app registra o scheme `limio` (iOS: `CFBundleURLTypes` no `Info.plist`; Android:
+      `intent-filter` com `<data android:scheme="limio" />`).
+- [ ] Telas no app que os paths abrem: `limio://nova-senha?token=...` (lê `token` da query string) e
+      `limio://recuperar-senha` (sem parâmetro, só "soube que foi você?").
+- [ ] Nada a fazer no back-end além do que já existe — `EmailService` já monta o link certo.
 
-## Decisão precisa de (antes de abrir o card)
+## Por que não precisa mais
 
-- Domínio final: o mesmo domínio onde a página web "Nova senha"/"Confirmar e-mail" vai morar
-  (recomendado — evita decisão duplicada) — depende de quem/onde essas páginas web serão hospedadas.
-- App ID + Team ID (iOS), pra montar o `appID` do AASA.
-- Package name + SHA-256 do certificado de assinatura (Android), debug e release se forem diferentes.
-
-## Enquanto isso
-
-`app.deeplink.url` (renomeado de `app.frontend.url` nesta sessão — nome antigo pressupunha site)
-continua configurável por env, sem default. Valor usado pra destravar deploy, até este card ser
-aberto: ver `AUTH_RETENCAO_*`/`APP_DEEPLINK_URL` em `application.properties`.
+- Sem Universal Link: não precisa de domínio, `/.well-known/apple-app-site-association` nem
+  `assetlinks.json`.
+- Sem página web: card relacionado [auth] [BACK-END] "Páginas web Confirmar e-mail/Nova senha" não se
+  aplica a este fluxo — se ele ainda existir pra outra coisa, é independente disto.
+- Trade-off aceito (decisão do produto, não técnica): link não funciona se o app não tiver instalado
+  (abre nada/erro do SO) — ok porque não tem alternativa nenhuma mesmo sem o app.
