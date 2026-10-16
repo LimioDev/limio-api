@@ -43,6 +43,13 @@ public class EmailService {
                         + "<p>O link vale por 1 hora. Se não foi você, ignore este e-mail.</p>");
     }
 
+    public void enviarConfirmacaoEmail(String destinatario, String link) {
+        enviar(destinatario, "Confirme seu e-mail",
+                "<p>Recebemos um pedido para usar este endereço na sua conta.</p>"
+                        + "<p><a href=\"" + link + "\">Clique aqui para confirmar seu e-mail</a></p>"
+                        + "<p>O link vale por 24 horas. Se não foi você, ignore este e-mail.</p>");
+    }
+
     public void enviarSenhaAlterada(String destinatario, String linkRecuperacao) {
         enviar(destinatario, "Sua senha foi alterada",
                 "<p>Sua senha foi alterada agora.</p>"

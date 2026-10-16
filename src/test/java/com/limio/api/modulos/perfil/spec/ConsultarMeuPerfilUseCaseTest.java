@@ -46,7 +46,7 @@ class ConsultarMeuPerfilUseCaseTest {
     }
 
     private static DadosUsuario dados(String nomeCompleto) {
-        return new DadosUsuario(nomeCompleto, "maria@example.com", "11999998888", Instant.parse("2026-10-01T10:00:00Z"),
+        return new DadosUsuario(nomeCompleto, "maria@example.com", "+5511999998888", Instant.parse("2026-10-01T10:00:00Z"),
                 null);
     }
 

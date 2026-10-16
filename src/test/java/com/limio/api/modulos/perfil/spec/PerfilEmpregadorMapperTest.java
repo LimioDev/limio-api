@@ -23,20 +23,20 @@ class PerfilEmpregadorMapperTest {
         Instant emailConfirmado = Instant.parse("2026-10-01T10:00:00Z");
         PerfilEmpregador perfil = PerfilEmpregador.builder().usuarioId(UUID.randomUUID()).nomeExibicao("Maria")
                 .mediaAvaliacoes(new BigDecimal("4.5")).qtdAvaliacoes(2).build();
-        DadosUsuario dados = new DadosUsuario("Maria da Silva", "maria@example.com", "11999998888", emailConfirmado,
+        DadosUsuario dados = new DadosUsuario("Maria da Silva", "maria@example.com", "+5511999998888", emailConfirmado,
                 null);
 
         PerfilEmpregadorResponse response = mapper.toResponse(new MeuPerfilEmpregador(perfil, dados));
 
         assertThat(response).isEqualTo(new PerfilEmpregadorResponse("Maria", new BigDecimal("4.5"), 2,
-                "maria@example.com", "11999998888", emailConfirmado, null));
+                "maria@example.com", "+5511999998888", emailConfirmado, null));
     }
 
     @Test
     void deveManterNuloSemAvaliacaoENaoConfirmado() {
         PerfilEmpregador perfil = PerfilEmpregador.builder().usuarioId(UUID.randomUUID()).nomeExibicao("Maria")
                 .build();
-        DadosUsuario dados = new DadosUsuario("Maria", "m@example.com", "11999998888", null, null);
+        DadosUsuario dados = new DadosUsuario("Maria", "m@example.com", "+5511999998888", null, null);
 
         PerfilEmpregadorResponse response = mapper.toResponse(new MeuPerfilEmpregador(perfil, dados));
 

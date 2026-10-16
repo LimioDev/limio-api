@@ -53,8 +53,16 @@ class ConsultaDadosUsuarioServiceTest {
 
         Optional<DadosUsuario> dados = service.buscarPorId(USUARIO_ID);
 
-        assertThat(dados).contains(new DadosUsuario("Maria da Silva", "maria@example.com", "11999998888",
+        assertThat(dados).contains(new DadosUsuario("Maria da Silva", "maria@example.com", "+5511999998888",
                 emailConfirmado, telefoneConfirmado));
+    }
+
+    @Test
+    void deveDevolverOTelefoneEmFormatoInternacionalMesmoParaLegadoDeDezDigitos() {
+        when(usuarioService.buscarPorId(USUARIO_ID)).thenReturn(Optional.of(usuario().telefone("1133334444").build()));
+
+        assertThat(service.buscarPorId(USUARIO_ID)).get().extracting(DadosUsuario::telefone)
+                .isEqualTo("+551133334444");
     }
 
     @Test

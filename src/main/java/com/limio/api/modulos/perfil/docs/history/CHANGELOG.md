@@ -29,3 +29,11 @@ O perfil não pode ser criado no cadastro (o `auth` importaria o `perfil`) e o p
 (criar o primeiro exigiria infraestrutura nova e backfill das contas existentes). Por isso `GET` e `PATCH`
 criam o perfil no primeiro acesso, com o nome completo do cadastro, de forma segura contra acesso simultâneo
 (`ON CONFLICT DO NOTHING`). `PATCH` passou a devolver o mesmo corpo do `GET`.
+
+## 2026-10-16 — TICKET-0048 contato trocado no `auth` aparece no perfil
+
+A troca de e-mail e de telefone é operação do `auth` (`PATCH /auth/email`, `PATCH /auth/telefone`); o `perfil` não
+mudou. O `GET /conta/perfil-empregador` já devolve o contato novo, com as confirmações nulas, pela porta
+`ConsultaDadosUsuario` (coberto por story). O telefone sai em formato internacional (`+55...`): o banco guarda só os
+dígitos nacionais e quem implementa a porta (`auth`) converte, então o `perfil` não conhece a regra. A confirmação de e-mail (UC05) e de telefone (UC04) não existe; o link
+enviado na troca de e-mail não conclui a confirmação.

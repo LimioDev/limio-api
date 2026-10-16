@@ -12,9 +12,10 @@ Relacionados: UC01 (ETI-30, cadastro), UC04 (confirmar telefone por OTP), UC05 (
 
 Em implementação por partes. **Implementado** (aguardando confirmação do tech lead nos pontos marcados): tabela
 `perfil_empregador`, `GET /conta/perfil-empregador`, `PATCH /conta/perfil-empregador/nome-exibicao` (Parte 1) e a
-leitura dos dados do usuário pela porta de `comum/`, com criação do perfil no primeiro acesso (Parte 2).
-**Não implementado**: troca de e-mail e de telefone, confirmação de contato, foto, endereços (partes seguintes /
-dependências abaixo).
+leitura dos dados do usuário pela porta de `comum/`, com criação do perfil no primeiro acesso (Parte 2), e a troca de
+e-mail e de telefone (Parte 3, módulo `auth` — ver `auth/docs/features/TICKET-0048-trocar-email-e-telefone.md`).
+**Não implementado**: confirmação de e-mail (UC05) e de telefone (UC04/SMS) — o link de confirmação enviado na troca de
+e-mail **não permite concluir a confirmação** —, foto, endereços (dependências abaixo).
 
 Legenda usada neste documento:
 
@@ -93,7 +94,7 @@ Justificativa das rotas (**Pendente**: validar com tech lead e com o front):
   `PUT /conta/perfil-empregador` substitui o `PATCH` de nome.
 - Sem `/me`: não há precedente no repositório.
 
-### Resposta do `GET` (**Proposto**; Parte 2 devolve os campos abaixo, menos `foto` e `enderecos`)
+### Resposta do `GET` (**Proposto**; devolve os campos abaixo, menos `foto` e `enderecos`)
 
 ```json
 {
@@ -158,12 +159,11 @@ contagem real igual a zero**.
 ### Trocar telefone (**Proposto**)
 
 - Regra do card: DDD + 9 dígitos começando por 9; gravado como `+55DDNNNNNNNNN`.
-- **Divergência com o código atual**: o cadastro hoje valida `\d{10,11}` (aceita fixo de 10 dígitos), remove
-  não-dígitos e grava só dígitos em `usuario.telefone` (`VARCHAR(11)`, V1). Telefone não é usado em login, não é
-  único e não aparece em `UsuarioResponse`. Adequar ao formato do card exigiria migration (`VARCHAR(14)` e
-  normalização das linhas existentes), ajuste de `CadastroRequest`/`UsuarioMapper`/mensagens de validação e dos
-  testes que usam telefone, e **mudaria a regra do UC01** (deixaria de aceitar fixo de 10 dígitos).
-  **Pendente (PO + tech lead)**: nada disso é alterado na etapa 1.
+- **Decisão (implementada na Parte 3)**: a frase "gravado como `+55...`" do card foi lida como **contrato da API**; o
+  banco continua com os dígitos nacionais (`usuario.telefone`, `VARCHAR(11)`), como o cadastro já grava, sem migration e
+  sem coexistência de formatos. O cadastro (UC01) valida `\d{10,11}` (aceita fixo) e **não foi alterado**; a troca exige
+  celular. **A confirmar com o PO/tech lead** que a leitura do card está correta; se for "banco", a mudança é uma
+  migration de ampliação e a conversão passa a gravar `+55`.
 - Grava o novo telefone em `Usuario` e zera `telefoneConfirmadoEm`. **Não envia SMS** (Dependência UC04).
 
 ### Efeito da reconfirmação
@@ -196,7 +196,7 @@ Nenhuma das decisões abaixo foi aprovada; todas dependem de confirmação do te
 - Alternativas: (a) rotas em `perfil` acionando o `auth` por evento — descartada por complicar a resposta
   síncrona ("link enviado"); (b) a troca virar card `[auth]` próprio — **em aberto**, pergunta do card.
 
-### 2. Leitura de contato para o `GET` — Implementado na Parte 2 / Pendente (confirmação do tech lead)
+### 2. Leitura de contato para o `GET`
 
 - Porta (interface) em `comum/`, por exemplo `ConsultaDadosUsuario` (nome completo, e-mail, telefone, datas de
   confirmação), implementada no `auth` e consumida pelo `perfil`. Cumpre o critério "usado por 2+ módulos hoje".
@@ -204,7 +204,7 @@ Nenhuma das decisões abaixo foi aprovada; todas dependem de confirmação do te
 - Alternativa: o front consultar dois endpoints (um do `perfil`, um do `auth`) — quebraria o contrato único do
   card.
 
-### 3. Criação do `PerfilEmpregador` — Implementado na Parte 2 (sob demanda) / Pendente (confirmação do tech lead)
+### 3. Criação do `PerfilEmpregador`
 
 - **Sob demanda (get-or-create)** no primeiro acesso, com `nomeExibicao = nomeCompleto`; corrida protegida por
   `UNIQUE(usuario_id)`. Cobre contas já existentes sem backfill e não exige infraestrutura nova.
@@ -240,7 +240,9 @@ candidatura é feito por `*ConfirmadoEm` nulo. Pergunta do card, **aberta**.
   atualizado".
 - **Conta encerrada ou usuário inexistente com token vivo**: 404 `PERFIL_EMPREGADOR_NAO_ENCONTRADO`, sem criar
   perfil. Conta suspensa continua lendo o próprio perfil.
-- **Telefone** sai como gravado hoje (só dígitos, sem `+55`) até a decisão do formato.
+- **Telefone**: o banco guarda só os dígitos nacionais (`11999998888`); a porta `ConsultaDadosUsuario` entrega o número em
+  formato internacional (`+5511999998888`), então o `GET` já sai com `+55` sem o `perfil` conhecer a regra de conversão
+  (ela é do `auth`, `TelefoneHelper`). Contrato da API = `+55`; armazenamento = dígitos.
 
 ## Limitações e dependências
 
@@ -258,7 +260,6 @@ candidatura é feito por `*ConfirmadoEm` nulo. Pergunta do card, **aberta**.
 
 Reproduzidas do card, mais as levantadas na análise.
 
-**Tech lead**
 
 - A troca de e-mail/telefone é operação do `auth` chamada por este card ou vira card `[auth]` próprio?
 - `statusConta` volta a `PENDENTE_VERIFICACAO` na troca? (proposta: não)
@@ -266,11 +267,8 @@ Reproduzidas do card, mais as levantadas na análise.
 - Os contadores de "Atividade" ficam fora desta sprint?
 - Porta em `comum/` para leitura de contato é aceita pela ADR?
 - Rotas finais.
-- Adequar o formato `+55DDNNNNNNNNN` agora (migration, cadastro, testes) ou tratar em card separado?
+- O `+55` do card é contrato da API (implementado assim) ou formato de armazenamento? (confirmar com o PO)
 - O endpoint exige `papelAtivo == EMPREGADOR`? (proposta: não)
-
-**PO**
-
 - "E-mail de contato" é o mesmo e-mail de login?
 - O nome de exibição é um só para os dois papéis ou um por papel? (assumido: só `perfil_empregador` agora)
 - Tamanho máximo do nome de exibição.

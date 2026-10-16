@@ -153,6 +153,36 @@ class ConsultarEEditarPerfilEmpregadorStoryTest {
     }
 
     @Test
+    void dadoTrocaDeEmailETelefonePeloAuth_quandoConsultaOPerfil_entaoVeOsNovosContatosSemConfirmacao()
+            throws Exception {
+        String token = cadastrarELogar(MARIA);
+        jdbc.update("update usuario set email_confirmado_em = now(), telefone_confirmado_em = now() where email = ?",
+                MARIA.email());
+        consultar(token)
+                .andExpect(jsonPath("$.emailConfirmadoEm", notNullValue()))
+                .andExpect(jsonPath("$.telefoneConfirmadoEm", notNullValue()));
+
+        mockMvc.perform(patch("/auth/email")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("novoEmail", "maria.nova@teste.com",
+                        "senhaAtual", SENHA)))).andExpect(status().isOk());
+        mockMvc.perform(patch("/auth/telefone")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("novoTelefone", "(21) 98888-7777",
+                        "senhaAtual", SENHA)))).andExpect(status().isOk());
+
+        consultar(token)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email", is("maria.nova@teste.com")))
+                .andExpect(jsonPath("$.telefone", is("+5521988887777")))
+                .andExpect(jsonPath("$.emailConfirmadoEm", nullValue()))
+                .andExpect(jsonPath("$.telefoneConfirmadoEm", nullValue()))
+                .andExpect(jsonPath("$.nomeExibicao", is("Maria da Silva")));
+    }
+
+    @Test
     void dadoUsuarioAutenticado_quandoConsulta_entaoDevolveDadosReaisDoCadastro() throws Exception {
         String token = cadastrarELogar(MARIA);
 
@@ -160,7 +190,7 @@ class ConsultarEEditarPerfilEmpregadorStoryTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nomeExibicao", is("Maria da Silva")))
                 .andExpect(jsonPath("$.email", is("maria@example.com")))
-                .andExpect(jsonPath("$.telefone", is("11999998888")))
+                .andExpect(jsonPath("$.telefone", is("+5511999998888")))
                 .andExpect(jsonPath("$.emailConfirmadoEm", nullValue()))
                 .andExpect(jsonPath("$.telefoneConfirmadoEm", nullValue()))
                 .andExpect(jsonPath("$.mediaAvaliacoes", nullValue()))
@@ -198,11 +228,11 @@ class ConsultarEEditarPerfilEmpregadorStoryTest {
         consultar(tokenMaria)
                 .andExpect(jsonPath("$.nomeExibicao", is("Maria da Silva")))
                 .andExpect(jsonPath("$.email", is("maria@example.com")))
-                .andExpect(jsonPath("$.telefone", is("11999998888")));
+                .andExpect(jsonPath("$.telefone", is("+5511999998888")));
         consultar(tokenJoao)
                 .andExpect(jsonPath("$.nomeExibicao", is("João Pereira")))
                 .andExpect(jsonPath("$.email", is("joao@example.com")))
-                .andExpect(jsonPath("$.telefone", is("21988887777")));
+                .andExpect(jsonPath("$.telefone", is("+5521988887777")));
     }
 
     @Test

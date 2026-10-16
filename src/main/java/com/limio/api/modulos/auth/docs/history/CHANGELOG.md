@@ -134,3 +134,22 @@ Para o módulo `perfil` ler nome, e-mail, telefone e datas de confirmação sem 
 passou a implementar `comum/portas/ConsultaDadosUsuario` em `actions/service/ConsultaDadosUsuarioService`
 (só leitura; conta encerrada responde como inexistente). `UsuarioService` ganhou `buscarPorId` (`Optional`, não
 lança). Nenhuma regra de cadastro, login ou confirmação de contato mudou.
+
+## 2026-10-16 — TICKET-0048: troca de e-mail e telefone, sem confirmação
+
+`PATCH /auth/email` e `PATCH /auth/telefone`, com `senhaAtual` obrigatória. **A confirmação de e-mail não foi
+implementada**: o link emitido na troca de e-mail é inerte porque o consumidor (UC05) não existe; SMS/OTP (UC04) também
+não existe e nada é simulado. Decisões que não ficam óbvias no código:
+
+- Lock de linha em `usuario` no início da troca (`buscarParaAtualizarOuFalhar`): sem ele, requisições simultâneas
+  furam o limite de 3 emissões por hora (verificado: 6 emissões sem o lock).
+- Unicidade do e-mail garantida pela constraint, traduzida em `salvarComEmailUnico` (flush antes de qualquer outra
+  escrita); o e-mail só sai depois do commit (`ExecutarAposCommit`).
+- Tokens `CONFIRMACAO_EMAIL` pendentes são invalidados a cada troca/reemissão, porque o token não guarda o e-mail-alvo;
+  `destino_hash` (D10) ficou como proposta não aprovada.
+- Telefone: o **banco guarda só os dígitos nacionais** (`11999998888`, `VARCHAR(11)` como sempre), igual ao cadastro; o
+  `+55` fica no contrato da API e nas integrações (`TelefoneHelper.paraInternacional`, aplicado também pela porta
+  `ConsultaDadosUsuario`). Uma primeira versão gravava `+55...` e ampliava a coluna para `VARCHAR(14)`, deixando dois
+  formatos na coluna; foi descartada antes do commit, sem migration. O cadastro (UC01) segue intocado e as linhas
+  legadas não foram tocadas.
+Detalhe em `docs/features/TICKET-0048-trocar-email-e-telefone.md`.

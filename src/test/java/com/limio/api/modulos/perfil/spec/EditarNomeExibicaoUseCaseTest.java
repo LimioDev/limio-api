@@ -27,7 +27,7 @@ import com.limio.api.modulos.perfil.excecao.PerfilEmpregadorNaoEncontradoExcepti
 class EditarNomeExibicaoUseCaseTest {
 
     private static final UUID USUARIO_ID = UUID.randomUUID();
-    private static final DadosUsuario DADOS = new DadosUsuario("Maria da Silva", "maria@example.com", "11999998888",
+    private static final DadosUsuario DADOS = new DadosUsuario("Maria da Silva", "maria@example.com", "+5511999998888",
             null, null);
 
     @Mock

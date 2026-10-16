@@ -7,13 +7,10 @@ import org.springframework.stereotype.Component;
 
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.DadosUsuario;
+import com.limio.api.modulos.auth.actions.helper.TelefoneHelper;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
 
-/**
- * Adapter que expõe o {@link Usuario} a outros módulos pela porta {@link ConsultaDadosUsuario},
- * sem vazar a entity. Conta encerrada responde como inexistente.
- */
 @Component
 public class ConsultaDadosUsuarioService implements ConsultaDadosUsuario {
 
@@ -34,7 +31,7 @@ public class ConsultaDadosUsuarioService implements ConsultaDadosUsuario {
         return new DadosUsuario(
                 usuario.getNomeCompleto(),
                 usuario.getEmail(),
-                usuario.getTelefone(),
+                TelefoneHelper.paraInternacional(usuario.getTelefone()).orElse(null),
                 usuario.getEmailConfirmadoEm(),
                 usuario.getTelefoneConfirmadoEm());
     }
