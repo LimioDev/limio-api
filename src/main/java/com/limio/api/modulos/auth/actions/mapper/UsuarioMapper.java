@@ -4,7 +4,9 @@ import org.springframework.stereotype.Component;
 
 import com.limio.api.comum.base.BaseMapper;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
+import com.limio.api.modulos.auth.actions.helper.TelefoneHelper;
 import com.limio.api.modulos.auth.records.CadastroRequest;
+import com.limio.api.modulos.auth.records.ContatoResponse;
 import com.limio.api.modulos.auth.records.PapelAtivoResponse;
 import com.limio.api.modulos.auth.records.UsuarioResponse;
 import com.limio.api.modulos.auth.usuario.Usuario;
@@ -40,5 +42,13 @@ public class UsuarioMapper implements BaseMapper<Usuario, CadastroRequest, Usuar
 
     public PapelAtivoResponse toPapelAtivoResponse(Usuario entity) {
         return new PapelAtivoResponse(entity.getPapelAtivo());
+    }
+
+    public ContatoResponse toContatoResponse(Usuario entity) {
+        return new ContatoResponse(
+                entity.getEmail(),
+                TelefoneHelper.paraInternacional(entity.getTelefone()).orElse(null),
+                entity.getEmailConfirmadoEm(),
+                entity.getTelefoneConfirmadoEm());
     }
 }

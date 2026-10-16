@@ -69,6 +69,29 @@ nada. Controller devolve 204 nos dois casos.
 usuário pelo id do token, recusa conta encerrada/suspensa e grava `papelAtivo`. `UsuarioMapper.toPapelAtivoResponse`
 → 200. O token de acesso em uso não muda — o papel novo chega no próximo `/auth/refresh` ou login.
 
+## `PATCH /auth/email` (TICKET-0048 — trocar e-mail)
+
+1. `AuthController.trocarEmail` recebe `@AuthenticationPrincipal UsuarioAutenticado` e `TrocarEmailRequest`
+   (e-mail normalizado, formato, `senhaAtual` obrigatória) e chama `TrocarEmailUseCase.executar(usuario.id(), ...)`.
+2. O usecase carrega o usuário com lock de linha (`UsuarioService.buscarParaAtualizarOuFalhar`), exige conta ativa e
+   confere a senha atual.
+3. E-mail igual ao atual: confirmado → não faz nada; não confirmado → reemite o link. E-mail diferente: recusa se for de
+   outra conta (`ContatoNaoPermitidoException`, 409).
+4. Conta o limite (`VerificacaoContatoService.contarDesde`, 3/h) → `TrocaContatoLimiteExcedidaException` (429).
+5. Troca: grava e-mail, zera `emailConfirmadoEm` e força o `UPDATE` (`UsuarioService.salvarComEmailUnico`, que traduz a
+   violação de `uk_usuario_email`).
+6. Consome os tokens `CONFIRMACAO_EMAIL` pendentes, cria o token novo (só o hash) e agenda o envio do link para
+   depois do commit (`ExecutarAposCommit` + `EmailService.enviarConfirmacaoEmail`). **O link não conclui a
+   confirmação: não há UC05.**
+7. O controller devolve `ContatoResponse` via `UsuarioMapper.toContatoResponse`.
+
+## `PATCH /auth/telefone` (TICKET-0048 — trocar telefone)
+
+Mesmo começo (lock, conta ativa, senha atual). `TrocarTelefoneRequest` normaliza com `TelefoneHelper` para
+dígitos nacionais (`DDNNNNNNNNN`, o formato do banco); o usecase grava e zera `telefoneConfirmadoEm`. A resposta
+(`UsuarioMapper.toContatoResponse`) devolve o número em `+55...` via `TelefoneHelper.paraInternacional`. Não cria token,
+não envia SMS (UC04 inexistente).
+
 ## Classes envolvidas
 
 | Classe | Papel |
@@ -79,9 +102,14 @@ usuário pelo id do token, recusa conta encerrada/suspensa e grava `papelAtivo`.
 | `RenovarSessaoUseCase` | Renovação do token de acesso com rotação do refresh token |
 | `EncerrarSessaoUseCase` | Logout do aparelho (UC08) |
 | `TrocarPapelAtivoUseCase` | Troca de papel ativo (UC09) |
-| `UsuarioMapper` | `Usuario` ⇄ `CadastroRequest`/`UsuarioResponse`/`PapelAtivoResponse` |
+| `TrocarEmailUseCase` | Troca de e-mail (TICKET-0048): lock, unicidade, limite, invalida tokens, emite link após o commit |
+| `TrocarTelefoneUseCase` | Troca de telefone (TICKET-0048): grava dígitos nacionais, limpa confirmação; sem SMS |
+| `ConsultaDadosUsuarioService` | Implementa a porta `comum/portas/ConsultaDadosUsuario` para outros módulos (só leitura) |
+| `TelefoneHelper` | Helper puro — `normalizar` (entrada → dígitos nacionais, só a troca) e `paraInternacional` (saída → `+55...`, usado pelo mapper e pela porta) |
+| `ExecutarAposCommit` | Helper — roda uma ação (envio de e-mail) só depois do commit da transação |
+| `UsuarioMapper` | `Usuario` ⇄ `CadastroRequest`/`UsuarioResponse`/`PapelAtivoResponse`/`ContatoResponse` |
 | `SessaoMapper` | `TokensSessao` → `LoginResponse` |
-| `UsuarioService` | Extends `comum/base/BaseService` — CRUD genérico + `existePorEmail`/`existePorCpf`/`buscarPorEmail` |
+| `UsuarioService` | Extends `comum/base/BaseService` — CRUD genérico + `existePorEmail`/`existePorCpf`/`buscarPorEmail`/`buscarPorId`, `buscarParaAtualizarOuFalhar` (lock) e `salvarComEmailUnico` |
 | `CpfBloqueadoService` | Extends `comum/base/BaseService` — CRUD genérico + `estaBloqueado` (cooldown 12 meses) |
 | `SessaoService` | Extends `comum/base/BaseService` — CRUD genérico + busca por hash do refresh token |
 | `TentativaLoginService` | Extends `comum/base/BaseService` — CRUD genérico + `ultimasFalhas` do e-mail |
@@ -93,6 +121,7 @@ usuário pelo id do token, recusa conta encerrada/suspensa e grava `papelAtivo`.
 | `RefreshTokenHelper` | Helper puro — gera refresh token e calcula o SHA-256 guardado na sessão |
 | `LimiteTentativasLogin` | Helper — regra do rate limit (máx. de falhas, janela, duração do bloqueio) |
 | `IdadeMinimaNaoAtingidaException`, `CpfInvalidoException`, `CadastroIndisponivelException` | Exceções de negócio do UC01 |
+| `ContatoNaoPermitidoException`, `TrocaContatoLimiteExcedidaException` | Exceções de negócio do TICKET-0048 (troca de contato) |
 | `CredenciaisInvalidasException`, `LoginTemporariamenteBloqueadoException`, `ContaSuspensaException`, `SessaoInvalidaException`, `PapelInvalidoException` | Exceções de negócio do TICKET-0032 |
 
 Atualize esta página sempre que uma classe mudar de responsabilidade.
