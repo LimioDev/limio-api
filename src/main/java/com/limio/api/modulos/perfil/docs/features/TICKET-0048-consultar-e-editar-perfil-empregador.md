@@ -10,7 +10,11 @@ Relacionados: UC01 (ETI-30, cadastro), UC04 (confirmar telefone por OTP), UC05 (
 
 ## Status
 
-Documentado — não implementado 
+Em implementação por partes. **Implementado** (aguardando confirmação do tech lead nos pontos marcados): tabela
+`perfil_empregador`, `GET /conta/perfil-empregador`, `PATCH /conta/perfil-empregador/nome-exibicao` (Parte 1) e a
+leitura dos dados do usuário pela porta de `comum/`, com criação do perfil no primeiro acesso (Parte 2).
+**Não implementado**: troca de e-mail e de telefone, confirmação de contato, foto, endereços (partes seguintes /
+dependências abaixo).
 
 Legenda usada neste documento:
 
@@ -89,7 +93,7 @@ Justificativa das rotas (**Pendente**: validar com tech lead e com o front):
   `PUT /conta/perfil-empregador` substitui o `PATCH` de nome.
 - Sem `/me`: não há precedente no repositório.
 
-### Resposta do `GET` (**Proposto**)
+### Resposta do `GET` (**Proposto**; Parte 2 devolve os campos abaixo, menos `foto` e `enderecos`)
 
 ```json
 {
@@ -192,7 +196,7 @@ Nenhuma das decisões abaixo foi aprovada; todas dependem de confirmação do te
 - Alternativas: (a) rotas em `perfil` acionando o `auth` por evento — descartada por complicar a resposta
   síncrona ("link enviado"); (b) a troca virar card `[auth]` próprio — **em aberto**, pergunta do card.
 
-### 2. Leitura de contato para o `GET` — Proposto / Pendente
+### 2. Leitura de contato para o `GET` — Implementado na Parte 2 / Pendente (confirmação do tech lead)
 
 - Porta (interface) em `comum/`, por exemplo `ConsultaDadosUsuario` (nome completo, e-mail, telefone, datas de
   confirmação), implementada no `auth` e consumida pelo `perfil`. Cumpre o critério "usado por 2+ módulos hoje".
@@ -200,7 +204,7 @@ Nenhuma das decisões abaixo foi aprovada; todas dependem de confirmação do te
 - Alternativa: o front consultar dois endpoints (um do `perfil`, um do `auth`) — quebraria o contrato único do
   card.
 
-### 3. Criação do `PerfilEmpregador` — Proposto / Pendente
+### 3. Criação do `PerfilEmpregador` — Implementado na Parte 2 (sob demanda) / Pendente (confirmação do tech lead)
 
 - **Sob demanda (get-or-create)** no primeiro acesso, com `nomeExibicao = nomeCompleto`; corrida protegida por
   `UNIQUE(usuario_id)`. Cobre contas já existentes sem backfill e não exige infraestrutura nova.
@@ -219,6 +223,24 @@ nenhum fluxo de confirmação de e-mail a reutilizar: só a infraestrutura.
 
 Não voltar para `PENDENTE_VERIFICACAO`: o login é permitido antes de confirmar (UC05) e o bloqueio de anúncio e
 candidatura é feito por `*ConfirmadoEm` nulo. Pergunta do card, **aberta**.
+
+## Detalhe da implementação 
+
+- **Porta**: `comum/portas/ConsultaDadosUsuario` (`Optional<DadosUsuario> buscarPorId(UUID)`) + record
+  `DadosUsuario` (nome completo, e-mail, telefone, `emailConfirmadoEm`, `telefoneConfirmadoEm`). Implementada em
+  `auth/actions/service/ConsultaDadosUsuarioService`; devolve vazio para usuário inexistente ou conta encerrada
+  (`anonimizadoEm`). `perfil` não importa nada de `modulos.auth`.
+- **Identidade**: o único identificador usado é `UsuarioAutenticado.id()` (token); nenhuma rota/corpo recebe id de
+  usuário, então um usuário não alcança dados de outro.
+- **Criação do perfil**: o cadastro (módulo `auth`) não conhece `perfil` e o projeto não tem eventos entre módulos;
+  por isso o perfil é criado no primeiro `GET` ou `PATCH`, com `nomeExibicao = nomeCompleto` (cortado em 80
+  caracteres, limite provisório). `INSERT ... ON CONFLICT (usuario_id) DO NOTHING` (nativo, sem migration nova) torna
+  seguro o primeiro acesso simultâneo. O `GET` passa a ter efeito de escrita na primeira chamada.
+- **Resposta única**: `PATCH` devolve o mesmo corpo do `GET` (perfil + contato), conforme "200 com o perfil
+  atualizado".
+- **Conta encerrada ou usuário inexistente com token vivo**: 404 `PERFIL_EMPREGADOR_NAO_ENCONTRADO`, sem criar
+  perfil. Conta suspensa continua lendo o próprio perfil.
+- **Telefone** sai como gravado hoje (só dígitos, sem `+55`) até a decisão do formato.
 
 ## Limitações e dependências
 

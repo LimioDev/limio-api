@@ -15,6 +15,10 @@ public class UsuarioService extends BaseService<Usuario, UUID, UsuarioRepository
         super(repository);
     }
 
+    public Optional<Usuario> buscarPorId(UUID id) {
+        return repository.findById(id);
+    }
+
     /** Vazio é fluxo normal no login (e-mail inexistente vira credencial inválida), por isso não lança. */
     public Optional<Usuario> buscarPorEmail(String email) {
         return repository.findByEmailIgnoreCase(email);

@@ -127,3 +127,10 @@ Empregador" ficaria como usecase do `auth` (dono de `Usuario`), e o `perfil` nã
 `VerificacaoContato`/`CONFIRMACAO_EMAIL`/`EmailService`; SMS fica dependente da UC04 e o link de e-mail, da UC05.
 Também depende de decisão sobre adequar o telefone ao formato `+55DDNNNNNNNNN`, o que alteraria o cadastro (UC01).
 Detalhe em `modulos/perfil/docs/features/TICKET-0048-consultar-e-editar-perfil-empregador.md`.
+
+## 2026-10-16 — TICKET-0048: `auth` implementa a porta `ConsultaDadosUsuario`
+
+Para o módulo `perfil` ler nome, e-mail, telefone e datas de confirmação sem importar classe do `auth`, o `auth`
+passou a implementar `comum/portas/ConsultaDadosUsuario` em `actions/service/ConsultaDadosUsuarioService`
+(só leitura; conta encerrada responde como inexistente). `UsuarioService` ganhou `buscarPorId` (`Optional`, não
+lança). Nenhuma regra de cadastro, login ou confirmação de contato mudou.

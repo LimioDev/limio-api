@@ -5,7 +5,6 @@ import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 import com.limio.api.comum.base.BaseService;
-import com.limio.api.modulos.perfil.excecao.PerfilEmpregadorNaoEncontradoException;
 
 @Component
 public class PerfilEmpregadorService extends BaseService<PerfilEmpregador, UUID, PerfilEmpregadorRepository> {
@@ -14,7 +13,10 @@ public class PerfilEmpregadorService extends BaseService<PerfilEmpregador, UUID,
         super(repository);
     }
 
-    public PerfilEmpregador buscarPorUsuarioIdOuFalhar(UUID usuarioId) {
-        return repository.findByUsuarioId(usuarioId).orElseThrow(PerfilEmpregadorNaoEncontradoException::new);
+    public PerfilEmpregador buscarOuCriar(UUID usuarioId, String nomeInicial) {
+        return repository.findByUsuarioId(usuarioId).orElseGet(() -> {
+            repository.inserirSeAusente(usuarioId, nomeInicial);
+            return repository.findByUsuarioId(usuarioId).orElseThrow();
+        });
     }
 }

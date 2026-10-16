@@ -2,20 +2,22 @@ package com.limio.api.modulos.perfil.actions.mapper;
 
 import org.springframework.stereotype.Component;
 
+import com.limio.api.modulos.perfil.empregador.MeuPerfilEmpregador;
 import com.limio.api.modulos.perfil.empregador.PerfilEmpregador;
 import com.limio.api.modulos.perfil.records.PerfilEmpregadorResponse;
 
-/**
- * Anti-corruption layer entre {@link PerfilEmpregador} e os records HTTP. Chamado só pelo controller.
- * Não implementa {@code BaseMapper}: nenhum request cria a entity (o perfil só é editado).
- */
 @Component
 public class PerfilEmpregadorMapper {
 
-    public PerfilEmpregadorResponse toResponse(PerfilEmpregador entity) {
+    public PerfilEmpregadorResponse toResponse(MeuPerfilEmpregador meuPerfil) {
+        PerfilEmpregador perfil = meuPerfil.perfil();
         return new PerfilEmpregadorResponse(
-                entity.getNomeExibicao(),
-                entity.getMediaAvaliacoes(),
-                entity.getQtdAvaliacoes());
+                perfil.getNomeExibicao(),
+                perfil.getMediaAvaliacoes(),
+                perfil.getQtdAvaliacoes(),
+                meuPerfil.dados().email(),
+                meuPerfil.dados().telefone(),
+                meuPerfil.dados().emailConfirmadoEm(),
+                meuPerfil.dados().telefoneConfirmadoEm());
     }
 }
