@@ -80,8 +80,8 @@ usuário pelo id do token, recusa conta encerrada/suspensa e grava `papelAtivo`.
 4. Conta o limite (`VerificacaoContatoService.contarDesde`, 3/h) → `TrocaContatoLimiteExcedidaException` (429).
 5. Troca: grava e-mail, zera `emailConfirmadoEm` e força o `UPDATE` (`UsuarioService.salvarComEmailUnico`, que traduz a
    violação de `uk_usuario_email`).
-6. Consome os tokens `CONFIRMACAO_EMAIL` pendentes, cria o token novo (só o hash) e agenda o envio do link para
-   depois do commit (`ExecutarAposCommit` + `EmailService.enviarConfirmacaoEmail`). **O link não conclui a
+6. Consome os tokens `CONFIRMACAO_EMAIL` pendentes, cria o token novo (só o hash) e publica o evento do link
+   (`ConfirmacaoEmailSolicitadaEvent`), enviado depois do commit por `EmailEventosService`. **O link não conclui a
    confirmação: não há UC05.**
 7. O controller devolve `ContatoResponse` via `UsuarioMapper.toContatoResponse`.
 
@@ -102,11 +102,12 @@ não envia SMS (UC04 inexistente).
 | `RenovarSessaoUseCase` | Renovação do token de acesso com rotação do refresh token |
 | `EncerrarSessaoUseCase` | Logout do aparelho (UC08) |
 | `TrocarPapelAtivoUseCase` | Troca de papel ativo (UC09) |
-| `TrocarEmailUseCase` | Troca de e-mail (TICKET-0048): lock, unicidade, limite, invalida tokens, emite link após o commit |
+| `TrocarEmailUseCase` | Troca de e-mail (TICKET-0048): lock, unicidade, limite, invalida tokens, emite link e avisa o e-mail antigo após o commit |
 | `TrocarTelefoneUseCase` | Troca de telefone (TICKET-0048): grava dígitos nacionais, limpa confirmação; sem SMS |
 | `ConsultaDadosUsuarioService` | Implementa a porta `comum/portas/ConsultaDadosUsuario` para outros módulos (só leitura) |
 | `TelefoneHelper` | Helper puro — `normalizar` (entrada → dígitos nacionais, só a troca) e `paraInternacional` (saída → `+55...`, usado pelo mapper e pela porta) |
-| `ExecutarAposCommit` | Helper — roda uma ação (envio de e-mail) só depois do commit da transação |
+| `ConfirmacaoEmailSolicitadaEvent`, `EmailContaAlteradoEvent` | Eventos internos do `auth` (`auth/eventos/`) publicados pela troca de e-mail |
+| `EmailEventosService` | Escuta os eventos com `@TransactionalEventListener(AFTER_COMMIT)` e envia os e-mails; falha só é logada, sem `fallbackExecution` |
 | `UsuarioMapper` | `Usuario` ⇄ `CadastroRequest`/`UsuarioResponse`/`PapelAtivoResponse`/`ContatoResponse` |
 | `SessaoMapper` | `TokensSessao` → `LoginResponse` |
 | `UsuarioService` | Extends `comum/base/BaseService` — CRUD genérico + `existePorEmail`/`existePorCpf`/`buscarPorEmail`/`buscarPorId`, `buscarParaAtualizarOuFalhar` (lock) e `salvarComEmailUnico` |
@@ -123,5 +124,19 @@ não envia SMS (UC04 inexistente).
 | `IdadeMinimaNaoAtingidaException`, `CpfInvalidoException`, `CadastroIndisponivelException` | Exceções de negócio do UC01 |
 | `ContatoNaoPermitidoException`, `TrocaContatoLimiteExcedidaException` | Exceções de negócio do TICKET-0048 (troca de contato) |
 | `CredenciaisInvalidasException`, `LoginTemporariamenteBloqueadoException`, `ContaSuspensaException`, `SessaoInvalidaException`, `PapelInvalidoException` | Exceções de negócio do TICKET-0032 |
+
+## Porta de consulta `comum/portas/` (leitura síncrona entre módulos)
+
+> **Proposta pendente de ADR.** O ADR-0001 só prevê "evento de domínio ou fila" entre módulos. A porta abaixo é um
+> terceiro canal, adotado no TICKET-0048; a formalização no ADR aguarda o tech lead.
+
+- **O que é:** interface + record imutável em `comum/portas/` (hoje `ConsultaDadosUsuario` e `DadosUsuario`). O módulo
+  dono do dado implementa em `actions/service/` (aqui, `ConsultaDadosUsuarioService`); o consumidor (`perfil`) injeta só
+  a interface e nunca importa classe do `auth`.
+- **Quando usar:** consulta de **leitura** síncrona de dado que pertence a outro módulo. Retorna record, nunca entity.
+- **Quando não usar:** escrita ou reação em outro módulo continua sendo evento de domínio
+  (`ApplicationEventPublisher`, pasta `comum/eventos/` criada na PR #7) ou fila. Regra prática: *eventos para reação,
+  portas para consulta* — não criar um quarto canal.
+- **Critério pra nascer:** só quando um módulo já precisa do dado hoje (dono + consumidor), como nas demais regras de `comum/`.
 
 Atualize esta página sempre que uma classe mudar de responsabilidade.

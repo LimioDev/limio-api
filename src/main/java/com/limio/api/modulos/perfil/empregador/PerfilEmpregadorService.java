@@ -5,15 +5,30 @@ import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 import com.limio.api.comum.base.BaseService;
+import com.limio.api.comum.portas.ConsultaDadosUsuario;
+import com.limio.api.comum.portas.DadosUsuario;
+import com.limio.api.modulos.perfil.excecao.PerfilEmpregadorNaoEncontradoException;
 
 @Component
 public class PerfilEmpregadorService extends BaseService<PerfilEmpregador, UUID, PerfilEmpregadorRepository> {
 
-    public PerfilEmpregadorService(PerfilEmpregadorRepository repository) {
+    private final ConsultaDadosUsuario consultaDadosUsuario;
+
+    public PerfilEmpregadorService(PerfilEmpregadorRepository repository,
+            ConsultaDadosUsuario consultaDadosUsuario) {
         super(repository);
+        this.consultaDadosUsuario = consultaDadosUsuario;
     }
 
-    public PerfilEmpregador buscarOuCriar(UUID usuarioId, String nomeInicial) {
+    public MeuPerfilEmpregador garantirPerfil(UUID usuarioId) {
+        DadosUsuario dados = consultaDadosUsuario.buscarPorId(usuarioId)
+                .orElseThrow(PerfilEmpregadorNaoEncontradoException::new);
+        PerfilEmpregador perfil = buscarOuCriar(usuarioId,
+                PerfilEmpregador.nomeExibicaoInicialDe(dados.nomeCompleto()));
+        return new MeuPerfilEmpregador(perfil, dados);
+    }
+
+    private PerfilEmpregador buscarOuCriar(UUID usuarioId, String nomeInicial) {
         return repository.findByUsuarioId(usuarioId).orElseGet(() -> {
             repository.inserirSeAusente(usuarioId, nomeInicial);
             return repository.findByUsuarioId(usuarioId).orElseThrow();

@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
+import com.limio.api.modulos.auth.actions.helper.LinkApp;
 import com.limio.api.modulos.auth.actions.helper.RefreshTokenHelper;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
 import com.limio.api.modulos.auth.actions.service.EmailService;
@@ -64,7 +65,7 @@ class AlterarSenhaUseCaseTest {
     @BeforeEach
     void montarUseCase() {
         useCase = new AlterarSenhaUseCase(usuarioService, sessaoService, senhaHasher, tokenService, emailService,
-                FRONTEND_URL);
+                new LinkApp(FRONTEND_URL));
     }
 
     private Usuario usuario() {

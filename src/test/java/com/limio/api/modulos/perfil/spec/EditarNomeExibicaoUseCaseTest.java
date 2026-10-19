@@ -2,11 +2,11 @@ package com.limio.api.modulos.perfil.spec;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -15,7 +15,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.DadosUsuario;
 import com.limio.api.modulos.perfil.actions.usecase.EditarNomeExibicaoUseCase;
 import com.limio.api.modulos.perfil.empregador.MeuPerfilEmpregador;
@@ -31,23 +30,19 @@ class EditarNomeExibicaoUseCaseTest {
             null, null);
 
     @Mock
-    private ConsultaDadosUsuario consultaDadosUsuario;
-
-    @Mock
     private PerfilEmpregadorService perfilEmpregadorService;
 
     private EditarNomeExibicaoUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new EditarNomeExibicaoUseCase(consultaDadosUsuario, perfilEmpregadorService);
+        useCase = new EditarNomeExibicaoUseCase(perfilEmpregadorService);
     }
 
     @Test
-    void deveGravarONovoNomeNoPerfilDoUsuario() {
+    void deveGravarONovoNomeNoPerfilGarantidoEDevolverOsMesmosDados() {
         PerfilEmpregador perfil = PerfilEmpregador.builder().usuarioId(USUARIO_ID).nomeExibicao("Maria").build();
-        when(consultaDadosUsuario.buscarPorId(USUARIO_ID)).thenReturn(Optional.of(DADOS));
-        when(perfilEmpregadorService.buscarOuCriar(USUARIO_ID, "Maria da Silva")).thenReturn(perfil);
+        when(perfilEmpregadorService.garantirPerfil(USUARIO_ID)).thenReturn(new MeuPerfilEmpregador(perfil, DADOS));
         when(perfilEmpregadorService.salvar(perfil)).thenReturn(perfil);
 
         MeuPerfilEmpregador resultado = useCase.executar(USUARIO_ID, "Maria Silva");
@@ -58,25 +53,12 @@ class EditarNomeExibicaoUseCaseTest {
     }
 
     @Test
-    void deveCriarOPerfilEGravarONomePedidoQuandoAindaNaoExiste() {
-        PerfilEmpregador recemCriado = PerfilEmpregador.builder().usuarioId(USUARIO_ID)
-                .nomeExibicao("Maria da Silva").build();
-        when(consultaDadosUsuario.buscarPorId(USUARIO_ID)).thenReturn(Optional.of(DADOS));
-        when(perfilEmpregadorService.buscarOuCriar(USUARIO_ID, "Maria da Silva")).thenReturn(recemCriado);
-        when(perfilEmpregadorService.salvar(recemCriado)).thenReturn(recemCriado);
-
-        MeuPerfilEmpregador resultado = useCase.executar(USUARIO_ID, "Mari");
-
-        assertThat(resultado.perfil().getNomeExibicao()).isEqualTo("Mari");
-    }
-
-    @Test
-    void naoDeveCriarNemSalvarQuandoUsuarioNaoExisteOuFoiEncerrado() {
-        when(consultaDadosUsuario.buscarPorId(USUARIO_ID)).thenReturn(Optional.empty());
+    void naoDeveSalvarQuandoUsuarioNaoExisteOuFoiEncerrado() {
+        when(perfilEmpregadorService.garantirPerfil(USUARIO_ID)).thenThrow(new PerfilEmpregadorNaoEncontradoException());
 
         assertThatThrownBy(() -> useCase.executar(USUARIO_ID, "Maria Silva"))
                 .isInstanceOf(PerfilEmpregadorNaoEncontradoException.class);
 
-        verifyNoInteractions(perfilEmpregadorService);
+        verify(perfilEmpregadorService, never()).salvar(any());
     }
 }

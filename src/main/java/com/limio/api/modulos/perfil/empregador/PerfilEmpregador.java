@@ -37,4 +37,11 @@ public class PerfilEmpregador extends BaseEntity {
     @Column(name = "qtd_avaliacoes", nullable = false)
     @Builder.Default
     private int qtdAvaliacoes = 0;
+
+    public static String nomeExibicaoInicialDe(String nomeCompleto) {
+        String nome = nomeCompleto.strip();
+        return nome.length() <= NOME_EXIBICAO_MAX
+                ? nome
+                : nome.substring(0, NOME_EXIBICAO_MAX).stripTrailing();
+    }
 }

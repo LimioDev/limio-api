@@ -5,13 +5,15 @@ import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.limio.api.modulos.auth.actions.helper.ExecutarAposCommit;
+import com.limio.api.modulos.auth.actions.helper.LinkApp;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
 import com.limio.api.modulos.auth.actions.helper.TokenRecuperacaoHelper;
-import com.limio.api.modulos.auth.actions.service.EmailService;
+import com.limio.api.modulos.auth.eventos.ConfirmacaoEmailSolicitadaEvent;
+import com.limio.api.modulos.auth.eventos.EmailContaAlteradoEvent;
 import com.limio.api.modulos.auth.excecao.ContatoNaoPermitidoException;
 import com.limio.api.modulos.auth.excecao.SenhaAtualIncorretaException;
 import com.limio.api.modulos.auth.excecao.TrocaContatoLimiteExcedidaException;
@@ -28,28 +30,28 @@ public class TrocarEmailUseCase {
     private final UsuarioService usuarioService;
     private final VerificacaoContatoService verificacaoContatoService;
     private final SenhaHasher senhaHasher;
-    private final EmailService emailService;
+    private final ApplicationEventPublisher eventos;
     private final Duration validadeToken;
     private final int maxSolicitacoes;
     private final Duration janelaSolicitacoes;
-    private final String frontendUrl;
+    private final LinkApp linkApp;
 
     public TrocarEmailUseCase(UsuarioService usuarioService,
             VerificacaoContatoService verificacaoContatoService,
             SenhaHasher senhaHasher,
-            EmailService emailService,
+            ApplicationEventPublisher eventos,
+            LinkApp linkApp,
             @Value("${auth.confirmacao-email.validade-token}") Duration validadeToken,
             @Value("${auth.confirmacao-email.max-solicitacoes}") int maxSolicitacoes,
-            @Value("${auth.confirmacao-email.janela-solicitacoes}") Duration janelaSolicitacoes,
-            @Value("${app.frontend.url}") String frontendUrl) {
+            @Value("${auth.confirmacao-email.janela-solicitacoes}") Duration janelaSolicitacoes) {
         this.usuarioService = usuarioService;
         this.verificacaoContatoService = verificacaoContatoService;
         this.senhaHasher = senhaHasher;
-        this.emailService = emailService;
+        this.eventos = eventos;
         this.validadeToken = validadeToken;
         this.maxSolicitacoes = maxSolicitacoes;
         this.janelaSolicitacoes = janelaSolicitacoes;
-        this.frontendUrl = frontendUrl;
+        this.linkApp = linkApp;
     }
 
     @Transactional
@@ -70,6 +72,7 @@ public class TrocarEmailUseCase {
         }
         validarLimite(usuarioId, agora);
 
+        String emailAntigo = usuario.getEmail();
         if (!mesmoEmail) {
             usuario.setEmail(novoEmail);
             usuario.setEmailConfirmadoEm(null);
@@ -78,6 +81,9 @@ public class TrocarEmailUseCase {
 
         invalidarPendentes(usuarioId, agora);
         emitirLink(usuario, agora);
+        if (!mesmoEmail) {
+            eventos.publishEvent(new EmailContaAlteradoEvent(emailAntigo, novoEmail));
+        }
         return usuario;
     }
 
@@ -118,10 +124,10 @@ public class TrocarEmailUseCase {
 
         String destinatario = usuario.getEmail();
         String link = linkDeConfirmacao(token);
-        ExecutarAposCommit.executar(() -> emailService.enviarConfirmacaoEmail(destinatario, link));
+        eventos.publishEvent(new ConfirmacaoEmailSolicitadaEvent(destinatario, link));
     }
 
     private String linkDeConfirmacao(String token) {
-        return frontendUrl + "/confirmar-email?token=" + token;
+        return linkApp.linkApp("confirmar-email?token=" + token);
     }
 }

@@ -1,7 +1,6 @@
 package com.limio.api.modulos.auth.spec;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -21,7 +20,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,15 +27,16 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
+import com.limio.api.modulos.auth.actions.helper.LinkApp;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
 import com.limio.api.modulos.auth.actions.helper.TokenRecuperacaoHelper;
-import com.limio.api.modulos.auth.actions.service.EmailService;
 import com.limio.api.modulos.auth.actions.usecase.TrocarEmailUseCase;
+import com.limio.api.modulos.auth.eventos.ConfirmacaoEmailSolicitadaEvent;
+import com.limio.api.modulos.auth.eventos.EmailContaAlteradoEvent;
 import com.limio.api.modulos.auth.excecao.ContaSuspensaException;
 import com.limio.api.modulos.auth.excecao.ContatoNaoPermitidoException;
 import com.limio.api.modulos.auth.excecao.SenhaAtualIncorretaException;
@@ -71,27 +70,20 @@ class TrocarEmailUseCaseTest {
     private SenhaHasher senhaHasher;
 
     @Mock
-    private EmailService emailService;
+    private ApplicationEventPublisher eventos;
 
     private TrocarEmailUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
-        TransactionSynchronizationManager.initSynchronization();
-        useCase = new TrocarEmailUseCase(usuarioService, verificacaoContatoService, senhaHasher, emailService,
-                Duration.ofHours(24), 3, Duration.ofHours(1), FRONTEND_URL);
+        useCase = new TrocarEmailUseCase(usuarioService, verificacaoContatoService, senhaHasher, eventos,
+                new LinkApp(FRONTEND_URL), Duration.ofHours(24), 3, Duration.ofHours(1));
     }
 
-    @AfterEach
-    void limparSincronizacao() {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.clearSynchronization();
-        }
-    }
-
-    /** Simula o commit da transação: dispara o que foi registrado pra depois dele. */
-    private static void commitar() {
-        TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+    private <E> E eventoPublicado(Class<E> tipo) {
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(eventos, atLeastOnce()).publishEvent(captor.capture());
+        return captor.getAllValues().stream().filter(tipo::isInstance).map(tipo::cast).findFirst().orElseThrow();
     }
 
     private Usuario usuario(StatusConta status, Instant emailConfirmadoEm) {
@@ -171,7 +163,7 @@ class TrocarEmailUseCaseTest {
     }
 
     @Test
-    void soDeveEnviarOEmailDepoisDoCommitComOLinkDoTokenGravado() {
+    void devePublicarOEventoComOLinkDoTokenGravado() {
         autenticarComSenhaCerta(usuarioAtivo());
         when(usuarioService.buscarPorEmail(EMAIL_NOVO)).thenReturn(Optional.empty());
         limiteLivre();
@@ -179,12 +171,10 @@ class TrocarEmailUseCaseTest {
 
         useCase.executar(USUARIO_ID, EMAIL_NOVO, "senha");
 
-        verifyNoInteractions(emailService);
-        commitar();
-        ArgumentCaptor<String> link = ArgumentCaptor.forClass(String.class);
-        verify(emailService).enviarConfirmacaoEmail(eq(EMAIL_NOVO), link.capture());
-        assertThat(link.getValue()).startsWith(FRONTEND_URL + "/confirmar-email?token=");
-        String token = link.getValue().substring(link.getValue().indexOf("token=") + "token=".length());
+        ConfirmacaoEmailSolicitadaEvent evento = eventoPublicado(ConfirmacaoEmailSolicitadaEvent.class);
+        assertThat(evento.destinatario()).isEqualTo(EMAIL_NOVO);
+        assertThat(evento.link()).startsWith(FRONTEND_URL + "/confirmar-email?token=");
+        String token = evento.link().substring(evento.link().indexOf("token=") + "token=".length());
         assertThat(TokenRecuperacaoHelper.hash(token)).isEqualTo(tokenSalvo().getTokenHash());
     }
 
@@ -222,7 +212,7 @@ class TrocarEmailUseCaseTest {
 
         assertThat(usuario.getEmail()).isEqualTo(EMAIL_ATUAL);
         verify(usuarioService, never()).salvarComEmailUnico(any());
-        verifyNoInteractions(verificacaoContatoService, emailService);
+        verifyNoInteractions(verificacaoContatoService, eventos);
     }
 
     @Test
@@ -238,8 +228,7 @@ class TrocarEmailUseCaseTest {
 
         verify(verificacaoContatoService, never()).pendentesDoUsuario(any(), any());
         verify(verificacaoContatoService, never()).salvar(any());
-        commitar();
-        verifyNoInteractions(emailService);
+        verifyNoInteractions(eventos);
     }
 
     @Test
@@ -251,7 +240,7 @@ class TrocarEmailUseCaseTest {
                 .isInstanceOf(SenhaAtualIncorretaException.class);
 
         verifyNoMoreInteractions(usuarioService);
-        verifyNoInteractions(verificacaoContatoService, emailService);
+        verifyNoInteractions(verificacaoContatoService, eventos);
     }
 
     @Test
@@ -267,7 +256,7 @@ class TrocarEmailUseCaseTest {
         assertThatThrownBy(() -> useCase.executar(USUARIO_ID, EMAIL_NOVO, "senha"))
                 .isInstanceOf(SessaoInvalidaException.class);
 
-        verifyNoInteractions(verificacaoContatoService, emailService, senhaHasher);
+        verifyNoInteractions(verificacaoContatoService, eventos, senhaHasher);
     }
 
     @Test
@@ -283,22 +272,21 @@ class TrocarEmailUseCaseTest {
         assertThat(usuario.getEmail()).isEqualTo(EMAIL_ATUAL);
         verify(usuarioService, never()).salvarComEmailUnico(any());
         verify(verificacaoContatoService, never()).salvar(any());
-        commitar();
-        verifyNoInteractions(emailService);
+        verifyNoInteractions(eventos);
     }
 
     @Test
-    void falhaNoEnvioDepoisDoCommitNaoDevePropagar() {
+    void devePublicarOAvisoParaOEmailAntigoDepoisDoLink() {
         autenticarComSenhaCerta(usuarioAtivo());
         when(usuarioService.buscarPorEmail(EMAIL_NOVO)).thenReturn(Optional.empty());
         limiteLivre();
         when(verificacaoContatoService.pendentesDoUsuario(USUARIO_ID, FINALIDADE)).thenReturn(List.of());
-        doThrow(new IllegalStateException("provedor fora do ar")).when(emailService)
-                .enviarConfirmacaoEmail(anyString(), anyString());
 
         useCase.executar(USUARIO_ID, EMAIL_NOVO, "senha");
 
-        assertThatCode(TrocarEmailUseCaseTest::commitar).doesNotThrowAnyException();
+        InOrder ordem = inOrder(eventos);
+        ordem.verify(eventos).publishEvent(any(ConfirmacaoEmailSolicitadaEvent.class));
+        ordem.verify(eventos).publishEvent(new EmailContaAlteradoEvent(EMAIL_ATUAL, EMAIL_NOVO));
     }
 
     /** D8: mesmo e-mail ainda não confirmado reemite o link. */
@@ -317,8 +305,8 @@ class TrocarEmailUseCaseTest {
         verify(usuarioService, never()).buscarPorEmail(anyString());
         assertThat(antigo.getConsumidoEm()).isNotNull();
         assertThat(tokenSalvo().getFinalidade()).isEqualTo(FINALIDADE);
-        commitar();
-        verify(emailService).enviarConfirmacaoEmail(eq(EMAIL_ATUAL), anyString());
+        assertThat(eventoPublicado(ConfirmacaoEmailSolicitadaEvent.class).destinatario()).isEqualTo(EMAIL_ATUAL);
+        verify(eventos, never()).publishEvent(any(EmailContaAlteradoEvent.class));
     }
 
     @Test
@@ -330,8 +318,7 @@ class TrocarEmailUseCaseTest {
                 .isInstanceOf(TrocaContatoLimiteExcedidaException.class);
 
         verify(verificacaoContatoService, never()).salvar(any());
-        commitar();
-        verifyNoInteractions(emailService);
+        verifyNoInteractions(eventos);
     }
 
     /** D8: mesmo e-mail já confirmado é no-op. */
@@ -344,7 +331,7 @@ class TrocarEmailUseCaseTest {
 
         assertThat(usuario.getEmailConfirmadoEm()).isEqualTo(CONFIRMADO);
         verify(usuarioService, never()).salvarComEmailUnico(any());
-        verifyNoInteractions(verificacaoContatoService, emailService);
+        verifyNoInteractions(verificacaoContatoService, eventos);
     }
 
     @Test
@@ -355,6 +342,6 @@ class TrocarEmailUseCaseTest {
         useCase.executar(USUARIO_ID, "MARIA@Example.com", "senha");
 
         verify(usuarioService, never()).salvarComEmailUnico(any());
-        verifyNoInteractions(verificacaoContatoService, emailService);
+        verifyNoInteractions(verificacaoContatoService, eventos);
     }
 }

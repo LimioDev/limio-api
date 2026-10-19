@@ -54,12 +54,23 @@ class UsuarioServiceTest {
     }
 
     @Test
-    void violacaoIdentificadaSoPelaMensagemDoBancoTambemDeveVirarContatoNaoPermitido() {
+    void violacaoAninhadaEmMaisDeUmaCausaDeveVirarContatoNaoPermitido() {
         Usuario usuario = Usuario.builder().email("a@example.com").build();
-        when(repository.saveAndFlush(usuario)).thenThrow(new DataIntegrityViolationException(
-                "ERROR: duplicate key value violates unique constraint \"uk_usuario_email\""));
+        var violacao = new ConstraintViolationException("duplicate key", new SQLException("duplicate key"),
+                "uk_usuario_email");
+        when(repository.saveAndFlush(usuario)).thenThrow(
+                new DataIntegrityViolationException("erro", new RuntimeException("envolvido", violacao)));
 
         assertThatThrownBy(() -> service.salvarComEmailUnico(usuario)).isInstanceOf(ContatoNaoPermitidoException.class);
+    }
+
+    @Test
+    void mensagemQueSoCitaANomeDaConstraintNaoDeveSerTratadaComoUnicidadeDeEmail() {
+        Usuario usuario = Usuario.builder().email("a@example.com").build();
+        var outra = new DataIntegrityViolationException("citou uk_usuario_email mas sem ConstraintViolationException");
+        when(repository.saveAndFlush(usuario)).thenThrow(outra);
+
+        assertThatThrownBy(() -> service.salvarComEmailUnico(usuario)).isSameAs(outra);
     }
 
     @Test

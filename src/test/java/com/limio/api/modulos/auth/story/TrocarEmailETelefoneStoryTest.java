@@ -233,6 +233,7 @@ class TrocarEmailETelefoneStoryTest {
         assertThat(linha.get("consumido_em")).isNull();
         logar("novo@example.com").andExpect(status().isOk());
         logar(MARIA.email()).andExpect(status().isUnauthorized());
+        verify(emailService).enviarEmailAlterado(MARIA.email(), "novo@example.com");
     }
 
     @Test

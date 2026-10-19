@@ -47,7 +47,10 @@ mensagem sempre genérica) e `TROCA_CONTATO_LIMITE_EXCEDIDO` (429).
   **confirmado**, não faz nada.
 - **Limite**: 3 emissões por hora por conta (`auth.confirmacao-email.*`), valendo para troca e reemissão; excesso → 429.
   Token vale 24 h.
-- `statusConta` não muda; outras sessões não são revogadas; o e-mail antigo não é avisado.
+- **Aviso ao e-mail antigo**: numa troca real (não na reemissão), o endereço que deixou de ser o da conta recebe, depois
+  do commit e em envio separado do link, um aviso com o endereço novo (`EmailService.enviarEmailAlterado`). Sem link de
+  recuperação de senha: ela sai para o e-mail atual da conta, que já é o novo. Falha de envio só é logada.
+- `statusConta` não muda; outras sessões não são revogadas.
 
 ### Trocar telefone
 
@@ -76,8 +79,11 @@ mensagem sempre genérica) e `TROCA_CONTATO_LIMITE_EXCEDIDO` (429).
   `UsuarioService.salvarComEmailUnico` faz `saveAndFlush` e traduz a violação dessa constraint em
   `ContatoNaoPermitidoException` (outra violação é relançada). O flush é a primeira escrita; a transação inteira sofre
   rollback (nenhum token, nenhum e-mail). Nada roda depois do erro (o Postgres aborta a transação).
-- **E-mail só depois do commit**: `ExecutarAposCommit` registra o envio em `afterCommit`; se o commit não acontece, o
-  e-mail não sai, e um link nunca aponta para um token não persistido. Exceção no envio é logada, não propaga.
+- **E-mail só depois do commit**: o usecase publica `ConfirmacaoEmailSolicitadaEvent` e `EmailContaAlteradoEvent`
+  (`auth/eventos/`) e `EmailEventosService` os trata com `@TransactionalEventListener(AFTER_COMMIT)`; se o commit não
+  acontece, o e-mail não sai, e um link nunca aponta para um token não persistido. Sem transação ativa o evento é
+  descartado (não há `fallbackExecution`), nunca envia antes de persistir. Exceção no envio é logada, não propaga, e um
+  envio não derruba o outro.
   Residual: commit ok e envio falhando deixa o token gravado e o e-mail perdido (mitigado pela reemissão D8).
 - **Por que o `perfil` não participa**: a troca é do `auth`; o `GET /conta/perfil-empregador` já reflete o novo contato
   pela porta `ConsultaDadosUsuario` (testado). Alternativa descartada: rotas sob `/conta/perfil-empregador` com porta de
@@ -109,6 +115,9 @@ numeração da `V9` do perfil e, se a D10 for aprovada, a migration do `destino_
   endereço emitido, inclusive contra emissores futuros e a corrida com o consumidor. Exigiria coluna anulável em
   `verificacao_contato` e uma segunda migration provisória; **não implementado**. Guardar o e-mail em claro foi evitado de
   propósito: o encerramento de conta (`feature/36`) anonimiza `usuario.email` e não limparia essa cópia.
+- **E-mail pendente promovido na confirmação (review)**: hoje o e-mail de login troca na hora; um typo (`@gmial.com`) deixa
+  a conta presa, pois a recuperação de senha vai para a caixa errada. O aviso ao e-mail antigo cobre o takeover, não o typo.
+  Resolver exige guardar o novo endereço como pendente e promovê-lo na UC05 (coluna/migration nova); não implementado.
 - UC05 (endpoint de consumo do link), UC04 (OTP/SMS e gateway), regra de telefone do UC01 (PO: recusar fixo?), ordem de merge e
   numeração das migrations (`V9`, e a da D10 se aprovada), `app.frontend.url` vs `app.deeplink.url` (`feature/36`; o link sai de um único método).
 - Riscos aceitos: recusa por e-mail em uso tem status diferente do sucesso e não consome limite (igual ao cadastro); o
@@ -117,7 +126,7 @@ numeração da `V9` do perfil e, se a D10 for aprovada, a migration do `destino_
 ## Fora de escopo
 
 UC05, UC04, qualquer envio ou simulação de SMS, alteração do cadastro (UC01), normalização de telefones legados,
-bloqueio por contato não confirmado (`anuncio`), revogação de outras sessões, aviso ao e-mail antigo.
+bloqueio por contato não confirmado (`anuncio`), revogação de outras sessões.
 
 ## Nomenclatura
 

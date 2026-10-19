@@ -46,9 +46,6 @@ public class UsuarioService extends BaseService<Usuario, UUID, UsuarioRepository
                     && CONSTRAINT_EMAIL_UNICO.equalsIgnoreCase(violacao.getConstraintName())) {
                 return true;
             }
-            if (causa.getMessage() != null && causa.getMessage().contains(CONSTRAINT_EMAIL_UNICO)) {
-                return true;
-            }
         }
         return false;
     }

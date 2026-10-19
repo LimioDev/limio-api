@@ -153,3 +153,27 @@ não existe e nada é simulado. Decisões que não ficam óbvias no código:
   formatos na coluna; foi descartada antes do commit, sem migration. O cadastro (UC01) segue intocado e as linhas
   legadas não foram tocadas.
 Detalhe em `docs/features/TICKET-0048-trocar-email-e-telefone.md`.
+
+## 2026-10 — troca de e-mail avisa o endereço antigo
+
+Code review: a troca de e-mail vale na hora e o dono não recebia sinal algum (account takeover silencioso). A
+`TrocarEmailUseCase` passou a avisar o e-mail antigo depois do commit, em envio separado do link de confirmação. O aviso
+não leva link de recuperação de senha, porque ela vai para o e-mail atual (já o novo). Typo no e-mail novo segue possível;
+a solução (e-mail pendente promovido na UC05) ficou como pendência no doc do TICKET-0048.
+
+## 2026-10 — porta `comum/portas/ConsultaDadosUsuario` como canal de leitura entre módulos
+
+O `auth` passou a implementar `ConsultaDadosUsuario` (`ConsultaDadosUsuarioService`) para o `perfil` ler nome, contato
+e datas de confirmação sem importar o `auth`. É um canal além dos previstos no ADR-0001 (evento/fila); fica registrado 
+junto com `comum/eventos/` para o próximo módulo não inventar outro. Regra registrada em 
+`docs/funcionalidade/EXPLICACAO_CLASSES.md` ("eventos para reação, portas para consulta"). 
+
+## 2026-10 — envio pós-commit por evento, no lugar de `ExecutarAposCommit`
+
+Code review: `helper/` é "utilitário puro" e `ExecutarAposCommit` dependia de `TransactionSynchronizationManager` (estado
+por thread); sem transação ele ainda rodava a ação na hora. A `TrocarEmailUseCase` agora publica
+`ConfirmacaoEmailSolicitadaEvent` e `EmailContaAlteradoEvent`, e `EmailEventosService` envia com
+`@TransactionalEventListener(AFTER_COMMIT)`. Fora de transação o evento é descartado, nunca envia antes de persistir.
+Os eventos ficam em `auth/eventos/` (internos); a #7 usa `comum/eventos/` só para evento entre módulos
+(`ContaEncerradaEvent`). Local provisório, ADR pendente do tech lead. `SolicitarRecuperacaoSenhaUseCase` e
+`AlterarSenhaUseCase` seguem enviando dentro da transação.

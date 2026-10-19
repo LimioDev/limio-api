@@ -23,7 +23,8 @@ contato, criação do perfil sob demanda) estão marcadas como **propostas**; ag
 
 O módulo `perfil` precisa de nome completo, e-mail, telefone e datas de confirmação do usuário, que são do `auth`
 (ADR-0001: módulo não importa outro módulo). Criada a porta `comum/portas/ConsultaDadosUsuario`, implementada no
-`auth`. Primeira interface do tipo em `comum/` — a ADR não a lista, **aguarda confirmação do tech lead**.
+`auth`. Primeira interface do tipo em `comum/` — a ADR não a lista, **aguarda confirmação do tech lead**. A regra de uso (leitura síncrona; reação continua sendo evento) está em
+`../../../auth/docs/funcionalidade/EXPLICACAO_CLASSES.md`.
 
 O perfil não pode ser criado no cadastro (o `auth` importaria o `perfil`) e o projeto não tem eventos entre módulos
 (criar o primeiro exigiria infraestrutura nova e backfill das contas existentes). Por isso `GET` e `PATCH`
@@ -37,3 +38,11 @@ mudou. O `GET /conta/perfil-empregador` já devolve o contato novo, com as confi
 `ConsultaDadosUsuario` (coberto por story). O telefone sai em formato internacional (`+55...`): o banco guarda só os
 dígitos nacionais e quem implementa a porta (`auth`) converte, então o `perfil` não conhece a regra. A confirmação de e-mail (UC05) e de telefone (UC04) não existe; o link
 enviado na troca de e-mail não conclui a confirmação.
+
+## 2026-10 — criação lazy do perfil num só lugar (`garantirPerfil`)
+
+Code review: `ConsultarMeuPerfilUseCase` e `EditarNomeExibicaoUseCase` repetiam "buscar `DadosUsuario` ou 404" e
+"`buscarOuCriar` com o nome inicial"; mudar a regra em um só faria os endpoints divergirem. Agora
+`PerfilEmpregadorService.garantirPerfil(usuarioId)` faz a consulta à porta, o 404 e a criação, e devolve
+`MeuPerfilEmpregador`. O corte do nome inicial em 80 caracteres saiu do helper `NomeExibicaoInicial` para
+`PerfilEmpregador.nomeExibicaoInicialDe` (regra da entity; o service não pode importar `actions/helper`).
