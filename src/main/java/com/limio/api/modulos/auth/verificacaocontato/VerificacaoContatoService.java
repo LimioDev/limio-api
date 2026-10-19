@@ -1,6 +1,7 @@
 package com.limio.api.modulos.auth.verificacaocontato;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,5 +25,9 @@ public class VerificacaoContatoService extends BaseService<VerificacaoContato, U
     /** Quantos tokens desta finalidade foram emitidos pro usuário desde {@code desde} — base do rate limit. */
     public long contarDesde(UUID usuarioId, FinalidadeVerificacao finalidade, Instant desde) {
         return repository.countByUsuarioIdAndFinalidadeAndCriadoEmAfter(usuarioId, finalidade, desde);
+    }
+
+    public List<VerificacaoContato> pendentesDoUsuario(UUID usuarioId, FinalidadeVerificacao finalidade) {
+        return repository.findByUsuarioIdAndFinalidadeAndConsumidoEmIsNull(usuarioId, finalidade);
     }
 }
