@@ -13,6 +13,8 @@
  *   <li>{@code endereco_salvo} — subentidade de {@code perfil_empregador}</li>
  *   <li>{@code categoria}, {@code prestador_categoria} — taxonomia de atuação</li>
  *   <li>{@code janela_atendimento}, {@code cota_mensal} — subentidade de {@code perfil_prestador}</li>
+ *   <li>{@code midia} — arquivo guardado no storage; hoje só a foto de perfil (TICKET-0056). Sobe pra
+ *       {@code comum/} quando {@code anuncio}/{@code chat} também usarem</li>
  * </ul>
  *
  * <p>Nome de produto correto é "empregador", nunca "contratante" ou "solicitante" — DER/diagrama de classes

@@ -22,6 +22,29 @@ Mesmo caminho do `GET` (o mesmo `garantirPerfil`), com `EditarNomeExibicaoUseCas
 `EditarNomeExibicaoRequest` (obrigatório, sem espaços nas pontas, até 80 caracteres), o nome é gravado e a resposta
 é a mesma do `GET`.
 
+## `PUT /conta/foto-perfil` (TICKET-0056)
+
+1. `FotoPerfilController.trocar` recebe a parte `arquivo` (multipart) e o `UsuarioAutenticado`, lê os bytes e chama
+   `TrocarFotoPerfilUseCase.executar(usuario.id(), bytes)`. Upload acima de 10 MB nem chega aqui:
+   `GlobalExceptionHandler` responde 413 `ARQUIVO_GRANDE_DEMAIS`.
+2. O usecase, numa transação:
+   - recusa vazio ou acima de `perfil.foto.tamanho-maximo` (5 MB) → `FotoInvalidaException` (422);
+   - `ImagemHelper.processar`: formato pelo conteúdo (JPEG/PNG), orientação do EXIF aplicada, lado maior até
+     2048 px, regravação sem metadados. Vazio → `FotoInvalidaException`;
+   - `MidiaService.travarFotoPerfil` (advisory lock por usuário) e `buscarFotoPerfilAtiva`;
+   - `ArmazenamentoService.enviar` sobe `fotos-perfil/<usuarioId>/<uuid>.<ext>` (falha → 503
+     `ARMAZENAMENTO_INDISPONIVEL`) e publica `FotoPerfilTrocadaEvent(chaveNova, chaveAnterior)`;
+   - `Midia.expurgar` na anterior + `MidiaService.salvarAgora` (flush antes do insert, por causa do índice de "uma
+     ativa"), depois `Midia.fotoPerfil` + `salvar`;
+   - devolve `ArmazenamentoService.gerarLink(chave)` (`LinkTemporario`).
+3. `FotoPerfilMapper.toResponse` → 200 `{ url, expiraEm }`.
+4. Depois do commit, `FotoPerfilEventosService.aoConfirmarTroca` apaga o objeto anterior; se a transação foi
+   desfeita, `aoDesfazerTroca` apaga o objeto novo.
+
+## `GET /conta/foto-perfil` (TICKET-0056)
+
+`ConsultarFotoPerfilUseCase` busca a `Midia` ativa e gera o link temporário; sem foto, o controller responde 204.
+
 ## Classes envolvidas
 
 | Classe | Papel |
@@ -35,3 +58,12 @@ Mesmo caminho do `GET` (o mesmo `garantirPerfil`), com `EditarNomeExibicaoUseCas
 | `excecao/PerfilEmpregadorNaoEncontradoException` | 404 do perfil |
 | `comum/portas/ConsultaDadosUsuario`, `DadosUsuario` | porta de leitura dos dados do usuário |
 | `auth/actions/service/ConsultaDadosUsuarioService` | implementação da porta no `auth` |
+| `midia/Midia`, `MidiaRepository`, `MidiaService`, `enums/TipoMidia` | entity do arquivo guardado (`fotoPerfil`, `expurgar`), persistência, foto ativa e lock por usuário |
+| `midia/LinkTemporario` | tipo de domínio: URL assinada + `expiraEm` |
+| `actions/helper/ImagemHelper` | validação do conteúdo, orientação EXIF, redução e regravação sem metadados (sem Spring) |
+| `actions/service/ArmazenamentoService` | integração com o bucket S3 (`enviar`, `gerarLink`, `remover`); 503 sem storage configurado |
+| `actions/service/FotoPerfilEventosService` | apaga do bucket o objeto anterior (commit) ou o novo (rollback) |
+| `eventos/FotoPerfilTrocadaEvent` | evento interno da troca: chave nova + chave anterior |
+| `actions/usecase/TrocarFotoPerfilUseCase`, `ConsultarFotoPerfilUseCase` | regra de negócio da foto |
+| `actions/mapper/FotoPerfilMapper`, `actions/controller/FotoPerfilController`, `records/FotoPerfilResponse` | contrato HTTP da foto |
+| `excecao/FotoInvalidaException`, `ArmazenamentoIndisponivelException` | 422 e 503 da foto |
