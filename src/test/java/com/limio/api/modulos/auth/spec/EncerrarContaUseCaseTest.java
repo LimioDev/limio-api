@@ -79,7 +79,7 @@ class EncerrarContaUseCaseTest {
     @Test
     void deveBloquearCpfAnonimizarEncerrarSessoesRegistrarAuditoriaEPublicarEvento() {
         Usuario usuario = usuarioAtivo();
-        when(usuarioService.buscarPorIdOuFalhar(USUARIO_ID)).thenReturn(usuario);
+        when(usuarioService.buscarParaAtualizarOuFalhar(USUARIO_ID)).thenReturn(usuario);
 
         useCase.executar(USUARIO_ID, IP);
 
@@ -100,7 +100,7 @@ class EncerrarContaUseCaseTest {
     @Test
     void deveBloquearCpfAntesDeAnonimizarParaUsarOCpfOriginal() {
         Usuario usuario = usuarioAtivo();
-        when(usuarioService.buscarPorIdOuFalhar(USUARIO_ID)).thenReturn(usuario);
+        when(usuarioService.buscarParaAtualizarOuFalhar(USUARIO_ID)).thenReturn(usuario);
 
         useCase.executar(USUARIO_ID, IP);
 
@@ -112,7 +112,7 @@ class EncerrarContaUseCaseTest {
     void naoDeveFazerNadaDeNovoQuandoContaJaEstaEncerrada() {
         Usuario jaEncerrada = usuarioAtivo();
         jaEncerrada.encerrar(Instant.now());
-        when(usuarioService.buscarPorIdOuFalhar(USUARIO_ID)).thenReturn(jaEncerrada);
+        when(usuarioService.buscarParaAtualizarOuFalhar(USUARIO_ID)).thenReturn(jaEncerrada);
 
         useCase.executar(USUARIO_ID, IP);
 

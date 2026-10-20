@@ -26,6 +26,11 @@ import com.limio.api.modulos.auth.usuario.UsuarioService;
  * Idempotente: conta já encerrada não faz nada de novo (evita duplicar
  * {@code CpfBloqueado} ou reabrir sessões já fechadas numa repetição de
  * requisição) — mesmo espírito do logout ({@code EncerrarSessaoUseCase}).
+ * A checagem usa {@code buscarParaAtualizarOuFalhar} (mesmo lock de
+ * {@code TrocarEmailUseCase}/{@code TrocarTelefoneUseCase}): sem ele, duas
+ * chamadas simultâneas com o mesmo token (duplo clique, retry) passam as
+ * duas pela checagem antes de qualquer uma persistir, duplicando
+ * {@code CpfBloqueado}/{@code LogAuditoria} e publicando o evento duas vezes.
  */
 @Service
 public class EncerrarContaUseCase {
@@ -51,7 +56,7 @@ public class EncerrarContaUseCase {
     @Transactional
     public void executar(UUID usuarioId, String ip) {
         Instant agora = Instant.now();
-        Usuario usuario = usuarioService.buscarPorIdOuFalhar(usuarioId);
+        Usuario usuario = usuarioService.buscarParaAtualizarOuFalhar(usuarioId);
         if (usuario.isEncerrada()) {
             return;
         }

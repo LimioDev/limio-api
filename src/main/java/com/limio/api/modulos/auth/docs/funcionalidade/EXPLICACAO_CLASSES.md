@@ -15,7 +15,8 @@
      `CpfInvalidoException`.
    - `validarUnicidade` — chama `UsuarioService.existePorEmail`/`existePorCpf`; duplicado lança
      `CadastroIndisponivelException` (erro genérico, anti-enumeração).
-   - `validarCpfNaoBloqueado` — chama `CpfBloqueadoService.estaBloqueado` com o limite de 12 meses atrás; CPF
+   - `validarCpfNaoBloqueado` — chama `CpfBloqueadoService.estaBloqueado(cpf, Instant.now())`; a janela de 12
+     meses é decidida na criação do registro (`CpfBloqueadoService.bloquear`, TICKET-0034), não aqui — CPF
      bloqueado lança a mesma `CadastroIndisponivelException`.
    - Se passou em tudo: `SenhaHasher.hash` (BCrypt via `PasswordEncoder` de `comum/config/SecurityConfig`) e
      `UsuarioService.salvar` (herdado de `BaseService`).

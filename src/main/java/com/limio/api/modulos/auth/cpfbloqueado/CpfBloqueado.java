@@ -15,14 +15,20 @@ import lombok.Setter;
 
 /**
  * Registro de CPF que teve conta excluída — usado só pra bloquear
- * recadastro dentro da janela de cooldown (evita burlar cotas). Criado pelo
- * futuro caso de uso de exclusão de conta; lido aqui só na hora do cadastro.
+ * recadastro dentro da janela de cooldown (evita burlar cotas). Criado por
+ * {@code EncerrarContaUseCase} (UC10); lido aqui só na hora do cadastro.
  * {@code cpfHmac} guarda HMAC-SHA256 do CPF ({@link
  * com.limio.api.modulos.auth.actions.helper.CpfHasher}), nunca o valor em
  * texto puro — a tabela só precisa conferir igualdade.
- * {@code liberadoEm} existe pra liberação antecipada do cooldown (ex.:
- * decisão administrativa) — enquanto nulo, vale o cooldown padrão a partir
- * de {@code bloqueadoEm}.
+ *
+ * {@code liberadoEm} é sempre gravado na criação ({@code bloqueadoEm} + 12
+ * meses, ver {@code CpfBloqueadoService.bloquear}) — a checagem
+ * ({@code estaBloqueado}) é só "{@code liberadoEm} no futuro". Liberação
+ * antecipada (ex.: decisão administrativa) é mover {@code liberadoEm} pra
+ * uma data no passado, não nular o campo: {@code liberadoEm} nulo faz a
+ * comparação SQL (<code>liberado_em &gt; :agora</code>) dar
+ * desconhecido/falso, ou seja, libera na hora — não é "cooldown padrão"
+ * como este campo já significou antes do TICKET-0034.
  */
 @Entity
 @Table(name = "cpf_bloqueado")
