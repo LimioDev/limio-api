@@ -74,7 +74,7 @@ public class EncerrarAnunciosEAplicacoesUseCase {
                 .forEach(aplicacao -> encerrarAplicacaoDoPrestador(aplicacao, agora));
     }
 
-    /** Anúncio do contratante que saiu: encerra, cancela reagendamento pendente, avisa o candidato escolhido. */
+    /** Anúncio do contratante que saiu: encerra, cancela reagendamento pendente, encerra e avisa o candidato escolhido. */
     private void encerrarAnuncioDoContratante(Anuncio anuncio, Instant agora) {
         boolean combinadoProximo = anuncio.estaAMenosDe(JANELA_COMBINADO_PROXIMO, agora);
         Optional<Aplicacao> escolhida = aplicacaoService.buscarEscolhidaDoAnuncio(anuncio.getId());
@@ -84,13 +84,9 @@ public class EncerrarAnunciosEAplicacoesUseCase {
         cancelarReagendamentosPendentes(anuncio.getId(), agora);
 
         escolhida.ifPresent(aplicacao -> {
-            if (combinadoProximo) {
-                registrarCombinadoCancelado(anuncio.getId());
-                avisar(aplicacao.getPrestadorId(), anuncio.getId(),
-                        "Combinado cancelado por impossibilidade operacional", agora);
-            } else {
-                avisar(aplicacao.getPrestadorId(), anuncio.getId(), "Anúncio encerrado", agora);
-            }
+            aplicacao.encerrar(agora, MOTIVO_SAIDA_DE_CONTA);
+            aplicacaoService.salvar(aplicacao);
+            avisarEncerramento(aplicacao.getPrestadorId(), anuncio.getId(), combinadoProximo, agora, "Anúncio encerrado");
         });
     }
 
@@ -103,27 +99,36 @@ public class EncerrarAnunciosEAplicacoesUseCase {
      * específico); fora dela é só "candidatura encerrada".
      */
     private void encerrarAplicacaoDoPrestador(Aplicacao aplicacao, Instant agora) {
-        Anuncio anuncio = anuncioService.buscarPorIdOuFalhar(aplicacao.getAnuncioId());
         boolean eraEscolhida = aplicacao.getStatus() == StatusAplicacao.ESCOLHIDA;
-        boolean combinadoProximo = eraEscolhida && anuncio.estaAMenosDe(JANELA_COMBINADO_PROXIMO, agora);
 
         aplicacao.encerrar(agora, MOTIVO_SAIDA_DE_CONTA);
         aplicacaoService.salvar(aplicacao);
 
-        if (!eraEscolhida || !anuncio.isAberto()) {
+        if (!eraEscolhida) {
             return;
         }
+
+        Anuncio anuncio = anuncioService.buscarPorIdOuFalhar(aplicacao.getAnuncioId());
+        if (!anuncio.isAberto()) {
+            return;
+        }
+        boolean combinadoProximo = anuncio.estaAMenosDe(JANELA_COMBINADO_PROXIMO, agora);
 
         anuncio.encerrarPorExclusaoDeConta(agora);
         anuncioService.salvar(anuncio);
         cancelarReagendamentosPendentes(anuncio.getId(), agora);
 
+        avisarEncerramento(anuncio.getContratanteId(), anuncio.getId(), combinadoProximo, agora, "Candidatura encerrada");
+    }
+
+    /** Combinado <24h: auditoria + aviso de impossibilidade operacional. Fora da janela: só o aviso padrão. */
+    private void avisarEncerramento(UUID destinatarioId, UUID anuncioId, boolean combinadoProximo, Instant agora,
+            String assuntoPadrao) {
         if (combinadoProximo) {
-            registrarCombinadoCancelado(anuncio.getId());
-            avisar(anuncio.getContratanteId(), anuncio.getId(),
-                    "Combinado cancelado por impossibilidade operacional", agora);
+            registrarCombinadoCancelado(anuncioId);
+            avisar(destinatarioId, anuncioId, "Combinado cancelado por impossibilidade operacional", agora);
         } else {
-            avisar(anuncio.getContratanteId(), anuncio.getId(), "Candidatura encerrada", agora);
+            avisar(destinatarioId, anuncioId, assuntoPadrao, agora);
         }
     }
 

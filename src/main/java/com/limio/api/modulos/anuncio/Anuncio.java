@@ -56,22 +56,22 @@ public class Anuncio extends BaseEntity {
     private String enderecoCompletoSnapshot;
 
     @Column(name = "latitude_snapshot")
-    private double latitudeSnapshot;
+    private Double latitudeSnapshot;
 
     @Column(name = "longitude_snapshot")
-    private double longitudeSnapshot;
+    private Double longitudeSnapshot;
 
     @Column(name = "tamanho_local")
     private String tamanhoLocal;
 
     @Column(name = "numero_pessoas")
-    private int numeroPessoas;
+    private Integer numeroPessoas;
 
     @Column(name = "observacoes")
     private String observacoes;
 
     @Column(name = "prazo_validacao_horas")
-    private int prazoValidacaoHoras;
+    private Integer prazoValidacaoHoras;
 
     @Column(name = "iniciado_em")
     private Instant iniciadoEm;
@@ -99,8 +99,10 @@ public class Anuncio extends BaseEntity {
         this.encerradoEm = agora;
     }
 
-    /** "Combinado": tem candidatura escolhida e a data combinada é daqui a menos de {@code horas}. */
+    /** "Combinado": tem candidatura escolhida e a data combinada ainda não passou, mas é daqui a menos de {@code janela}. */
     public boolean estaAMenosDe(Duration janela, Instant agora) {
-        return status == StatusAnuncio.EM_ANDAMENTO && dataHoraPretendida.isBefore(agora.plus(janela));
+        return status == StatusAnuncio.EM_ANDAMENTO
+                && agora.isBefore(dataHoraPretendida)
+                && dataHoraPretendida.isBefore(agora.plus(janela));
     }
 }

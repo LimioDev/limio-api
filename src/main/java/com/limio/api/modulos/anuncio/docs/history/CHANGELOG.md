@@ -34,3 +34,23 @@ existe em código.
 
 Detalhe completo da regra, tabela critério-por-critério e decisões descartadas em
 `docs/features/TICKET-0049-encerrar-anuncios-candidaturas-e-combinados.md`.
+
+## 2026-10-20 — TICKET-0049: correções de review (PR #11)
+
+Achados de code review no próprio PR, corrigidos antes do merge:
+
+- `encerrarAnuncioDoContratante` encerrava o `Anuncio` e avisava o prestador escolhido mas nunca
+  fechava a `Aplicacao` dele — ficava `ESCOLHIDA` presa num anúncio já `ENCERRADO`. Agora fecha os dois
+  lados, simétrico com `encerrarAplicacaoDoPrestador`.
+- `Anuncio.estaAMenosDe` não checava se `dataHoraPretendida` já tinha passado — anúncio com data
+  vencida caía em "combinado <24h" (impossibilidade operacional) por engano. Adicionado
+  `agora.isBefore(dataHoraPretendida)`.
+- `latitudeSnapshot`/`longitudeSnapshot`/`numeroPessoas`/`prazoValidacaoHoras` eram `double`/`int`
+  mapeando colunas sem `NOT NULL` — um NULL futuro (campos ainda não populados por nenhum usecase)
+  quebraria a hidratação do Hibernate. Trocados pra `Double`/`Integer`.
+- `encerrarAplicacaoDoPrestador` buscava o `Anuncio` antes de checar `eraEscolhida` — query
+  desperdiçada pra toda `Aplicacao` `ENVIADA`/`AGUARDANDO_VALIDACAO`. Reordenado.
+- `Aplicacao.isAberta()` era código morto (zero chamadas, duplicava a lista de status de
+  `AplicacaoService` sem reforço do compilador) — removido.
+- Branching `combinadoProximo ? auditoria+aviso : aviso` duplicado entre os dois métodos privados —
+  extraído pra `avisarEncerramento`.

@@ -56,14 +56,6 @@ public class Aplicacao extends BaseEntity {
     @Column(name = "motivo_encerramento")
     private String motivoEncerramento;
 
-    /** Status ainda "vivo" — candidato a encerramento (TICKET-0049). */
-    public boolean isAberta() {
-        return switch (status) {
-            case ENVIADA, ESCOLHIDA, AGUARDANDO_VALIDACAO -> true;
-            case RECUSADA, CONCLUIDA, ENCERRADA -> false;
-        };
-    }
-
     public void encerrar(Instant agora, String motivo) {
         this.status = StatusAplicacao.ENCERRADA;
         this.encerradaEm = agora;
