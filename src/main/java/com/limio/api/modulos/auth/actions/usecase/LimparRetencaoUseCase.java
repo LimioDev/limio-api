@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import com.limio.api.modulos.auth.auditoria.LogAuditoriaService;
+import com.limio.api.comum.auditoria.LogAuditoriaService;
 import com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueadoService;
 import com.limio.api.modulos.auth.sessao.SessaoService;
 

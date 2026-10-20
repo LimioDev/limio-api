@@ -1,4 +1,4 @@
-package com.limio.api.modulos.auth.auditoria;
+package com.limio.api.comum.auditoria;
 
 import java.time.Instant;
 import java.util.UUID;
