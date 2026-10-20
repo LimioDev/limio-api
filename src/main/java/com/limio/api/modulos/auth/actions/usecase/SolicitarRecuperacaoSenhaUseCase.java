@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.limio.api.modulos.auth.actions.helper.LinkApp;
 import com.limio.api.modulos.auth.actions.helper.TokenRecuperacaoHelper;
 import com.limio.api.modulos.auth.actions.service.EmailService;
 import com.limio.api.modulos.auth.usuario.Usuario;
@@ -35,22 +36,22 @@ public class SolicitarRecuperacaoSenhaUseCase {
     private final Duration validadeToken;
     private final int maxSolicitacoes;
     private final Duration janelaSolicitacoes;
-    private final String deeplinkUrl;
+    private final LinkApp linkApp;
 
     public SolicitarRecuperacaoSenhaUseCase(UsuarioService usuarioService,
             VerificacaoContatoService verificacaoContatoService,
             EmailService emailService,
+            LinkApp linkApp,
             @Value("${auth.recuperacao-senha.validade-token}") Duration validadeToken,
             @Value("${auth.recuperacao-senha.max-solicitacoes}") int maxSolicitacoes,
-            @Value("${auth.recuperacao-senha.janela-solicitacoes}") Duration janelaSolicitacoes,
-            @Value("${app.deeplink.url}") String deeplinkUrl) {
+            @Value("${auth.recuperacao-senha.janela-solicitacoes}") Duration janelaSolicitacoes) {
         this.usuarioService = usuarioService;
         this.verificacaoContatoService = verificacaoContatoService;
         this.emailService = emailService;
         this.validadeToken = validadeToken;
         this.maxSolicitacoes = maxSolicitacoes;
         this.janelaSolicitacoes = janelaSolicitacoes;
-        this.deeplinkUrl = deeplinkUrl;
+        this.linkApp = linkApp;
     }
 
     @Transactional
@@ -78,6 +79,6 @@ public class SolicitarRecuperacaoSenhaUseCase {
                 .build();
         verificacaoContatoService.salvar(verificacao);
 
-        emailService.enviarRecuperacaoSenha(usuario.getEmail(), deeplinkUrl + "nova-senha?token=" + token);
+        emailService.enviarRecuperacaoSenha(usuario.getEmail(), linkApp.linkApp("nova-senha?token=" + token));
     }
 }

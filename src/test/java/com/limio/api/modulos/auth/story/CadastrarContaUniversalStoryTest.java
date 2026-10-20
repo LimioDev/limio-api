@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,6 +64,13 @@ class CadastrarContaUniversalStoryTest {
     void limparBase() {
         usuarioRepository.deleteAll();
         cpfBloqueadoRepository.deleteAll();
+    }
+
+    // Testes de outras classes reaproveitam o mesmo CPF fixo de teste (52998224725) como "válido" —
+    // não deixar um CpfBloqueado pra trás depois do último teste desta classe.
+    @AfterEach
+    void naoDeixarCpfBloqueadoPraTras() {
+        limparBase();
     }
 
     private CadastroRequest requestValido(String cpf, String email) {

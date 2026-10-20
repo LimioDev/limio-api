@@ -1,6 +1,7 @@
 package com.limio.api.modulos.auth.verificacaocontato;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,4 +13,7 @@ public interface VerificacaoContatoRepository extends BaseRepository<Verificacao
     Optional<VerificacaoContato> findByTokenHashAndFinalidade(String tokenHash, FinalidadeVerificacao finalidade);
 
     long countByUsuarioIdAndFinalidadeAndCriadoEmAfter(UUID usuarioId, FinalidadeVerificacao finalidade, Instant desde);
+
+    List<VerificacaoContato> findByUsuarioIdAndFinalidadeAndConsumidoEmIsNull(UUID usuarioId,
+            FinalidadeVerificacao finalidade);
 }

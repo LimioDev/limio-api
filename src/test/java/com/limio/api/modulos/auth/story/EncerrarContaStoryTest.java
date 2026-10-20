@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.Map;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -96,6 +97,14 @@ class EncerrarContaStoryTest {
         sessaoRepository.deleteAll();
         cpfBloqueadoRepository.deleteAll();
         usuarioRepository.deleteAll();
+    }
+
+    // Outras classes de story usam o mesmo CPF fixo de teste (52998224725) como "válido" — não deixar
+    // CpfBloqueado pra trás depois do último teste desta classe (mesmo cuidado de
+    // AcessarContaEAlternarPapelStoryTest com Sessao).
+    @AfterEach
+    void naoDeixarCpfBloqueadoPraTras() {
+        limparBase();
     }
 
     private Usuario cadastrar() {

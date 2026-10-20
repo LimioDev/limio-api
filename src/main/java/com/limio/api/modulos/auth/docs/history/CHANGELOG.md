@@ -147,3 +147,61 @@ card: antes checava uma janela de 12 meses calculada a partir de `bloqueadoEm` n
 do card. Sem dado em produção afetado: nenhum código anterior de fato criava linha em `CpfBloqueado`
 (só checava) até este ticket implementar o primeiro ponto que grava. Detalhe completo em
 `docs/features/TICKET-0034-encerrar-conta-anonimizacao-e-retencao.md`.
+
+## 2026-10-15 — TICKET-0048 (proposta): troca de e-mail e telefone como operação do `auth`
+
+Proposta, **não implementada e não aprovada**: a troca de e-mail/telefone do card "Consultar e editar o perfil de
+Empregador" ficaria como usecase do `auth` (dono de `Usuario`), e o `perfil` não alteraria `Usuario`. Reaproveitaria
+`VerificacaoContato`/`CONFIRMACAO_EMAIL`/`EmailService`; SMS fica dependente da UC04 e o link de e-mail, da UC05.
+Também depende de decisão sobre adequar o telefone ao formato `+55DDNNNNNNNNN`, o que alteraria o cadastro (UC01).
+Detalhe em `modulos/perfil/docs/features/TICKET-0048-consultar-e-editar-perfil-empregador.md`.
+
+## 2026-10-16 — TICKET-0048: `auth` implementa a porta `ConsultaDadosUsuario`
+
+Para o módulo `perfil` ler nome, e-mail, telefone e datas de confirmação sem importar classe do `auth`, o `auth`
+passou a implementar `comum/portas/ConsultaDadosUsuario` em `actions/service/ConsultaDadosUsuarioService`
+(só leitura; conta encerrada responde como inexistente). `UsuarioService` ganhou `buscarPorId` (`Optional`, não
+lança). Nenhuma regra de cadastro, login ou confirmação de contato mudou.
+
+## 2026-10-16 — TICKET-0048: troca de e-mail e telefone, sem confirmação
+
+`PATCH /auth/email` e `PATCH /auth/telefone`, com `senhaAtual` obrigatória. **A confirmação de e-mail não foi
+implementada**: o link emitido na troca de e-mail é inerte porque o consumidor (UC05) não existe; SMS/OTP (UC04) também
+não existe e nada é simulado. Decisões que não ficam óbvias no código:
+
+- Lock de linha em `usuario` no início da troca (`buscarParaAtualizarOuFalhar`): sem ele, requisições simultâneas
+  furam o limite de 3 emissões por hora (verificado: 6 emissões sem o lock).
+- Unicidade do e-mail garantida pela constraint, traduzida em `salvarComEmailUnico` (flush antes de qualquer outra
+  escrita); o e-mail só sai depois do commit (`ExecutarAposCommit`).
+- Tokens `CONFIRMACAO_EMAIL` pendentes são invalidados a cada troca/reemissão, porque o token não guarda o e-mail-alvo;
+  `destino_hash` (D10) ficou como proposta não aprovada.
+- Telefone: o **banco guarda só os dígitos nacionais** (`11999998888`, `VARCHAR(11)` como sempre), igual ao cadastro; o
+  `+55` fica no contrato da API e nas integrações (`TelefoneHelper.paraInternacional`, aplicado também pela porta
+  `ConsultaDadosUsuario`). Uma primeira versão gravava `+55...` e ampliava a coluna para `VARCHAR(14)`, deixando dois
+  formatos na coluna; foi descartada antes do commit, sem migration. O cadastro (UC01) segue intocado e as linhas
+  legadas não foram tocadas.
+Detalhe em `docs/features/TICKET-0048-trocar-email-e-telefone.md`.
+
+## 2026-10 — troca de e-mail avisa o endereço antigo
+
+Code review: a troca de e-mail vale na hora e o dono não recebia sinal algum (account takeover silencioso). A
+`TrocarEmailUseCase` passou a avisar o e-mail antigo depois do commit, em envio separado do link de confirmação. O aviso
+não leva link de recuperação de senha, porque ela vai para o e-mail atual (já o novo). Typo no e-mail novo segue possível;
+a solução (e-mail pendente promovido na UC05) ficou como pendência no doc do TICKET-0048.
+
+## 2026-10 — porta `comum/portas/ConsultaDadosUsuario` como canal de leitura entre módulos
+
+O `auth` passou a implementar `ConsultaDadosUsuario` (`ConsultaDadosUsuarioService`) para o `perfil` ler nome, contato
+e datas de confirmação sem importar o `auth`. É um canal além dos previstos no ADR-0001 (evento/fila); fica registrado 
+junto com `comum/eventos/` para o próximo módulo não inventar outro. Regra registrada em 
+`docs/funcionalidade/EXPLICACAO_CLASSES.md` ("eventos para reação, portas para consulta"). 
+
+## 2026-10 — envio pós-commit por evento, no lugar de `ExecutarAposCommit`
+
+Code review: `helper/` é "utilitário puro" e `ExecutarAposCommit` dependia de `TransactionSynchronizationManager` (estado
+por thread); sem transação ele ainda rodava a ação na hora. A `TrocarEmailUseCase` agora publica
+`ConfirmacaoEmailSolicitadaEvent` e `EmailContaAlteradoEvent`, e `EmailEventosService` envia com
+`@TransactionalEventListener(AFTER_COMMIT)`. Fora de transação o evento é descartado, nunca envia antes de persistir.
+Os eventos ficam em `auth/eventos/` (internos); a #7 usa `comum/eventos/` só para evento entre módulos
+(`ContaEncerradaEvent`). Local provisório, ADR pendente do tech lead. `SolicitarRecuperacaoSenhaUseCase` e
+`AlterarSenhaUseCase` seguem enviando dentro da transação.
