@@ -41,13 +41,16 @@ public class Usuario extends BaseEntity {
     @Column(name = "senha_hash", nullable = false)
     private String senhaHash;
 
-    @Column(name = "cpf", nullable = false, unique = true, length = 11)
+    /** Nulo numa conta encerrada (UC10 apaga, não só mascara) — {@code uk_usuario_cpf} aceita vários NULL. */
+    @Column(name = "cpf", unique = true, length = 11)
     private String cpf;
 
-    @Column(name = "data_nascimento", nullable = false)
+    /** Nulo numa conta encerrada (UC10 apaga). */
+    @Column(name = "data_nascimento")
     private LocalDate dataNascimento;
 
-    @Column(name = "cidade_uf", nullable = false)
+    /** Nulo numa conta encerrada (UC10 apaga). */
+    @Column(name = "cidade_uf")
     private String cidadeUf;
 
     @Enumerated(EnumType.STRING)
@@ -96,5 +99,25 @@ public class Usuario extends BaseEntity {
         if (isSuspensa()) {
             throw new ContaSuspensaException();
         }
+    }
+
+    /**
+     * UC10 (encerrar conta, LGPD): apaga cpf/dataNascimento/cidadeUf; anonimiza
+     * nomeCompleto/email/telefone (e-mail e telefone ficam livres pra um
+     * cadastro novo, já que {@code uk_usuario_email} não libera com só mascarar
+     * o valor original). Não mexe em {@code senhaHash} (login já recusa a conta
+     * encerrada antes de olhar a senha) nem em {@code papelAtivo}/{@code statusConta}
+     * (encerrada é só {@code anonimizadoEm} preenchido — {@link #isEncerrada()}).
+     * Quem chama ainda precisa gravar {@link com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueado}
+     * com o CPF original, antes de chamar isto.
+     */
+    public void encerrar(Instant agora) {
+        this.nomeCompleto = "Conta encerrada";
+        this.email = "encerrada+" + getId() + "@anonimizado.limio";
+        this.telefone = "00000000000";
+        this.cpf = null;
+        this.dataNascimento = null;
+        this.cidadeUf = null;
+        this.anonimizadoEm = agora;
     }
 }

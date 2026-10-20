@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.base.BaseService;
 
@@ -38,5 +39,11 @@ public class SessaoService extends BaseService<Sessao, UUID, SessaoRepository> {
                     sessao.setRevogadaEm(agora);
                     repository.save(sessao);
                 });
+    }
+
+    /** Apaga sessões encerradas ou expiradas há mais do que a retenção (rotina diária — ver {@code LimparRetencaoUseCase}). */
+    @Transactional
+    public void limparEncerradasOuExpiradas(Instant limite) {
+        repository.apagarEncerradasOuExpiradasAntesDe(limite);
     }
 }

@@ -67,7 +67,7 @@ class TrocarEmailETelefoneStoryTest {
     private static final String SENHA = "senhaForte123";
     private static final Conta MARIA = new Conta("Maria da Silva", "maria@example.com", "11999998888", "52998224725");
     private static final Conta JOAO = new Conta("João Pereira", "joao@example.com", "21988887777", "11144477735");
-    private static final String PREFIXO_LINK = "https://app.limio.test/confirmar-email?token=";
+    private static final String PREFIXO_LINK = "limio://confirmar-email?token=";
 
     private record Conta(String nome, String email, String telefone, String cpf) {
     }
