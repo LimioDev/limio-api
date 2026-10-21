@@ -205,3 +205,10 @@ por thread); sem transação ele ainda rodava a ação na hora. A `TrocarEmailUs
 Os eventos ficam em `auth/eventos/` (internos); a #7 usa `comum/eventos/` só para evento entre módulos
 (`ContaEncerradaEvent`). Local provisório, ADR pendente do tech lead. `SolicitarRecuperacaoSenhaUseCase` e
 `AlterarSenhaUseCase` seguem enviando dentro da transação.
+
+## 2026-10-21 — lock do login vai pro helper comum
+
+O `pg_advisory_xact_lock` por e-mail de `TentativaLoginService.registrarSeLiberado` saiu do
+`TentativaLoginRepository` e passou a usar `comum/persistencia/TravaTransacional` com escopo `EscopoTrava.LOGIN`
+(review da PR #9, TICKET-0054: o perfil era o segundo módulo com o mesmo lock feito à mão). Muda só a chave do lock
+(forma de duas chaves, escopo + e-mail); a serialização por e-mail é a mesma.

@@ -26,6 +26,10 @@ public enum CodigoErro {
     TROCA_CONTATO_LIMITE_EXCEDIDO("Muitas solicitações de troca de contato. Tente novamente mais tarde."),
     ENTIDADE_NAO_ENCONTRADA("Registro não encontrado."),
     PERFIL_EMPREGADOR_NAO_ENCONTRADO("Perfil de empregador não encontrado."),
+    CATEGORIA_INVALIDA("Uma ou mais especialidades selecionadas não estão disponíveis."),
+    CATEGORIA_PROTEGIDA("Esta categoria não pode ser desativada."),
+    MUNICIPIO_NAO_ENCONTRADO("Município não encontrado na UF informada."),
+    GEOCODIFICACAO_INDISPONIVEL("Não foi possível localizar o município agora. Tente novamente em instantes."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;
