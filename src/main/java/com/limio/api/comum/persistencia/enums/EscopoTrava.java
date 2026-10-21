@@ -10,5 +10,8 @@ public enum EscopoTrava {
     LOGIN,
 
     /** Salvamento do perfil de atuação por usuário (TICKET-0054). */
-    PERFIL_PRESTADOR
+    PERFIL_PRESTADOR,
+
+    /** Troca da foto de perfil por usuário (TICKET-0056). */
+    FOTO_PERFIL
 }
