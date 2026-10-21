@@ -71,3 +71,39 @@ Decisões que não ficam óbvias só lendo o código:
 - **`GlobalExceptionHandler`**: id de rota que não é UUID passou de 500 para 400 `VALIDACAO_FALHOU`.
 - **Jackson 3** recusa `boolean` primitivo ausente em record; por isso `isPadrao` é `Boolean` no request e é
   normalizado para `false` no compact constructor.
+## 2026-10-14 — TICKET-0054: perfil de atuação do Prestador
+
+Entram `categoria/` (entity raiz, taxonomia), `perfilprestador/` (entity raiz) e
+`perfilprestador/janelaatendimento/` (subentidade, sem ciclo de vida próprio), ao lado do `empregador/` do
+TICKET-0048. Migration `V11__criar_tabelas_perfil_prestador.sql` com a carga inicial das categorias — `V11` porque a
+`develop` já tem a `V10` (perfil do Empregador) e as PRs abertas #6 e #7 disputam a `V8`/`V9`.
+
+Desvios do DER: `categoria.grupo` e `categoria.ordem` (a tela agrupa e ordena; o DER não tem como). As quatro
+tabelas nasceram só com os campos que o card usa.
+
+Coordenadas do município-base vêm do Nominatim (OpenStreetMap) — escolha do dev, a validar com o tech lead. O
+servidor público tem política de uso (1 req/s, User-Agent próprio, cache, atribuição), então a URL é configurável e o
+usecase reaproveita coordenadas que algum perfil já gravou pro mesmo município antes de consultar. Se a
+geocodificação falha, o perfil não é salvo (503): sem coordenadas, o mural ficaria vazio sem aviso.
+
+`completo` usa critério provisório (exemplo do card: 1+ especialidade + município/UF + raio) enquanto o PO não
+decide. Fica num único método, `PerfilPrestador.calcularCompleto`.
+
+O perfil não exige papel ativo `PRESTADOR`, só o dono do token: a troca pra Prestador (UC09) tende a exigir perfil
+completo, e exigir o papel aqui criaria um ciclo em que ninguém consegue virar Prestador.
+
+Detalhe completo em `docs/features/TICKET-0054-salvar-perfil-de-atuacao-e-perfil-completo.md`.
+
+## 2026-10-21 — TICKET-0054: ajustes do review da PR #9
+
+- `GET /perfil/prestador/atuacao` devolvia janelas repetidas com 2+ especialidades e 2+ janelas: as duas coleções
+  vinham no mesmo fetch join (produto cartesiano, e a `List` de janelas não deduplica). Agora são duas queries.
+- Janelas sobrepostas no mesmo dia passam a ser recusadas (400 `VALIDACAO_FALHOU`).
+- Resposta 200 do Nominatim fora do formato (lat/lon não numérico, `place_rank` ausente) vira 503
+  `GEOCODIFICACAO_INDISPONIVEL`, não mais 500 genérico.
+- A geocodificação saiu de dentro da transação: não segura mais conexão do pool durante a chamada externa.
+- `Categoria.desativar()` recusa "Outros" com erro de negócio (`CATEGORIA_PROTEGIDA`), antes de chegar no CHECK do
+  banco.
+- Advisory lock virou helper em `comum/persistencia/` (`TravaTransacional` + `EscopoTrava`), usado pelo perfil e pelo
+  login — o lock do login passou pra forma de duas chaves, com escopo `LOGIN`.
+- `GeocodificacaoService` continua em `modulos/perfil` (só ele usa hoje — critério do ADR-0001).

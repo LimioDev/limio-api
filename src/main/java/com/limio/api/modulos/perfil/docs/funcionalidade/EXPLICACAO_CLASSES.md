@@ -55,6 +55,48 @@ Em todas as rotas o dono vem só do token (`usuario.id()`), nunca da URL ou do c
 | `excecao/EnderecoSalvoNaoEncontradoException`, `EnderecoPadraoConflitoException` | 404 e 409 |
 | `empregador/PerfilEmpregadorRepository.findByIdParaAtualizar`, `PerfilEmpregadorService.garantirPerfilParaAtualizar` | lock pessimista do perfil usado por toda escrita de endereço |
 
+As rotas do TICKET-0054 também exigem login: o `JwtAuthFilter` (`comum/seguranca/`) põe o `UsuarioAutenticado` no SecurityContext e
+o controller recebe com `@AuthenticationPrincipal`. Sem token válido, 401 `NAO_AUTENTICADO` antes de chegar aqui.
+
+## `GET /categorias` (TICKET-0054)
+
+1. `CategoriaController.listar` chama `ListarCategoriasUseCase.executar()`.
+2. O usecase devolve `CategoriaService.listarAtivas()` — `ativa = true`, ordenadas por `ordem` e nome. "Outros"
+   sempre vem: é protegida, e o banco não deixa categoria protegida ficar inativa.
+3. `CategoriaMapper.toResponse` → 200 `[{ id, nome, grupo }]`, na ordem que veio do banco.
+
+## `GET /perfil/prestador/atuacao` (TICKET-0054)
+
+1. `PerfilAtuacaoController.consultar` chama `ConsultarPerfilAtuacaoUseCase.executar(usuario.id())`.
+2. O usecase busca por `PerfilPrestadorService.buscarPorUsuario` (já com especialidades e janelas — o mapper lê as
+   duas fora da transação; especialidades no `@EntityGraph`, janelas num segundo `initialize`, pra não virar
+   produto cartesiano). Nunca salvou: `PerfilPrestador.novo(usuarioId)`, vazio e
+   incompleto, sem persistir.
+3. `PerfilAtuacaoMapper.toResponse` → 200, especialidades em ordem de exibição (`Categoria.ORDEM_EXIBICAO`) e janelas
+   por dia/horário.
+
+## `PUT /perfil/prestador/atuacao` (TICKET-0054)
+
+1. `PerfilAtuacaoController.salvar` desserializa `PerfilAtuacaoRequest` (Bean Validation: raio 1–40, UF do enum,
+   listas obrigatórias; `JanelaAtendimentoRequest.isIntervaloValido` recusa início depois do/igual ao fim;
+   `PerfilAtuacaoRequest.isJanelasSemSobreposicao` recusa janelas que se cruzam no mesmo dia). Converte
+   as janelas em entity com `PerfilAtuacaoMapper.toJanelas` e tira ids de especialidade repetidos (`Set.copyOf`).
+2. `SalvarPerfilAtuacaoUseCase.executar(usuarioId, especialidadeIds, raio, municipio, uf, janelas)`, em ordem (os
+   dois primeiros fora da transação, pra chamada ao Nominatim não segurar conexão do pool):
+   - `CategoriaService.buscarAtivasPorIds` — veio menos do que foi pedido (id inexistente ou inativo) →
+     `CategoriaInvalidaException`.
+   - Coordenadas: `PerfilPrestadorService.buscarCoordenadasConhecidas` (algum perfil já gravou esse município/UF —
+     cache) ou, se não, `GeocodificacaoService.localizarMunicipio` (Nominatim). Não achou →
+     `MunicipioNaoEncontradoException`; serviço fora do ar ou resposta fora do formato →
+     `GeocodificacaoIndisponivelException` (lançada pelo service).
+   - Abre a transação (`TransactionOperations`): `PerfilPrestadorService.travarPorUsuario` (advisory lock até o fim
+     da transação) e
+     `buscarPorUsuario` — ou `PerfilPrestador.novo` no primeiro salvamento.
+   - `PerfilPrestador.atualizarAtuacao` substitui tudo (especialidades e janelas na mesma coleção — o `orphanRemoval`
+     apaga as janelas antigas) e recalcula `completo`.
+   - `PerfilPrestadorService.salvar`.
+3. `PerfilAtuacaoMapper.toResponse` → 200.
+
 ## Classes envolvidas
 
 | Classe | Papel |
