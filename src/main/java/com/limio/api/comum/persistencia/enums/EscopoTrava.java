@@ -9,6 +9,9 @@ public enum EscopoTrava {
     /** Tentativas de login por e-mail (TICKET-0032). */
     LOGIN,
 
+    /** Salvamento do perfil de atuação por usuário (TICKET-0054). */
+    PERFIL_PRESTADOR,
+
     /** Troca da foto de perfil por usuário (TICKET-0056). */
     FOTO_PERFIL
 }

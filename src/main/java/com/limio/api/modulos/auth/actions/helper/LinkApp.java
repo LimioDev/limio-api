@@ -14,7 +14,7 @@ public class LinkApp {
 
     private final String base;
 
-    public LinkApp(@Value("${app.frontend.url}") String base) {
+    public LinkApp(@Value("${app.deeplink.url}") String base) {
         this.base = base;
     }
 

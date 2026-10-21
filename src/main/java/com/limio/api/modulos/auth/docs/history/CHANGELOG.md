@@ -120,6 +120,34 @@ e `CanalVerificacao.SMS` já existem no enum mas nenhum usecase os emite ainda �
 e-mail"), fora deste card. Detalhe completo em
 `docs/features/TICKET-0033-recuperar-senha-e-alterar-senha-autenticada.md`.
 
+## 2026-10-14 — TICKET-0034: encerrar conta, anonimização e retenção (LGPD, UC10)
+
+Implementada a reação de `auth` ao encerramento de conta: `POST /auth/encerrar-conta` (confirmação
+explícita obrigatória) bloqueia o CPF por 12 meses em `CpfBloqueado`, anonimiza `Usuario`
+(`cpf`/`dataNascimento`/`cidadeUf` apagados — ficaram nullable, migration `V8`; `nomeCompleto`/`email`/
+`telefone` anonimizados, e-mail/telefone originais livres pra cadastro novo), encerra todas as sessões
+(inclusive a atual), grava uma linha em `LogAuditoria` (subpasta nova `auditoria/`, só em `auth` por
+enquanto — sobe pra `comum/` quando um 2º módulo precisar) e publica `ContaEncerradaEvent`
+(`comum/eventos/`, pasta nova: evento de domínio entre módulos só funciona se for importável por
+qualquer módulo que precisar escutá-lo, então não cabe no critério "2+ módulos usando hoje" de
+helper). Ninguém escuta o evento ainda — `perfil`/consentimento não têm as entidades que o card pede
+anonimizar (`PerfilEmpregador` — "PerfilContratante" no diagrama é o nome velho, ver nomenclatura no
+`perfil/package-info.java` —, `PerfilPrestador`, `EnderecoSalvo`, `Midia`, `AceiteTermo`), ficou
+fora de escopo de propósito (ver "Fora de escopo" no doc do ticket).
+
+Rotina diária de limpeza por retenção (`LimparRetencaoUseCase`, `@Scheduled`, `@EnableScheduling` novo
+na aplicação): `CpfBloqueado` liberado, `LogAuditoria` com mais de 5 anos, `Sessao` encerrada/expirada
+há mais de 6 meses (Marco Civil da Internet art. 15 — decidido que "registros de acesso" do card é a
+própria `Sessao`, não uma tabela nova; ela já guarda IP + timestamps por login).
+
+Corrigida a regra de bloqueio de CPF (UC01/`CadastrarUsuarioUseCase`) pra bater com a descrição do
+card: antes checava uma janela de 12 meses calculada a partir de `bloqueadoEm` na hora da consulta
+(`liberadoEm` só pra liberação antecipada, nullable); agora `liberadoEm` é sempre gravado na criação
+(`bloqueadoEm + 12 meses`) e a checagem é só "`liberadoEm` no futuro" — mais simples e bate com o texto
+do card. Sem dado em produção afetado: nenhum código anterior de fato criava linha em `CpfBloqueado`
+(só checava) até este ticket implementar o primeiro ponto que grava. Detalhe completo em
+`docs/features/TICKET-0034-encerrar-conta-anonimizacao-e-retencao.md`.
+
 ## 2026-10-15 — TICKET-0048 (proposta): troca de e-mail e telefone como operação do `auth`
 
 Proposta, **não implementada e não aprovada**: a troca de e-mail/telefone do card "Consultar e editar o perfil de
