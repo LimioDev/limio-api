@@ -1,0 +1,16 @@
+package com.limio.api.modulos.anuncio.enums;
+
+/**
+ * Diagrama de classes declara o enum sem valores ("a definir pelo grupo").
+ * Cada valor abaixo corresponde a um marco de timestamp que {@link
+ * com.limio.api.modulos.anuncio.aplicacao.Aplicacao} já tem — nenhum estado
+ * sem rastro no diagrama (TICKET-0049).
+ */
+public enum StatusAplicacao {
+    ENVIADA,
+    ESCOLHIDA,
+    RECUSADA,
+    AGUARDANDO_VALIDACAO,
+    CONCLUIDA,
+    ENCERRADA
+}

@@ -1,0 +1,16 @@
+package com.limio.api.modulos.anuncio.aplicacao;
+
+import java.util.List;
+import java.util.UUID;
+
+import com.limio.api.comum.base.BaseRepository;
+import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
+
+public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
+
+    List<Aplicacao> findByPrestadorIdAndStatusIn(UUID prestadorId, List<StatusAplicacao> status);
+
+    List<Aplicacao> findByAnuncioIdAndStatusIn(UUID anuncioId, List<StatusAplicacao> status);
+
+    List<Aplicacao> findByAnuncioIdInAndStatusIn(List<UUID> anuncioIds, List<StatusAplicacao> status);
+}
