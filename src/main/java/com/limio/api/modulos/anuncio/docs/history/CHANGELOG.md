@@ -54,3 +54,35 @@ Achados de code review no próprio PR, corrigidos antes do merge:
   `AplicacaoService` sem reforço do compilador) — removido.
 - Branching `combinadoProximo ? auditoria+aviso : aviso` duplicado entre os dois métodos privados —
   extraído pra `avisarEncerramento`.
+
+## 2026-10-21 — TICKET-0049: correções de review (PR #12)
+
+Achados de code review no PR #12, corrigidos antes do merge:
+
+- `encerrarAnuncioDoContratante` só fechava/avisava a candidatura `ESCOLHIDA` do anúncio — `ENVIADA` e
+  `AGUARDANDO_VALIDACAO` ficavam penduradas num anúncio já `ENCERRADO`, sem aviso. Mesmo problema do
+  outro lado: `encerrarAplicacaoDoPrestador` só fechava a candidatura do próprio usuário, não as outras
+  `ENVIADA` do anúncio que ele fechava como escolhido. Unificado: ambos os caminhos agora buscam e fecham
+  **todas** as candidaturas abertas do anúncio (`AplicacaoService.buscarAbertasDoAnuncio(s)`), não só a
+  escolhida.
+- `AGUARDANDO_VALIDACAO` (candidatura pós-checkout aguardando o contratante validar) não recebia o
+  mesmo tratamento que `ESCOLHIDA` em nenhum dos dois sentidos — nem fechava o anúncio ligado quando o
+  prestador saía, nem era fechada quando o contratante saía. `fechaAnuncioLigado` e as buscas de
+  "abertas" agora tratam os dois estados igual, como a doc do ticket já previa.
+- `Anuncio.estaAMenosDe` exigia `status == EM_ANDAMENTO`, mas esse status só é setado no check-in —
+  que acontece depois de `dataHoraPretendida`. Resultado: a condição nunca era satisfeita, e "combinado
+  <24h" nunca disparava. Removida a dependência do status; a janela agora é só sobre a data.
+- Uma exceção dentro do listener `AFTER_COMMIT`/`REQUIRES_NEW` (ex.: `anuncio_id` sem FK apontando pra
+  linha inexistente) desfazia o encerramento inteiro do usuário, sem reconciliação. Agora cada
+  anúncio/candidatura processa isolado (`processarComIsolamento`, try/catch + log), e a busca de anúncio
+  ligado não lança mais (`AnuncioService.buscarPorId`, `Optional`) — um item ruim não derruba os outros.
+- Nada garantia no máximo uma `ESCOLHIDA` por anúncio no banco. Adicionado índice único parcial
+  (`idx_aplicacao_escolhida_unica`) na migration.
+- N+1: a busca de candidaturas abertas e de reagendamentos pendentes rodava por anúncio. Batched pra 1
+  query cada, cobrindo todos os anúncios abertos do contratante de uma vez
+  (`buscarAbertasDosAnuncios`/`buscarPendentesDosAnuncios` com a lista inteira de ids).
+- `StatusAnuncio.isAberto()` central no enum — `Anuncio.isAberto()` e `AnuncioService.STATUS_ABERTOS`
+  agora derivam da mesma fonte, em vez de duas listas mantidas à mão.
+- Migration renumerada de `V11` pra `V13`: `V11` colide com a #9 (`TICKET-0054`, ainda aberta) e `V12`
+  já é da #10 — nenhuma das duas tinha mergeado ainda, então `V13` é o próximo número livre sem
+  depender da ordem de merge entre elas.

@@ -11,5 +11,13 @@ public enum StatusAnuncio {
     EM_ANDAMENTO,
     AGUARDANDO_VALIDACAO,
     CONCLUIDO,
-    ENCERRADO
+    ENCERRADO;
+
+    /** Status ainda "vivo" — ainda não chegou num estado final. Fonte única pra {@code isAberto()} e pros finders. */
+    public boolean isAberto() {
+        return switch (this) {
+            case PUBLICADO, EM_ANDAMENTO, AGUARDANDO_VALIDACAO -> true;
+            case CONCLUIDO, ENCERRADO -> false;
+        };
+    }
 }

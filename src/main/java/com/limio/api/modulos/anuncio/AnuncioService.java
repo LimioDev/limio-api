@@ -1,6 +1,8 @@
 package com.limio.api.modulos.anuncio;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Component;
@@ -12,8 +14,9 @@ import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 @Component
 public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository> {
 
+    /** Derivado de {@link StatusAnuncio#isAberto()} — fonte única, não duplica a lista aqui. */
     private static final List<StatusAnuncio> STATUS_ABERTOS =
-            List.of(StatusAnuncio.PUBLICADO, StatusAnuncio.EM_ANDAMENTO, StatusAnuncio.AGUARDANDO_VALIDACAO);
+            Arrays.stream(StatusAnuncio.values()).filter(StatusAnuncio::isAberto).toList();
 
     public AnuncioService(AnuncioRepository repository) {
         super(repository);
@@ -22,5 +25,14 @@ public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository
     /** Anúncios ainda abertos (não concluídos nem encerrados) em que {@code usuarioId} é o contratante. */
     public List<Anuncio> buscarAbertosDoContratante(UUID usuarioId) {
         return repository.findByContratanteIdAndStatusIn(usuarioId, STATUS_ABERTOS);
+    }
+
+    /**
+     * Busca que não lança — {@code anuncio_id} em {@code Aplicacao}/{@code
+     * Reagendamento} não tem FK (ADR-0001 §1.6), então um anúncio ausente é
+     * um cenário possível, não excepcional. Quem chama decide o que fazer.
+     */
+    public Optional<Anuncio> buscarPorId(UUID id) {
+        return repository.findById(id);
     }
 }

@@ -87,10 +87,7 @@ public class Anuncio extends BaseEntity {
 
     /** Status ainda "vivo" — ainda não chegou num estado final (TICKET-0049: candidato a encerramento). */
     public boolean isAberto() {
-        return switch (status) {
-            case PUBLICADO, EM_ANDAMENTO, AGUARDANDO_VALIDACAO -> true;
-            case CONCLUIDO, ENCERRADO -> false;
-        };
+        return status.isAberto();
     }
 
     /** UC16 (encerrar conta do contratante): tira do mural, não conclui. */
@@ -99,10 +96,16 @@ public class Anuncio extends BaseEntity {
         this.encerradoEm = agora;
     }
 
-    /** "Combinado": tem candidatura escolhida e a data combinada ainda não passou, mas é daqui a menos de {@code janela}. */
+    /**
+     * "Combinado a menos de {@code janela}": a data combinada ainda não
+     * passou, mas está perto. Não depende de {@code status == EM_ANDAMENTO}
+     * — esse status só é setado no check-in, que acontece depois de {@code
+     * dataHoraPretendida}, então nunca coincidiria com "data ainda no
+     * futuro" (TICKET-0049, achado de review). Quem chama já sabe que existe
+     * candidatura escolhida/aguardando validação; aqui só a janela de tempo.
+     */
     public boolean estaAMenosDe(Duration janela, Instant agora) {
-        return status == StatusAnuncio.EM_ANDAMENTO
-                && agora.isBefore(dataHoraPretendida)
+        return agora.isBefore(dataHoraPretendida)
                 && dataHoraPretendida.isBefore(agora.plus(janela));
     }
 }

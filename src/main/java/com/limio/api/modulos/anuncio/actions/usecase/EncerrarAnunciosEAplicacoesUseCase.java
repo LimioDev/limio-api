@@ -3,9 +3,14 @@ package com.limio.api.modulos.anuncio.actions.usecase;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -28,15 +33,17 @@ import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
 /**
  * UC16 — reação de {@code anuncio} ao encerramento de conta (TICKET-0049).
  * Escuta {@link ContaEncerradaEvent} depois que {@code auth} confirma a
- * transação ({@code AFTER_COMMIT}): se o listener falhar aqui, a conta já
- * está encerrada (isso não é desfeito) e os registros deste módulo ficam
- * pendentes de reconciliação — risco aceito, fora de escopo deste card.
+ * transação ({@code AFTER_COMMIT}): se a conta já está encerrada, cada
+ * anúncio/candidatura é processado isoladamente (ver {@link
+ * #processarComIsolamento}) — uma falha num item não desfaz os demais.
  *
  * Dois papéis possíveis pro usuário que saiu: contratante (dono de {@code
  * Anuncio}) e/ou prestador (dono de {@code Aplicacao}) — processa os dois.
  */
 @Service
 public class EncerrarAnunciosEAplicacoesUseCase {
+
+    private static final Logger log = LoggerFactory.getLogger(EncerrarAnunciosEAplicacoesUseCase.class);
 
     private static final Duration JANELA_COMBINADO_PROXIMO = Duration.ofHours(24);
     private static final String MOTIVO_SAIDA_DE_CONTA = "Cancelado por saída de conta";
@@ -59,7 +66,7 @@ public class EncerrarAnunciosEAplicacoesUseCase {
         this.eventPublisher = eventPublisher;
     }
 
-    // REQUIRES_NEW: no AFTER_COMMIT já não há transação ativa pra "participar" (a de auth já comitou) —
+    // REQUIRES_NEW: no AFTER_COMMIT já não há transação ativa pra participar (a de auth já comitou) —
     // REQUIRED (padrão) falha a subida do contexto exatamente por causa disso.
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -67,48 +74,78 @@ public class EncerrarAnunciosEAplicacoesUseCase {
         Instant agora = Instant.now();
         UUID usuarioId = evento.usuarioId();
 
-        anuncioService.buscarAbertosDoContratante(usuarioId)
-                .forEach(anuncio -> encerrarAnuncioDoContratante(anuncio, agora));
+        encerrarAnunciosDoContratante(usuarioId, agora);
 
         aplicacaoService.buscarAbertasDoPrestador(usuarioId)
-                .forEach(aplicacao -> encerrarAplicacaoDoPrestador(aplicacao, agora));
+                .forEach(aplicacao -> processarComIsolamento("Aplicacao", aplicacao.getId(),
+                        () -> encerrarAplicacaoDoPrestador(aplicacao, agora)));
     }
 
-    /** Anúncio do contratante que saiu: encerra, cancela reagendamento pendente, encerra e avisa o candidato escolhido. */
-    private void encerrarAnuncioDoContratante(Anuncio anuncio, Instant agora) {
+    /**
+     * Anúncios abertos do contratante que saiu: busca candidaturas e
+     * reagendamentos pendentes em lote (1 query cada pra todos os anúncios,
+     * em vez de 2 por anúncio) e só então processa anúncio por anúncio.
+     */
+    private void encerrarAnunciosDoContratante(UUID usuarioId, Instant agora) {
+        List<Anuncio> anuncios = anuncioService.buscarAbertosDoContratante(usuarioId);
+        if (anuncios.isEmpty()) {
+            return;
+        }
+
+        List<UUID> anuncioIds = anuncios.stream().map(Anuncio::getId).toList();
+        Map<UUID, List<Aplicacao>> candidaturasPorAnuncio = aplicacaoService.buscarAbertasDosAnuncios(anuncioIds)
+                .stream()
+                .collect(Collectors.groupingBy(Aplicacao::getAnuncioId));
+        cancelarReagendamentosPendentes(anuncioIds, agora);
+
+        for (Anuncio anuncio : anuncios) {
+            List<Aplicacao> candidaturasAbertas = candidaturasPorAnuncio.getOrDefault(anuncio.getId(), List.of());
+            processarComIsolamento("Anuncio", anuncio.getId(),
+                    () -> encerrarAnuncioDoContratante(anuncio, candidaturasAbertas, agora));
+        }
+    }
+
+    /** Anúncio do contratante que saiu: encerra e encerra/avisa toda candidatura aberta (não só a escolhida). */
+    private void encerrarAnuncioDoContratante(Anuncio anuncio, List<Aplicacao> candidaturasAbertas, Instant agora) {
         boolean combinadoProximo = anuncio.estaAMenosDe(JANELA_COMBINADO_PROXIMO, agora);
-        Optional<Aplicacao> escolhida = aplicacaoService.buscarEscolhidaDoAnuncio(anuncio.getId());
 
         anuncio.encerrarPorExclusaoDeConta(agora);
         anuncioService.salvar(anuncio);
-        cancelarReagendamentosPendentes(anuncio.getId(), agora);
 
-        escolhida.ifPresent(aplicacao -> {
+        for (Aplicacao aplicacao : candidaturasAbertas) {
             aplicacao.encerrar(agora, MOTIVO_SAIDA_DE_CONTA);
             aplicacaoService.salvar(aplicacao);
             avisarEncerramento(aplicacao.getPrestadorId(), anuncio.getId(), combinadoProximo, agora, "Anúncio encerrado");
-        });
+        }
     }
 
     /**
      * Candidatura do prestador que saiu: encerra sempre. Se ela estava
-     * ESCOLHIDA (prestador combinado pra um anúncio de outro contratante),
-     * o anúncio também encerra — não tem mais quem cumpra o serviço
-     * combinado, esteja a data perto ou longe. Só a janela de 24h muda:
-     * dentro dela é "impossibilidade operacional" (auditoria + aviso
-     * específico); fora dela é só "candidatura encerrada".
+     * ESCOLHIDA ou AGUARDANDO_VALIDACAO (prestador combinado pra um anúncio
+     * de outro contratante, antes ou depois do check-in), o anúncio e as
+     * outras candidaturas abertas dele também encerram — não tem mais quem
+     * cumpra o serviço combinado. Só a janela de 24h muda: dentro dela é
+     * "impossibilidade operacional" (auditoria + aviso específico); fora
+     * dela é só "candidatura encerrada".
      */
     private void encerrarAplicacaoDoPrestador(Aplicacao aplicacao, Instant agora) {
-        boolean eraEscolhida = aplicacao.getStatus() == StatusAplicacao.ESCOLHIDA;
+        boolean fechaAnuncio = fechaAnuncioLigado(aplicacao.getStatus());
 
         aplicacao.encerrar(agora, MOTIVO_SAIDA_DE_CONTA);
         aplicacaoService.salvar(aplicacao);
 
-        if (!eraEscolhida) {
+        if (!fechaAnuncio) {
             return;
         }
 
-        Anuncio anuncio = anuncioService.buscarPorIdOuFalhar(aplicacao.getAnuncioId());
+        Optional<Anuncio> anuncioEncontrado = anuncioService.buscarPorId(aplicacao.getAnuncioId());
+        if (anuncioEncontrado.isEmpty()) {
+            log.warn("Aplicacao {} referencia Anuncio {} inexistente ao encerrar conta; candidatura encerrada, "
+                    + "anúncio pulado", aplicacao.getId(), aplicacao.getAnuncioId());
+            return;
+        }
+
+        Anuncio anuncio = anuncioEncontrado.get();
         if (!anuncio.isAberto()) {
             return;
         }
@@ -116,9 +153,22 @@ public class EncerrarAnunciosEAplicacoesUseCase {
 
         anuncio.encerrarPorExclusaoDeConta(agora);
         anuncioService.salvar(anuncio);
-        cancelarReagendamentosPendentes(anuncio.getId(), agora);
+        cancelarReagendamentosPendentes(List.of(anuncio.getId()), agora);
+
+        for (Aplicacao outra : aplicacaoService.buscarAbertasDoAnuncio(anuncio.getId())) {
+            if (Objects.equals(outra.getId(), aplicacao.getId())) {
+                continue;
+            }
+            outra.encerrar(agora, MOTIVO_SAIDA_DE_CONTA);
+            aplicacaoService.salvar(outra);
+            avisarEncerramento(outra.getPrestadorId(), anuncio.getId(), combinadoProximo, agora, "Candidatura encerrada");
+        }
 
         avisarEncerramento(anuncio.getContratanteId(), anuncio.getId(), combinadoProximo, agora, "Candidatura encerrada");
+    }
+
+    private static boolean fechaAnuncioLigado(StatusAplicacao status) {
+        return status == StatusAplicacao.ESCOLHIDA || status == StatusAplicacao.AGUARDANDO_VALIDACAO;
     }
 
     /** Combinado <24h: auditoria + aviso de impossibilidade operacional. Fora da janela: só o aviso padrão. */
@@ -132,8 +182,8 @@ public class EncerrarAnunciosEAplicacoesUseCase {
         }
     }
 
-    private void cancelarReagendamentosPendentes(UUID anuncioId, Instant agora) {
-        for (Reagendamento reagendamento : reagendamentoService.buscarPendentesDosAnuncios(List.of(anuncioId))) {
+    private void cancelarReagendamentosPendentes(List<UUID> anuncioIds, Instant agora) {
+        for (Reagendamento reagendamento : reagendamentoService.buscarPendentesDosAnuncios(anuncioIds)) {
             reagendamento.cancelarSemEfeito(agora);
             reagendamentoService.salvar(reagendamento);
         }
@@ -147,5 +197,20 @@ public class EncerrarAnunciosEAplicacoesUseCase {
 
     private void avisar(UUID destinatarioId, UUID anuncioId, String assunto, Instant agora) {
         eventPublisher.publishEvent(new AvisoDeAnuncioEvent(destinatarioId, anuncioId, assunto, agora));
+    }
+
+    /**
+     * Roda {@code acao} isolada: uma exceção aqui (ex.: FK crua quebrada,
+     * violação de índice) é logada e pulada, sem propagar — a transação
+     * REQUIRES_NEW do listener continua válida pros demais itens em vez de
+     * ser marcada rollback-only por um item ruim.
+     */
+    private void processarComIsolamento(String tipoEntidade, UUID entidadeId, Runnable acao) {
+        try {
+            acao.run();
+        } catch (RuntimeException ex) {
+            log.error("Falha ao processar {} {} no encerramento de conta; item pulado, demais continuam",
+                    tipoEntidade, entidadeId, ex);
+        }
     }
 }

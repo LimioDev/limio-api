@@ -1,7 +1,6 @@
 package com.limio.api.modulos.anuncio.aplicacao;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Component;
@@ -25,8 +24,20 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
         return repository.findByPrestadorIdAndStatusIn(usuarioId, STATUS_ABERTOS);
     }
 
-    /** A candidatura escolhida de um anúncio, se houver — pra saber quem avisar quando ele encerra. */
-    public Optional<Aplicacao> buscarEscolhidaDoAnuncio(UUID anuncioId) {
-        return repository.findByAnuncioIdAndStatus(anuncioId, StatusAplicacao.ESCOLHIDA);
+    /**
+     * Todas as candidaturas ainda abertas de um anúncio (inclui {@code
+     * ENVIADA} e {@code AGUARDANDO_VALIDACAO}, não só {@code ESCOLHIDA}) —
+     * pra fechar e avisar todo mundo quando o anúncio encerra.
+     */
+    public List<Aplicacao> buscarAbertasDoAnuncio(UUID anuncioId) {
+        return repository.findByAnuncioIdAndStatusIn(anuncioId, STATUS_ABERTOS);
+    }
+
+    /** Mesma busca que {@link #buscarAbertasDoAnuncio}, em lote pra vários anúncios de uma vez (evita N+1). */
+    public List<Aplicacao> buscarAbertasDosAnuncios(List<UUID> anuncioIds) {
+        if (anuncioIds.isEmpty()) {
+            return List.of();
+        }
+        return repository.findByAnuncioIdInAndStatusIn(anuncioIds, STATUS_ABERTOS);
     }
 }

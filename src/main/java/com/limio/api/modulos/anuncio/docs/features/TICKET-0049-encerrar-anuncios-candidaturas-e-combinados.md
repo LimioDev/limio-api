@@ -64,18 +64,18 @@ marco de timestamp que a entity já tem (`iniciadoEm`→`EM_ANDAMENTO`, `encerra
 | Critério do card | Implementação |
 |---|---|
 | Anúncios abertos: encerrados e retirados do mural | `Anuncio` aberto (`PUBLICADO`/`EM_ANDAMENTO`/`AGUARDANDO_VALIDACAO`) do contratante encerrado → `ENCERRADO` + `encerradoEm`. "Retirado do mural" é consequência do status — quem lista já filtra por `PUBLICADO`. |
-| Candidaturas em andamento: encerradas | `Aplicacao` aberta do prestador encerrado → `ENCERRADA` + `encerradaEm` + `motivoEncerramento`. |
-| AguardandoValidacao: vira "Cancelado por saída de conta", sem conclusão por silêncio | Mesmo tratamento acima — `AGUARDANDO_VALIDACAO` está entre os status "abertos" tratados. |
+| Candidaturas em andamento: encerradas | `Aplicacao` aberta do prestador encerrado → `ENCERRADA` + `encerradaEm` + `motivoEncerramento`. Quando o anúncio encerra pelo lado do contratante, **todas** as candidaturas abertas daquele anúncio (`ENVIADA`/`ESCOLHIDA`/`AGUARDANDO_VALIDACAO`) encerram junto, não só a escolhida — e o prestador de cada uma é avisado. |
+| AguardandoValidacao: vira "Cancelado por saída de conta", sem conclusão por silêncio | Mesmo tratamento que `ESCOLHIDA` nos dois sentidos: fecha o anúncio ligado quando o prestador sai, e é fechada junto quando o contratante sai — `AGUARDANDO_VALIDACAO` está entre os status "abertos" tratados em ambos os caminhos. |
 | Propostas de reagendamento pendentes: encerradas sem efeito | `Reagendamento.PENDENTE` dos anúncios afetados → `CANCELADO` + `respondidoEm`. |
-| Combinado <24h: cancelado por impossibilidade operacional, outra parte notificada, registrado em auditoria, cota não estornada | "Combinado" = `Anuncio` com `Aplicacao` `ESCOLHIDA` e `dataHoraPretendida` a menos de 24h. Grava `LogAuditoria` (`entidade="Anuncio"`, `tipoAcao=COMBINADO_CANCELADO`) + publica `AvisoDeAnuncioEvent` com assunto "Combinado cancelado por impossibilidade operacional". "Cota não estornada": nenhuma chamada a serviço de cota/assinatura — ausência de código é a regra. |
+| Combinado <24h: cancelado por impossibilidade operacional, outra parte notificada, registrado em auditoria, cota não estornada | "Combinado" = `Anuncio` com `Aplicacao` `ESCOLHIDA`/`AGUARDANDO_VALIDACAO` e `dataHoraPretendida` a menos de 24h **no futuro** — a checagem (`Anuncio.estaAMenosDe`) é só sobre a data, não sobre `status == EM_ANDAMENTO` (esse status só é setado no check-in, que acontece depois de `dataHoraPretendida`; exigi-lo fazia a condição nunca disparar — achado de review do PR #12). Grava `LogAuditoria` (`entidade="Anuncio"`, `tipoAcao=COMBINADO_CANCELADO`) + publica `AvisoDeAnuncioEvent` com assunto "Combinado cancelado por impossibilidade operacional". "Cota não estornada": nenhuma chamada a serviço de cota/assinatura — ausência de código é a regra. |
 | A outra parte é notificada | `AvisoDeAnuncioEvent(destinatarioId, anuncioId, assunto, ocorridoEm)`, publicado sempre que um `Anuncio`/`Aplicacao` muda de estado por este fluxo. `anuncio` não grava `Notificacao` — não pode importar `modulos.notificacao`. |
 
 ### Regra adicional não-literal do card (decisão de implementação)
 
 O card só fala em "combinado <24h" pro caso de cancelamento por impossibilidade operacional, mas não
-diz o que fazer com um `Anuncio` `EM_ANDAMENTO` cuja `Aplicacao` `ESCOLHIDA` encerra por saída de conta
-do prestador **fora** da janela de 24h. Decisão: o `Anuncio` encerra de qualquer forma (não fica preso
-em `EM_ANDAMENTO` com um prestador fantasma) — só a janela de 24h muda o *tom* do aviso/auditoria
+diz o que fazer com um `Anuncio` cuja `Aplicacao` `ESCOLHIDA`/`AGUARDANDO_VALIDACAO` encerra por saída
+de conta do prestador **fora** da janela de 24h. Decisão: o `Anuncio` encerra de qualquer forma (não
+fica preso aberto com um prestador fantasma) — só a janela de 24h muda o *tom* do aviso/auditoria
 ("impossibilidade operacional" vs. "candidatura encerrada"), não se o anúncio encerra ou não.
 
 ## Fluxo: listener do `ContaEncerradaEvent`
@@ -83,10 +83,19 @@ em `EM_ANDAMENTO` com um prestador fantasma) — só a janela de 24h muda o *tom
 `modulos/anuncio/actions/usecase/EncerrarAnunciosEAplicacoesUseCase.aoEncerrarConta`, processa os dois
 papéis que o usuário que saiu pode ter:
 
-1. **Contratante**: anúncios abertos dele → encerra, cancela reagendamento pendente, avisa o candidato
-   escolhido (se houver).
-2. **Prestador**: candidaturas abertas dele → encerra sempre; se era a escolhida, o anúncio ligado
-   também encerra (ver "Regra adicional" acima) e avisa o contratante.
+1. **Contratante**: anúncios abertos dele → busca candidaturas abertas e reagendamentos pendentes em
+   lote (1 query cada pra todos os anúncios, não por anúncio — evita N+1), encerra cada anúncio e
+   encerra/avisa **todas** as candidaturas abertas dele (não só a escolhida).
+2. **Prestador**: candidaturas abertas dele → encerra sempre; se era `ESCOLHIDA`/`AGUARDANDO_VALIDACAO`,
+   o anúncio ligado também encerra (ver "Regra adicional" acima), junto com as outras candidaturas
+   abertas daquele anúncio, e avisa o contratante.
+
+Cada anúncio/candidatura de nível superior roda isolado (`processarComIsolamento`: try/catch + log) —
+uma exceção num item (ex.: `anuncio_id` sem FK apontando pra linha que não existe mais) não desfaz o
+que já foi processado nem impede os itens seguintes (achado de review do PR #12; antes, qualquer
+exceção dentro da `REQUIRES_NEW` desfazia o encerramento inteiro do usuário sem nenhuma reconciliação).
+Buscar o anúncio ligado a uma candidatura usa `AnuncioService.buscarPorId` (`Optional`), não
+`buscarPorIdOuFalhar` — ausência é um cenário esperado, não excepcional.
 
 ## Decisões técnicas
 
@@ -110,8 +119,15 @@ papéis que o usuário que saiu pode ter:
 
 ## Banco (Flyway)
 
-`V11__criar_tabelas_anuncio_aplicacao_reagendamento.sql`: cria `anuncio`, `aplicacao`, `reagendamento`.
-Colunas de FK pra usuário são cruas, sem `FOREIGN KEY` (ADR-0001 §1.6).
+`V13__criar_tabelas_anuncio_aplicacao_reagendamento.sql`: cria `anuncio`, `aplicacao`, `reagendamento`.
+Colunas de FK pra usuário são cruas, sem `FOREIGN KEY` (ADR-0001 §1.6). Numeração `V13` porque `V11`
+(#9, `TICKET-0054`) e `V12` (#10) já estavam reservadas por outras PRs abertas quando este card chegou
+no review — nenhuma das duas tinha mergeado ainda, `V13` é o próximo número livre sem depender da ordem
+de merge entre elas.
+
+Inclui índice único parcial `idx_aplicacao_escolhida_unica` em `aplicacao (anuncio_id) WHERE status =
+'ESCOLHIDA'` — o código sempre assumiu no máximo uma candidatura escolhida por anúncio, mas nada no
+banco garantia isso antes (achado de review do PR #12).
 
 ## Fora de escopo
 
@@ -131,12 +147,16 @@ fora deste card.
 
 ## Testes
 
-`spec/` (`EncerrarAnunciosEAplicacoesUseCaseTest`): 7 casos — anúncio sem candidato, com candidato
-dentro/fora da janela de 24h, reagendamento pendente cancelado, candidatura enviada (não escolhida) só
-encerra a si mesma, candidatura escolhida encerra o anúncio também, candidatura escolhida com anúncio
-já concluído não mexe nele de novo.
+`spec/` (`EncerrarAnunciosEAplicacoesUseCaseTest`): 13 casos — anúncio sem candidato, com candidato
+dentro/fora da janela de 24h (inclusive com o anúncio ainda `PUBLICADO`, não `EM_ANDAMENTO`, provando o
+fix da detecção de combinado), reagendamento pendente cancelado, candidatura enviada (não escolhida) só
+encerra a si mesma, candidatura escolhida encerra o anúncio também, candidatura escolhida com anúncio já
+concluído não mexe nele de novo, anúncio com escolhida+enviada encerra e avisa as duas,
+`AGUARDANDO_VALIDACAO` tratada igual `ESCOLHIDA` nos dois sentidos, prestador escolhido com outra
+candidatura enviada no mesmo anúncio fecha e avisa a outra também, anúncio ligado inexistente não
+derruba o processamento da candidatura, e um item que falha não impede os demais de serem processados.
 
-`story/` (`EncerrarAnunciosEAplicacoesStoryTest`): ponta a ponta via `POST /auth/encerrar-conta` real
-(sem usecase de "criar anúncio" ainda, as linhas são semeadas direto pelo repository) — anúncio
-encerra, reagendamento cancela, `LogAuditoria` de combinado cancelado é gravada, candidatura do
-prestador encerra o anúncio ligado, candidatura não escolhida não mexe no anúncio.
+`story/` (`EncerrarAnunciosEAplicacoesStoryTest`): 5 cenários ponta a ponta via `POST
+/auth/encerrar-conta` real (sem usecase de "criar anúncio" ainda, as linhas são semeadas direto pelo
+repository) — anúncio encerra, reagendamento cancela, `LogAuditoria` de combinado cancelado é gravada,
+candidatura do prestador encerra o anúncio ligado, candidatura não escolhida não mexe no anúncio.

@@ -45,6 +45,11 @@ CREATE INDEX idx_aplicacao_prestador_id ON aplicacao (prestador_id);
 CREATE INDEX idx_aplicacao_prestador_status ON aplicacao (prestador_id, status);
 CREATE INDEX idx_aplicacao_anuncio_status ON aplicacao (anuncio_id, status);
 
+-- No máximo uma candidatura ESCOLHIDA por anúncio — o código assume isso (ver
+-- AplicacaoService/AplicacaoRepository), mas nada impedia duas linhas antes
+-- deste índice.
+CREATE UNIQUE INDEX idx_aplicacao_escolhida_unica ON aplicacao (anuncio_id) WHERE status = 'ESCOLHIDA';
+
 CREATE TABLE reagendamento (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     anuncio_id      UUID         NOT NULL,
