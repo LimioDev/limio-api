@@ -43,7 +43,12 @@ public final class ImagemHelper {
     public record ImagemProcessada(byte[] conteudo, String mime, String extensao, int largura, int altura) {
     }
 
-    /** Vazio quando o conteúdo não é JPEG nem PNG legível, ou é grande demais para decodificar. */
+    /**
+     * Vazio quando o conteúdo não é JPEG nem PNG legível, ou é grande demais para decodificar.
+     *
+     * @throws EscritorIndisponivelException o runtime não tem writer ImageIO pro formato — problema do
+     *         servidor (500), não da foto enviada
+     */
     public static Optional<ImagemProcessada> processar(byte[] original) {
         if (original == null || original.length == 0)
             return Optional.empty();
@@ -77,6 +82,8 @@ public final class ImagemHelper {
             } finally {
                 leitor.dispose();
             }
+        } catch (EscritorIndisponivelException e) {
+            throw e;
         } catch (IOException | RuntimeException e) {
             // Arquivo truncado/corrompido, JPEG CMYK etc.: o ImageIO não lê, então não é foto aceitável.
             return Optional.empty();
@@ -129,7 +136,10 @@ public final class ImagemHelper {
     }
 
     private static byte[] gravar(BufferedImage imagem, Formato formato) throws IOException {
-        ImageWriter escritor = ImageIO.getImageWritersByFormatName(formato.nomeImageIo).next();
+        Iterator<ImageWriter> escritores = ImageIO.getImageWritersByFormatName(formato.nomeImageIo);
+        if (!escritores.hasNext())
+            throw new EscritorIndisponivelException(formato.nomeImageIo);
+        ImageWriter escritor = escritores.next();
         ByteArrayOutputStream saida = new ByteArrayOutputStream();
         try (ImageOutputStream destino = ImageIO.createImageOutputStream(saida)) {
             escritor.setOutput(destino);
@@ -144,6 +154,14 @@ public final class ImagemHelper {
             escritor.dispose();
         }
         return saida.toByteArray();
+    }
+
+    /** Runtime sem writer ImageIO pro formato (ex.: JRE enxuto sem parte do {@code java.desktop}). */
+    public static final class EscritorIndisponivelException extends IllegalStateException {
+
+        EscritorIndisponivelException(String formato) {
+            super("nenhum ImageWriter registrado para " + formato);
+        }
     }
 
     private enum Formato {
@@ -188,6 +206,11 @@ public final class ImagemHelper {
                     if (marcador == 0xDA || marcador == 0xD9) // início dos dados da imagem / fim
                         return 1;
                     int tamanho = u16(jpeg, i + 2, false);
+                    // O tamanho inclui os próprios 2 bytes: menor que isso o segmento é inconsistente. Hoje o
+                    // passo seguinte já cairia nos bytes de tamanho (não 0xFF) e sairia do loop, mas a regra
+                    // fica explícita em vez de depender disso.
+                    if (tamanho < 2)
+                        return 1;
                     if (marcador == 0xE1 && tamanho >= 8 && ehExif(jpeg, i + 4))
                         return orientacaoNoTiff(jpeg, i + 10, i + 2 + tamanho);
                     i += 2 + tamanho;
@@ -211,7 +234,10 @@ public final class ImagemHelper {
                 littleEndian = false;
             else
                 return 1;
-            int ifd0 = tiff + u32(b, tiff + 4, littleEndian);
+            long deslocamento = u32(b, tiff + 4, littleEndian) & 0xFFFFFFFFL;
+            if (tiff + deslocamento + 2 > fim) // IFD0 fora do segmento APP1
+                return 1;
+            int ifd0 = (int) (tiff + deslocamento);
             int entradas = u16(b, ifd0, littleEndian);
             for (int n = 0; n < entradas; n++) {
                 int entrada = ifd0 + 2 + n * 12;

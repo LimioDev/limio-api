@@ -74,9 +74,12 @@ Pendências do card resolvidas, a validar com tech lead/PO:
 - **Redução**: o lado maior fica em até 2048 px. A leitura já usa subamostragem, então uma foto de 48 MP não é
   decodificada inteira na memória. `largura`/`altura`/`bytes` gravados são os da foto guardada.
 - **JPEG continua JPEG (qualidade 0,9) e PNG continua PNG** (mantém transparência).
+- **Runtime sem writer ImageIO** pro formato (JRE enxuto): `ImagemHelper.EscritorIndisponivelException` sobe como 500
+  `ERRO_INTERNO` (com log), não como 422 `FOTO_INVALIDA` — é problema do servidor, não da foto.
 - **Ordem da troca** (`TrocarFotoPerfilUseCase`, numa transação):
   1. valida e processa a imagem (antes de qualquer acesso ao banco ou ao storage);
-  2. `pg_advisory_xact_lock` por usuário — duas trocas simultâneas da mesma conta não deixam duas fotos ativas;
+  2. advisory lock por usuário (`comum/persistencia/TravaTransacional`, escopo `EscopoTrava.FOTO_PERFIL` — mesmo
+     helper do lock do login) — duas trocas simultâneas da mesma conta não deixam duas fotos ativas;
   3. sobe o objeto novo (`fotos-perfil/<usuarioId>/<uuid>.<ext>`);
   4. publica `FotoPerfilTrocadaEvent`;
   5. expurga a anterior e grava já (`saveAndFlush`) — o Hibernate faria o insert antes do update, e o índice de "uma
@@ -100,7 +103,7 @@ ADR-0001 §1.6), `uk_midia_url_s3` e o índice único parcial `uk_midia_foto_per
 ## Testes
 
 - `spec/`: `ImagemHelperTest` (JPEG/PNG, EXIF removido, orientação 6 e 8, redução, GIF, texto, truncado, cabeçalho
-  com dimensões absurdas), `TrocarFotoPerfilUseCaseTest` (primeira foto, troca e ordem das operações, vazio, grande
+  com dimensões absurdas, runtime sem writer JPEG), `TrocarFotoPerfilUseCaseTest` (primeira foto, troca e ordem das operações, vazio, grande
   demais, GIF, storage fora), `ConsultarFotoPerfilUseCaseTest`, `FotoPerfilEventosServiceTest` (commit e rollback),
   `ArmazenamentoServiceTest` (link assinado real, storage não configurado).
 - `story/` (`FotoPerfilStoryTest`, storage mockado): os quatro do card — foto válida (com EXIF de localização, que

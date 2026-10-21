@@ -49,8 +49,9 @@ public class ArmazenamentoService {
         if (cliente == null || props == null)
             throw new ArmazenamentoIndisponivelException();
         try {
-            cliente.putObject(r -> r.bucket(props.bucket()).key(chave).contentType(mime)
-                    .contentLength((long) conteudo.length), RequestBody.fromBytes(conteudo));
+            // Content-Length sai do próprio RequestBody.fromBytes.
+            cliente.putObject(r -> r.bucket(props.bucket()).key(chave).contentType(mime),
+                    RequestBody.fromBytes(conteudo));
         } catch (SdkException e) {
             log.warn("falha ao enviar objeto ao storage ({}): {}", e.getClass().getSimpleName(), e.getMessage());
             throw new ArmazenamentoIndisponivelException();

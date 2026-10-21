@@ -61,3 +61,13 @@ ser guardada. O bucket é privado; `url_s3` guarda a chave do objeto e o app rec
 
 Formatos (JPEG/PNG) e tamanho (5 MB) são provisórios até o PO decidir. Detalhe em
 `docs/features/TICKET-0056-enviar-e-trocar-foto-de-perfil.md`.
+
+## 2026-10-21 — TICKET-0056: ajustes do review da PR #10
+
+- Advisory lock da foto saiu do `MidiaRepository` e passou pro helper `comum/persistencia/TravaTransacional`
+  (escopo `EscopoTrava.FOTO_PERFIL`), o mesmo que o login usa — e o mesmo arquivo da PR #9 (TICKET-0054), que traz o
+  escopo `PERFIL_PRESTADOR`. Quem entrar depois resolve só o conflito do enum.
+- Runtime sem writer ImageIO vira 500 (problema do servidor), não mais 422 `FOTO_INVALIDA`.
+- Scanner de EXIF para em segmento com tamanho < 2 e em IFD0 fora do APP1. Os dois casos já davam "sem rotação" por
+  acaso; a regra ficou explícita.
+- `ArmazenamentoService`: sai o `contentLength` manual, o `RequestBody.fromBytes` já define.

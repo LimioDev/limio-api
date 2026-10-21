@@ -30,8 +30,9 @@ Mesmo caminho do `GET` (o mesmo `garantirPerfil`), com `EditarNomeExibicaoUseCas
 2. O usecase, numa transação:
    - recusa vazio ou acima de `perfil.foto.tamanho-maximo` (5 MB) → `FotoInvalidaException` (422);
    - `ImagemHelper.processar`: formato pelo conteúdo (JPEG/PNG), orientação do EXIF aplicada, lado maior até
-     2048 px, regravação sem metadados. Vazio → `FotoInvalidaException`;
-   - `MidiaService.travarFotoPerfil` (advisory lock por usuário) e `buscarFotoPerfilAtiva`;
+     2048 px, regravação sem metadados. Vazio → `FotoInvalidaException`; sem writer ImageIO no runtime →
+     `ImagemHelper.EscritorIndisponivelException` (500);
+   - `MidiaService.travarFotoPerfil` (advisory lock por usuário, via `comum/persistencia/TravaTransacional`) e `buscarFotoPerfilAtiva`;
    - `ArmazenamentoService.enviar` sobe `fotos-perfil/<usuarioId>/<uuid>.<ext>` (falha → 503
      `ARMAZENAMENTO_INDISPONIVEL`) e publica `FotoPerfilTrocadaEvent(chaveNova, chaveAnterior)`;
    - `Midia.expurgar` na anterior + `MidiaService.salvarAgora` (flush antes do insert, por causa do índice de "uma
@@ -59,6 +60,7 @@ Mesmo caminho do `GET` (o mesmo `garantirPerfil`), com `EditarNomeExibicaoUseCas
 | `comum/portas/ConsultaDadosUsuario`, `DadosUsuario` | porta de leitura dos dados do usuário |
 | `auth/actions/service/ConsultaDadosUsuarioService` | implementação da porta no `auth` |
 | `midia/Midia`, `MidiaRepository`, `MidiaService`, `enums/TipoMidia` | entity do arquivo guardado (`fotoPerfil`, `expurgar`), persistência, foto ativa e lock por usuário |
+| `comum/persistencia/TravaTransacional`, `EscopoTrava` | Advisory lock do Postgres por escopo + chave (usado aqui e no login) |
 | `midia/LinkTemporario` | tipo de domínio: URL assinada + `expiraEm` |
 | `actions/helper/ImagemHelper` | validação do conteúdo, orientação EXIF, redução e regravação sem metadados (sem Spring) |
 | `actions/service/ArmazenamentoService` | integração com o bucket S3 (`enviar`, `gerarLink`, `remover`); 503 sem storage configurado |

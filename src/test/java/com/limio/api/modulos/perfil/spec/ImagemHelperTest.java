@@ -1,17 +1,25 @@
 package com.limio.api.modulos.perfil.spec;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 import java.util.zip.CRC32;
+
+import javax.imageio.spi.IIORegistry;
+import javax.imageio.spi.ImageWriterSpi;
 
 import org.junit.jupiter.api.Test;
 
 import com.limio.api.modulos.perfil.actions.helper.ImagemHelper;
+import com.limio.api.modulos.perfil.actions.helper.ImagemHelper.EscritorIndisponivelException;
 import com.limio.api.modulos.perfil.actions.helper.ImagemHelper.ImagemProcessada;
 
 class ImagemHelperTest {
@@ -100,6 +108,23 @@ class ImagemHelperTest {
     @Test
     void dadoPngQueDeclaraDimensoesAbsurdas_quandoProcessa_entaoRecusaSemDecodificar() {
         assertThat(ImagemHelper.processar(pngSoComCabecalho(20_000, 20_000))).isEmpty();
+    }
+
+    @Test
+    void dadoRuntimeSemWriterJpeg_quandoProcessa_entaoFalhaComoErroDoServidorENaoComoFotoInvalida() {
+        byte[] jpeg = ImagensDeTeste.jpeg(40, 20); // antes de tirar o writer: o próprio gerador usa ImageIO
+        IIORegistry registro = IIORegistry.getDefaultInstance();
+        List<ImageWriterSpi> removidos = new ArrayList<>();
+        Iterator<ImageWriterSpi> escritores = registro.getServiceProviders(ImageWriterSpi.class,
+                spi -> Arrays.asList(((ImageWriterSpi) spi).getFormatNames()).contains("jpeg"), false);
+        escritores.forEachRemaining(removidos::add);
+        removidos.forEach(spi -> registro.deregisterServiceProvider(spi, ImageWriterSpi.class));
+        try {
+            assertThatThrownBy(() -> ImagemHelper.processar(jpeg))
+                    .isInstanceOf(EscritorIndisponivelException.class);
+        } finally {
+            removidos.forEach(spi -> registro.registerServiceProvider(spi, ImageWriterSpi.class));
+        }
     }
 
     private static boolean ehVermelho(int rgb) {

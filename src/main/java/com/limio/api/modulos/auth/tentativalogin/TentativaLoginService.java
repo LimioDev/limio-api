@@ -11,13 +11,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.base.BaseService;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 
 /** Camada técnica de persistência de {@link TentativaLogin} — CRUD genérico (herdado) + finder da entity. */
 @Component
 public class TentativaLoginService extends BaseService<TentativaLogin, UUID, TentativaLoginRepository> {
 
-    public TentativaLoginService(TentativaLoginRepository repository) {
+    private final TravaTransacional travaTransacional;
+
+    public TentativaLoginService(TentativaLoginRepository repository, TravaTransacional travaTransacional) {
         super(repository);
+        this.travaTransacional = travaTransacional;
     }
 
     /** Instantes das últimas tentativas do e-mail, da mais recente pra mais antiga. */
@@ -38,7 +43,7 @@ public class TentativaLoginService extends BaseService<TentativaLogin, UUID, Ten
     @Transactional
     public Optional<TentativaLogin> registrarSeLiberado(String email, String ip, int quantidade,
             Predicate<List<Instant>> bloqueado) {
-        repository.travarPorEmail(email);
+        travaTransacional.travar(EscopoTrava.LOGIN, email);
         if (bloqueado.test(ultimasFalhas(email, quantidade))) {
             return Optional.empty();
         }
