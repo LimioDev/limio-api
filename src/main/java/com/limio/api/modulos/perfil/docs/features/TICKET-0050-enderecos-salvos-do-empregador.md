@@ -21,7 +21,7 @@ mais rápido.
 
 ### Campos de `EnderecoSalvo`
 
-`apelido`, `cep`, `logradouroCompleto`, `bairroRegiao`, `cidade`, `uf`, `latitude`, `longitude`, `isPadrao`.
+`apelido`, `cep`, `rua`, `numero`, `complemento`, `bairroRegiao`, `cidade`, `uf`, `latitude`, `longitude`, `isPadrao`.
 
 ### Validações
 
@@ -90,7 +90,9 @@ Pontos de contrato:
 {
   "apelido": "Casa",
   "cep": "01310100",
-  "logradouroCompleto": "Avenida Paulista, 1000 - Apto 12",
+  "rua": "Avenida Paulista",
+  "numero": "1000",
+  "complemento": "Apto 12",
   "bairroRegiao": "Bela Vista",
   "cidade": "São Paulo",
   "uf": "SP",
@@ -183,19 +185,19 @@ Se o tech lead escolher geocodificação no servidor: `GeocodificacaoService` em
 **fora** da transação de escrita, e latitude/longitude passam a ser anuláveis (criar/editar sem coordenadas quando
 a geocodificação falhar). Essa decisão muda a migration; por isso precisa sair antes do código.
 
-## Decisão técnica: `logradouroCompleto` vs Rua/Número/Complemento (**Pendente**)
+## Decisão técnica: Rua, Número e Complemento (**Definido** pelo tech lead)
 
-Não existe modelo de endereço reutilizável no projeto (só `Usuario.cidadeUf`, string). O DER tem uma única coluna
-`logradouroCompleto`, mas a tela "Novo endereço" tem Rua, Número e Complemento.
+Não existe modelo de endereço reutilizável no projeto (só `Usuario.cidadeUf`, string). O card lista
+`logradouroCompleto`, mas a tela "Novo endereço" tem Rua, Número e Complemento. **Decisão do tech lead:** o
+endereço guarda os três campos separados, no banco e na API, em vez de `logradouroCompleto`. Isso muda o DER
+(`logradouro_completo` é substituído por `rua`, `numero` e `complemento`) — o DER precisa ser atualizado por quem o
+mantém (fora deste repositório).
 
-**Recomendação:** manter `logradouro_completo` no banco e na API (contrato = campos do card). O frontend monta
-"Avenida Paulista, 1000 - Apto 12" a partir dos três campos. O texto é o que o anúncio vai exibir e copiar como
-snapshot, então representa bem o domínio, e o DER não muda.
-
-Alternativa descartada por ora: API aceitar `rua/numero/complemento` e o backend concatenar em um helper. Colocaria
-lógica de formatação no servidor e não permite repopular os três campos na edição sem parsing do texto. Se o app
-precisar dos campos separados na edição, o caminho correto é pedir ao tech lead que revise o DER — não parsear
-texto, nem alterar a tabela só para adequar a tela.
+- `rua`: obrigatório, até 255 caracteres.
+- `numero`: obrigatório, **texto** (até 20), porque aceita "S/N" e "123-A".
+- `complemento`: opcional (`NULL` quando não informado), até 100 caracteres.
+- Quem precisar de uma linha única de endereço (ex.: o snapshot do anúncio, futuro módulo `anuncio`) monta o texto a
+  partir dos três campos; o `perfil` não grava texto montado. Não há parsing de texto nem coluna redundante.
 
 ## Fora de escopo
 
@@ -209,7 +211,7 @@ texto, nem alterar a tabela só para adequar a tela.
 ## Pontos para o tech lead
 
 1. Origem de latitude/longitude e se são `NOT NULL` no DER.
-2. `logradouroCompleto` único vindo do app, ou campos separados (revisão do DER).
+2. ~~`logradouroCompleto` ou campos separados~~ — **resolvido**: `rua`, `numero` e `complemento`; atualizar o DER.
 3. Regra do endereço padrão: 0..1 (recomendado) vs exatamente 1; remover o padrão atual.
 4. Checagem de papel `EMPREGADOR` nas rotas.
 5. Número da migration e tipos/tamanhos exatos do DER.

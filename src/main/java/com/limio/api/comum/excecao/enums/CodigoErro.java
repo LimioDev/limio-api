@@ -25,6 +25,7 @@ public enum CodigoErro {
     TROCA_CONTATO_LIMITE_EXCEDIDO("Muitas solicitações de troca de contato. Tente novamente mais tarde."),
     ENTIDADE_NAO_ENCONTRADA("Registro não encontrado."),
     PERFIL_EMPREGADOR_NAO_ENCONTRADO("Perfil de empregador não encontrado."),
+    ENDERECO_NAO_ENCONTRADO("Endereço não encontrado."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;
