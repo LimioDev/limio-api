@@ -30,30 +30,34 @@ o controller recebe com `@AuthenticationPrincipal`. Sem token válido, 401 `NAO_
 1. `CategoriaController.listar` chama `ListarCategoriasUseCase.executar()`.
 2. O usecase devolve `CategoriaService.listarAtivas()` — `ativa = true`, ordenadas por `ordem` e nome. "Outros"
    sempre vem: é protegida, e o banco não deixa categoria protegida ficar inativa.
-3. `CategoriaMapper.toResponse` → 200 `[{ id, nome, grupo }]`.
+3. `CategoriaMapper.toResponse` → 200 `[{ id, nome, grupo }]`, na ordem que veio do banco.
 
 ## `GET /perfil/prestador/atuacao` (TICKET-0054)
 
 1. `PerfilAtuacaoController.consultar` chama `ConsultarPerfilAtuacaoUseCase.executar(usuario.id())`.
-2. O usecase busca por `PerfilPrestadorService.buscarPorUsuario` (já com especialidades e janelas, via
-   `@EntityGraph` — o mapper lê as duas fora da transação). Nunca salvou: `PerfilPrestador.novo(usuarioId)`, vazio e
+2. O usecase busca por `PerfilPrestadorService.buscarPorUsuario` (já com especialidades e janelas — o mapper lê as
+   duas fora da transação; especialidades no `@EntityGraph`, janelas num segundo `initialize`, pra não virar
+   produto cartesiano). Nunca salvou: `PerfilPrestador.novo(usuarioId)`, vazio e
    incompleto, sem persistir.
-3. `PerfilAtuacaoMapper.toResponse` → 200, especialidades em ordem de exibição e janelas por dia/horário.
+3. `PerfilAtuacaoMapper.toResponse` → 200, especialidades em ordem de exibição (`Categoria.ORDEM_EXIBICAO`) e janelas
+   por dia/horário.
 
 ## `PUT /perfil/prestador/atuacao` (TICKET-0054)
 
 1. `PerfilAtuacaoController.salvar` desserializa `PerfilAtuacaoRequest` (Bean Validation: raio 1–40, UF do enum,
-   listas obrigatórias; `JanelaAtendimentoRequest.isIntervaloValido` recusa início depois do/igual ao fim). Converte
+   listas obrigatórias; `JanelaAtendimentoRequest.isIntervaloValido` recusa início depois do/igual ao fim;
+   `PerfilAtuacaoRequest.isJanelasSemSobreposicao` recusa janelas que se cruzam no mesmo dia). Converte
    as janelas em entity com `PerfilAtuacaoMapper.toJanelas` e tira ids de especialidade repetidos (`Set.copyOf`).
-2. `SalvarPerfilAtuacaoUseCase.executar(usuarioId, especialidadeIds, raio, municipio, uf, janelas)`, transacional,
-   em ordem:
+2. `SalvarPerfilAtuacaoUseCase.executar(usuarioId, especialidadeIds, raio, municipio, uf, janelas)`, em ordem (os
+   dois primeiros fora da transação, pra chamada ao Nominatim não segurar conexão do pool):
    - `CategoriaService.buscarAtivasPorIds` — veio menos do que foi pedido (id inexistente ou inativo) →
      `CategoriaInvalidaException`.
    - Coordenadas: `PerfilPrestadorService.buscarCoordenadasConhecidas` (algum perfil já gravou esse município/UF —
      cache) ou, se não, `GeocodificacaoService.localizarMunicipio` (Nominatim). Não achou →
-     `MunicipioNaoEncontradoException`; serviço fora do ar → `GeocodificacaoIndisponivelException` (lançada pelo
-     service).
-   - `PerfilPrestadorService.travarPorUsuario` (advisory lock até o fim da transação) e
+     `MunicipioNaoEncontradoException`; serviço fora do ar ou resposta fora do formato →
+     `GeocodificacaoIndisponivelException` (lançada pelo service).
+   - Abre a transação (`TransactionOperations`): `PerfilPrestadorService.travarPorUsuario` (advisory lock até o fim
+     da transação) e
      `buscarPorUsuario` — ou `PerfilPrestador.novo` no primeiro salvamento.
    - `PerfilPrestador.atualizarAtuacao` substitui tudo (especialidades e janelas na mesma coleção — o `orphanRemoval`
      apaga as janelas antigas) e recalcula `completo`.
@@ -78,16 +82,17 @@ o controller recebe com `@AuthenticationPrincipal`. Sem token válido, 401 `NAO_
 | `ConsultarPerfilAtuacaoUseCase` | Perfil salvo ou vazio, sem persistir |
 | `SalvarPerfilAtuacaoUseCase` | Valida especialidades, resolve coordenadas, grava o perfil inteiro |
 | `GeocodificacaoService` | Integração externa — Nominatim (município + UF → coordenadas) |
-| `CategoriaMapper` | `Categoria` → `CategoriaResponse`, sempre em ordem de exibição |
+| `CategoriaMapper` | `Categoria` → `CategoriaResponse`, mantendo a ordem recebida |
 | `PerfilAtuacaoMapper` | `JanelaAtendimentoRequest` → `JanelaAtendimento`; `PerfilPrestador` → `PerfilAtuacaoResponse` |
 | `PerfilPrestador` | Entity raiz — atuação do Prestador; `atualizarAtuacao` + critério de `completo` |
 | `JanelaAtendimento` | Subentidade de `PerfilPrestador` (cascade + orphanRemoval) |
-| `Categoria` | Entity raiz — taxonomia de especialidades |
-| `Coordenadas` | Record de domínio — resultado da geocodificação |
+| `Categoria` | Entity raiz — taxonomia de especialidades; `desativar` recusa a protegida; `ORDEM_EXIBICAO` |
+| `Coordenadas` | Record `@Embeddable` — resultado da geocodificação, embutido no `PerfilPrestador`; valida a faixa |
 | `PerfilPrestadorService` | Extends `comum/base/BaseService` — `buscarPorUsuario`, `buscarCoordenadasConhecidas`, `travarPorUsuario` |
 | `CategoriaService` | Extends `comum/base/BaseService` — `listarAtivas`, `buscarAtivasPorIds` |
 | `PerfilPrestadorRepository` / `CategoriaRepository` | Extends `comum/base/BaseRepository` — porta de persistência JPA |
 | `Uf`, `DiaSemana` | Enums de domínio (27 UFs com nome por extenso; dias da semana, segunda primeiro) |
-| `CategoriaInvalidaException`, `MunicipioNaoEncontradoException`, `GeocodificacaoIndisponivelException` | Exceções de negócio do TICKET-0054 |
+| `CategoriaInvalidaException`, `CategoriaProtegidaException`, `MunicipioNaoEncontradoException`, `GeocodificacaoIndisponivelException` | Exceções de negócio do TICKET-0054 |
+| `comum/persistencia/TravaTransacional`, `EscopoTrava` | Advisory lock do Postgres por escopo + chave (usado aqui e no login) |
 
 Atualize esta página sempre que uma classe mudar de responsabilidade.

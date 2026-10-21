@@ -18,7 +18,7 @@ no mural só os anúncios que combinam comigo.
 - **Consultar perfil de atuação**: especialidades, raio, município-base/UF, janelas e `completo`. Quem nunca salvou
   recebe 200 com tudo vazio e `completo = false` (nada é gravado).
 - **Salvar perfil de atuação**: estado completo (PUT). Cria o `PerfilPrestador` no primeiro salvamento; substitui as
-  especialidades (`prestador_categoria`) e as janelas (`janela_atendimento`); resolve `latitudeBase`/`longitudeBase`
+  especialidades (`prestador_categoria`) e as janelas (`janela_atendimento`); resolve `coordenadasBase` (latitude/longitude)
   a partir do município-base; recalcula `completo`.
 - **Especialidades vazias**: aceito (UC) — o perfil fica incompleto e o mural fica vazio até haver ao menos uma.
 - **Especialidade inválida**: id inexistente ou de categoria inativa recusa a gravação inteira
@@ -69,17 +69,17 @@ no mural só os anúncios que combinam comigo.
 
 - `diaSemana`: `SEGUNDA`, `TERCA`, `QUARTA`, `QUINTA`, `SEXTA`, `SABADO`, `DOMINGO`.
 - Especialidades voltam em ordem de exibição; janelas por dia da semana (segunda primeiro) e horário de início.
-- `latitudeBase`/`longitudeBase` não saem na resposta — são internas (mural).
+- `coordenadasBase` não sai na resposta — são internas (mural).
 
 Erro: `ErroResponse { codigo, mensagem, timestamp, path }`, sempre via `GlobalExceptionHandler`.
 
 | `codigo` | HTTP | Quando |
 |---|---|---|
-| `VALIDACAO_FALHOU` | 400 | Campo ausente, raio fora de 1–40, UF fora das 27, janela com início depois do (ou igual ao) fim, `diaSemana`/horário em formato inválido |
+| `VALIDACAO_FALHOU` | 400 | Campo ausente, raio fora de 1–40, UF fora das 27, janela com início depois do (ou igual ao) fim, janelas sobrepostas no mesmo dia, `diaSemana`/horário em formato inválido |
 | `NAO_AUTENTICADO` | 401 | Sem token de acesso válido |
 | `CATEGORIA_INVALIDA` | 422 | Especialidade inexistente ou inativa |
 | `MUNICIPIO_NAO_ENCONTRADO` | 422 | A geocodificação não achou município com esse nome na UF |
-| `GEOCODIFICACAO_INDISPONIVEL` | 503 | Serviço de geocodificação fora do ar, lento ou recusando consulta — tentar de novo |
+| `GEOCODIFICACAO_INDISPONIVEL` | 503 | Serviço de geocodificação fora do ar, lento, recusando consulta ou devolvendo resposta fora do formato (lat/lon não numérico, `place_rank` ausente) — tentar de novo |
 
 `DADOS_INVALIDOS` (nome sugerido no card) não foi criado: `VALIDACAO_FALHOU` já cumpre esse papel no projeto todo.
 
@@ -116,23 +116,37 @@ Pendências do card resolvidas com o dev, a validar com tech lead/PO:
 - **Acesso por papel**: não exige papel ativo `PRESTADOR`. A troca pra Prestador (UC09) tende a checar perfil
   completo (fluxo alternativo, ainda fora do código — TICKET-0032); se só o Prestador pudesse preencher o perfil,
   ninguém conseguiria virar Prestador. "Só o próprio" é garantido pelo id do token.
-- **"Outros" protegida**: garantido no banco (`CHECK (ativa OR NOT protegida)`), já que não existe tela de admin pra
-  desativar categoria ainda — quem implementar herda a regra sem precisar lembrar dela.
+- **"Outros" protegida**: `Categoria` não tem setter de `ativa`/`protegida`; `Categoria.desativar()` recusa a
+  protegida com `CategoriaProtegidaException` (422 `CATEGORIA_PROTEGIDA`). Ainda não existe tela de admin pra
+  desativar categoria — quem implementar já recebe erro de negócio, não o 500 do banco. O banco continua barrando
+  (`CHECK (ativa OR NOT protegida)`) quem passar por fora da entity.
 
 Demais decisões:
 
 - **Estado completo (PUT)**: o front sempre manda o perfil inteiro. As listas são obrigatórias (podem ser vazias)
   pra campo esquecido não apagar especialidades/janelas sem querer.
-- **Primeiro salvamento concorrente**: `pg_advisory_xact_lock` por usuário (`PerfilPrestadorService.travarPorUsuario`,
-  forma de duas chaves com namespace `'perfil_prestador'`, separada do lock do login). Sem isso, um toque duplo em
-  "Salvar" no primeiro salvamento estourava `uk_perfil_prestador_usuario_id` como 500.
-- **Geocodificação dentro da transação**: o lock só é pego depois da geocodificação, mas a conexão com o banco fica
-  presa enquanto o Nominatim responde (até `geocodificacao.timeout`, 5s). Aceito pelo volume baixo de gravações.
+- **Primeiro salvamento concorrente**: advisory lock por usuário (`PerfilPrestadorService.travarPorUsuario`, via
+  `comum/persistencia/TravaTransacional` com escopo `EscopoTrava.PERFIL_PRESTADOR` — o mesmo helper do lock do
+  login, cada um no seu escopo). Sem isso, um toque duplo em "Salvar" no primeiro salvamento estourava
+  `uk_perfil_prestador_usuario_id` como 500.
+- **Geocodificação fora da transação**: validação das especialidades e geocodificação rodam antes; só lock + leitura
+  + gravação ficam no `TransactionOperations`. Assim a chamada ao Nominatim (até `geocodificacao.timeout`, 5s) não
+  segura conexão do pool — PUTs concorrentes pra municípios novos esgotariam o pool e travariam outros endpoints.
+- **Janelas sobrepostas**: recusadas no record (`PerfilAtuacaoRequest.isJanelasSemSobreposicao`, 400) — mesmo dia e
+  intervalos que se cruzam, inclusive janela repetida; encostar (08–12 e 12–14) pode. Sem constraint no banco:
+  exclusão por intervalo exigiria a extensão `btree_gist`, e o PUT é a única porta de escrita.
+- **Leitura do perfil em duas queries**: `findByUsuarioId` faz fetch só das especialidades; as janelas vêm num
+  `Hibernate.initialize` na mesma transação (`PerfilPrestadorService.buscarPorUsuario`). As duas coleções no mesmo
+  join viravam produto cartesiano e a `List` de janelas voltava repetida.
 - **`PerfilPrestador` sem setter**: `completo` depende de todos os campos de atuação, então eles só mudam juntos, por
   `atualizarAtuacao`, que recalcula no fim.
 - **`usuario_id` cru, sem FK pra `usuario`** (ADR-0001 §1.6): `perfil` não se acopla a `auth`.
 - **Coordenadas em `DOUBLE PRECISION`**: centro de município não precisa de precisão decimal exata; facilita o
-  cálculo de distância do mural.
+  cálculo de distância do mural. Na entity, `Coordenadas` é record `@Embeddable` (colunas `latitude_base` /
+  `longitude_base`) e valida a faixa (-90..90, -180..180) na criação.
+- **`GeocodificacaoService` fica em `modulos/perfil`**: só o perfil geocodifica hoje (critério do ADR-0001 pra
+  subir pra `comum/`: 2+ módulos usando agora). Quando o mural precisar, sobe pra `comum/` — e aí, com dois
+  chamadores, entra um limitador de 1 req/s compartilhado.
 
 ## Banco (Flyway)
 

@@ -69,3 +69,17 @@ O perfil não exige papel ativo `PRESTADOR`, só o dono do token: a troca pra Pr
 completo, e exigir o papel aqui criaria um ciclo em que ninguém consegue virar Prestador.
 
 Detalhe completo em `docs/features/TICKET-0054-salvar-perfil-de-atuacao-e-perfil-completo.md`.
+
+## 2026-10-21 — TICKET-0054: ajustes do review da PR #9
+
+- `GET /perfil/prestador/atuacao` devolvia janelas repetidas com 2+ especialidades e 2+ janelas: as duas coleções
+  vinham no mesmo fetch join (produto cartesiano, e a `List` de janelas não deduplica). Agora são duas queries.
+- Janelas sobrepostas no mesmo dia passam a ser recusadas (400 `VALIDACAO_FALHOU`).
+- Resposta 200 do Nominatim fora do formato (lat/lon não numérico, `place_rank` ausente) vira 503
+  `GEOCODIFICACAO_INDISPONIVEL`, não mais 500 genérico.
+- A geocodificação saiu de dentro da transação: não segura mais conexão do pool durante a chamada externa.
+- `Categoria.desativar()` recusa "Outros" com erro de negócio (`CATEGORIA_PROTEGIDA`), antes de chegar no CHECK do
+  banco.
+- Advisory lock virou helper em `comum/persistencia/` (`TravaTransacional` + `EscopoTrava`), usado pelo perfil e pelo
+  login — o lock do login passou pra forma de duas chaves, com escopo `LOGIN`.
+- `GeocodificacaoService` continua em `modulos/perfil` (só ele usa hoje — critério do ADR-0001).
