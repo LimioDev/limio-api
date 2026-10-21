@@ -16,20 +16,27 @@ import com.limio.api.modulos.auth.actions.mapper.UsuarioMapper;
 import com.limio.api.modulos.auth.actions.usecase.AlterarSenhaUseCase;
 import com.limio.api.modulos.auth.actions.usecase.AutenticarUsuarioUseCase;
 import com.limio.api.modulos.auth.actions.usecase.CadastrarUsuarioUseCase;
+import com.limio.api.modulos.auth.actions.usecase.EncerrarContaUseCase;
 import com.limio.api.modulos.auth.actions.usecase.EncerrarSessaoUseCase;
 import com.limio.api.modulos.auth.actions.usecase.RedefinirSenhaUseCase;
 import com.limio.api.modulos.auth.actions.usecase.RenovarSessaoUseCase;
 import com.limio.api.modulos.auth.actions.usecase.SolicitarRecuperacaoSenhaUseCase;
+import com.limio.api.modulos.auth.actions.usecase.TrocarEmailUseCase;
 import com.limio.api.modulos.auth.actions.usecase.TrocarPapelAtivoUseCase;
+import com.limio.api.modulos.auth.actions.usecase.TrocarTelefoneUseCase;
 import com.limio.api.modulos.auth.records.AlterarSenhaRequest;
 import com.limio.api.modulos.auth.records.CadastroRequest;
+import com.limio.api.modulos.auth.records.ContatoResponse;
+import com.limio.api.modulos.auth.records.EncerrarContaRequest;
 import com.limio.api.modulos.auth.records.LoginRequest;
 import com.limio.api.modulos.auth.records.LoginResponse;
 import com.limio.api.modulos.auth.records.PapelAtivoResponse;
 import com.limio.api.modulos.auth.records.RedefinirSenhaRequest;
 import com.limio.api.modulos.auth.records.RefreshTokenRequest;
 import com.limio.api.modulos.auth.records.SolicitarRecuperacaoSenhaRequest;
+import com.limio.api.modulos.auth.records.TrocarEmailRequest;
 import com.limio.api.modulos.auth.records.TrocarPapelRequest;
+import com.limio.api.modulos.auth.records.TrocarTelefoneRequest;
 import com.limio.api.modulos.auth.records.UsuarioResponse;
 import com.limio.api.modulos.auth.sessao.TokensSessao;
 import com.limio.api.modulos.auth.usuario.Usuario;
@@ -49,6 +56,9 @@ public class AuthController {
     private final SolicitarRecuperacaoSenhaUseCase solicitarRecuperacaoSenhaUseCase;
     private final RedefinirSenhaUseCase redefinirSenhaUseCase;
     private final AlterarSenhaUseCase alterarSenhaUseCase;
+    private final EncerrarContaUseCase encerrarContaUseCase;
+    private final TrocarEmailUseCase trocarEmailUseCase;
+    private final TrocarTelefoneUseCase trocarTelefoneUseCase;
     private final UsuarioMapper usuarioMapper;
     private final SessaoMapper sessaoMapper;
 
@@ -60,6 +70,9 @@ public class AuthController {
             SolicitarRecuperacaoSenhaUseCase solicitarRecuperacaoSenhaUseCase,
             RedefinirSenhaUseCase redefinirSenhaUseCase,
             AlterarSenhaUseCase alterarSenhaUseCase,
+            EncerrarContaUseCase encerrarContaUseCase,
+            TrocarEmailUseCase trocarEmailUseCase,
+            TrocarTelefoneUseCase trocarTelefoneUseCase,
             UsuarioMapper usuarioMapper,
             SessaoMapper sessaoMapper) {
         this.cadastrarUsuarioUseCase = cadastrarUsuarioUseCase;
@@ -70,6 +83,9 @@ public class AuthController {
         this.solicitarRecuperacaoSenhaUseCase = solicitarRecuperacaoSenhaUseCase;
         this.redefinirSenhaUseCase = redefinirSenhaUseCase;
         this.alterarSenhaUseCase = alterarSenhaUseCase;
+        this.encerrarContaUseCase = encerrarContaUseCase;
+        this.trocarEmailUseCase = trocarEmailUseCase;
+        this.trocarTelefoneUseCase = trocarTelefoneUseCase;
         this.usuarioMapper = usuarioMapper;
         this.sessaoMapper = sessaoMapper;
     }
@@ -127,6 +143,29 @@ public class AuthController {
         TokensSessao tokens = alterarSenhaUseCase.executar(usuario.id(), request.senhaAtual(), request.novaSenha(),
                 request.refreshToken());
         return ResponseEntity.ok(sessaoMapper.toLoginResponse(tokens));
+    }
+
+    /** UC10 (LGPD): encerra e anonimiza a conta. Sem {@code confirmacao=true}, nem chega aqui (400). */
+    @PostMapping("/encerrar-conta")
+    public ResponseEntity<Void> encerrarConta(@AuthenticationPrincipal UsuarioAutenticado usuario,
+            @Valid @RequestBody EncerrarContaRequest request, HttpServletRequest http) {
+        encerrarContaUseCase.executar(usuario.id(), http.getRemoteAddr());
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/email")
+    public ResponseEntity<ContatoResponse> trocarEmail(@AuthenticationPrincipal UsuarioAutenticado usuario,
+            @Valid @RequestBody TrocarEmailRequest request) {
+        Usuario atualizado = trocarEmailUseCase.executar(usuario.id(), request.novoEmail(), request.senhaAtual());
+        return ResponseEntity.ok(usuarioMapper.toContatoResponse(atualizado));
+    }
+
+    @PatchMapping("/telefone")
+    public ResponseEntity<ContatoResponse> trocarTelefone(@AuthenticationPrincipal UsuarioAutenticado usuario,
+            @Valid @RequestBody TrocarTelefoneRequest request) {
+        Usuario atualizado = trocarTelefoneUseCase.executar(usuario.id(), request.novoTelefone(),
+                request.senhaAtual());
+        return ResponseEntity.ok(usuarioMapper.toContatoResponse(atualizado));
     }
 
     /** Sem dispositivo informado, identifica o aparelho pelo User-Agent. Normalização fica no usecase. */

@@ -119,3 +119,89 @@ confirmação de e-mail, já que os dois saem pelo mesmo canal (`EMAIL`). `Final
 e `CanalVerificacao.SMS` já existem no enum mas nenhum usecase os emite ainda — entram com a UC05 ("Confirmar
 e-mail"), fora deste card. Detalhe completo em
 `docs/features/TICKET-0033-recuperar-senha-e-alterar-senha-autenticada.md`.
+
+## 2026-10-14 — TICKET-0034: encerrar conta, anonimização e retenção (LGPD, UC10)
+
+Implementada a reação de `auth` ao encerramento de conta: `POST /auth/encerrar-conta` (confirmação
+explícita obrigatória) bloqueia o CPF por 12 meses em `CpfBloqueado`, anonimiza `Usuario`
+(`cpf`/`dataNascimento`/`cidadeUf` apagados — ficaram nullable, migration `V8`; `nomeCompleto`/`email`/
+`telefone` anonimizados, e-mail/telefone originais livres pra cadastro novo), encerra todas as sessões
+(inclusive a atual), grava uma linha em `LogAuditoria` (subpasta nova `auditoria/`, só em `auth` por
+enquanto — sobe pra `comum/` quando um 2º módulo precisar) e publica `ContaEncerradaEvent`
+(`comum/eventos/`, pasta nova: evento de domínio entre módulos só funciona se for importável por
+qualquer módulo que precisar escutá-lo, então não cabe no critério "2+ módulos usando hoje" de
+helper). Ninguém escuta o evento ainda — `perfil`/consentimento não têm as entidades que o card pede
+anonimizar (`PerfilEmpregador` — "PerfilContratante" no diagrama é o nome velho, ver nomenclatura no
+`perfil/package-info.java` —, `PerfilPrestador`, `EnderecoSalvo`, `Midia`, `AceiteTermo`), ficou
+fora de escopo de propósito (ver "Fora de escopo" no doc do ticket).
+
+Rotina diária de limpeza por retenção (`LimparRetencaoUseCase`, `@Scheduled`, `@EnableScheduling` novo
+na aplicação): `CpfBloqueado` liberado, `LogAuditoria` com mais de 5 anos, `Sessao` encerrada/expirada
+há mais de 6 meses (Marco Civil da Internet art. 15 — decidido que "registros de acesso" do card é a
+própria `Sessao`, não uma tabela nova; ela já guarda IP + timestamps por login).
+
+Corrigida a regra de bloqueio de CPF (UC01/`CadastrarUsuarioUseCase`) pra bater com a descrição do
+card: antes checava uma janela de 12 meses calculada a partir de `bloqueadoEm` na hora da consulta
+(`liberadoEm` só pra liberação antecipada, nullable); agora `liberadoEm` é sempre gravado na criação
+(`bloqueadoEm + 12 meses`) e a checagem é só "`liberadoEm` no futuro" — mais simples e bate com o texto
+do card. Sem dado em produção afetado: nenhum código anterior de fato criava linha em `CpfBloqueado`
+(só checava) até este ticket implementar o primeiro ponto que grava. Detalhe completo em
+`docs/features/TICKET-0034-encerrar-conta-anonimizacao-e-retencao.md`.
+
+## 2026-10-15 — TICKET-0048 (proposta): troca de e-mail e telefone como operação do `auth`
+
+Proposta, **não implementada e não aprovada**: a troca de e-mail/telefone do card "Consultar e editar o perfil de
+Empregador" ficaria como usecase do `auth` (dono de `Usuario`), e o `perfil` não alteraria `Usuario`. Reaproveitaria
+`VerificacaoContato`/`CONFIRMACAO_EMAIL`/`EmailService`; SMS fica dependente da UC04 e o link de e-mail, da UC05.
+Também depende de decisão sobre adequar o telefone ao formato `+55DDNNNNNNNNN`, o que alteraria o cadastro (UC01).
+Detalhe em `modulos/perfil/docs/features/TICKET-0048-consultar-e-editar-perfil-empregador.md`.
+
+## 2026-10-16 — TICKET-0048: `auth` implementa a porta `ConsultaDadosUsuario`
+
+Para o módulo `perfil` ler nome, e-mail, telefone e datas de confirmação sem importar classe do `auth`, o `auth`
+passou a implementar `comum/portas/ConsultaDadosUsuario` em `actions/service/ConsultaDadosUsuarioService`
+(só leitura; conta encerrada responde como inexistente). `UsuarioService` ganhou `buscarPorId` (`Optional`, não
+lança). Nenhuma regra de cadastro, login ou confirmação de contato mudou.
+
+## 2026-10-16 — TICKET-0048: troca de e-mail e telefone, sem confirmação
+
+`PATCH /auth/email` e `PATCH /auth/telefone`, com `senhaAtual` obrigatória. **A confirmação de e-mail não foi
+implementada**: o link emitido na troca de e-mail é inerte porque o consumidor (UC05) não existe; SMS/OTP (UC04) também
+não existe e nada é simulado. Decisões que não ficam óbvias no código:
+
+- Lock de linha em `usuario` no início da troca (`buscarParaAtualizarOuFalhar`): sem ele, requisições simultâneas
+  furam o limite de 3 emissões por hora (verificado: 6 emissões sem o lock).
+- Unicidade do e-mail garantida pela constraint, traduzida em `salvarComEmailUnico` (flush antes de qualquer outra
+  escrita); o e-mail só sai depois do commit (`ExecutarAposCommit`).
+- Tokens `CONFIRMACAO_EMAIL` pendentes são invalidados a cada troca/reemissão, porque o token não guarda o e-mail-alvo;
+  `destino_hash` (D10) ficou como proposta não aprovada.
+- Telefone: o **banco guarda só os dígitos nacionais** (`11999998888`, `VARCHAR(11)` como sempre), igual ao cadastro; o
+  `+55` fica no contrato da API e nas integrações (`TelefoneHelper.paraInternacional`, aplicado também pela porta
+  `ConsultaDadosUsuario`). Uma primeira versão gravava `+55...` e ampliava a coluna para `VARCHAR(14)`, deixando dois
+  formatos na coluna; foi descartada antes do commit, sem migration. O cadastro (UC01) segue intocado e as linhas
+  legadas não foram tocadas.
+Detalhe em `docs/features/TICKET-0048-trocar-email-e-telefone.md`.
+
+## 2026-10 — troca de e-mail avisa o endereço antigo
+
+Code review: a troca de e-mail vale na hora e o dono não recebia sinal algum (account takeover silencioso). A
+`TrocarEmailUseCase` passou a avisar o e-mail antigo depois do commit, em envio separado do link de confirmação. O aviso
+não leva link de recuperação de senha, porque ela vai para o e-mail atual (já o novo). Typo no e-mail novo segue possível;
+a solução (e-mail pendente promovido na UC05) ficou como pendência no doc do TICKET-0048.
+
+## 2026-10 — porta `comum/portas/ConsultaDadosUsuario` como canal de leitura entre módulos
+
+O `auth` passou a implementar `ConsultaDadosUsuario` (`ConsultaDadosUsuarioService`) para o `perfil` ler nome, contato
+e datas de confirmação sem importar o `auth`. É um canal além dos previstos no ADR-0001 (evento/fila); fica registrado 
+junto com `comum/eventos/` para o próximo módulo não inventar outro. Regra registrada em 
+`docs/funcionalidade/EXPLICACAO_CLASSES.md` ("eventos para reação, portas para consulta"). 
+
+## 2026-10 — envio pós-commit por evento, no lugar de `ExecutarAposCommit`
+
+Code review: `helper/` é "utilitário puro" e `ExecutarAposCommit` dependia de `TransactionSynchronizationManager` (estado
+por thread); sem transação ele ainda rodava a ação na hora. A `TrocarEmailUseCase` agora publica
+`ConfirmacaoEmailSolicitadaEvent` e `EmailContaAlteradoEvent`, e `EmailEventosService` envia com
+`@TransactionalEventListener(AFTER_COMMIT)`. Fora de transação o evento é descartado, nunca envia antes de persistir.
+Os eventos ficam em `auth/eventos/` (internos); a #7 usa `comum/eventos/` só para evento entre módulos
+(`ContaEncerradaEvent`). Local provisório, ADR pendente do tech lead. `SolicitarRecuperacaoSenhaUseCase` e
+`AlterarSenhaUseCase` seguem enviando dentro da transação.

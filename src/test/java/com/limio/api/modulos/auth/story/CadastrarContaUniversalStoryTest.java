@@ -6,9 +6,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,6 +64,13 @@ class CadastrarContaUniversalStoryTest {
     void limparBase() {
         usuarioRepository.deleteAll();
         cpfBloqueadoRepository.deleteAll();
+    }
+
+    // Testes de outras classes reaproveitam o mesmo CPF fixo de teste (52998224725) como "válido" —
+    // não deixar um CpfBloqueado pra trás depois do último teste desta classe.
+    @AfterEach
+    void naoDeixarCpfBloqueadoPraTras() {
+        limparBase();
     }
 
     private CadastroRequest requestValido(String cpf, String email) {
@@ -149,9 +158,11 @@ class CadastrarContaUniversalStoryTest {
     @Test
     void dadoCpfExcluidoHaMenosDe12Meses_quandoCadastra_entaoBloqueiaComErroGenerico() throws Exception {
         String cpfExcluido = "52998224725";
+        Instant agora = Instant.now();
         CpfBloqueado bloqueio = new CpfBloqueado();
         bloqueio.setCpfHmac(cpfHasher.hash(cpfExcluido));
-        bloqueio.setBloqueadoEm(Instant.now());
+        bloqueio.setBloqueadoEm(agora);
+        bloqueio.setLiberadoEm(agora.plus(Duration.ofDays(365)));
         cpfBloqueadoRepository.save(bloqueio);
 
         CadastroRequest request = requestValido(cpfExcluido, "novo@example.com");
@@ -163,5 +174,23 @@ class CadastrarContaUniversalStoryTest {
                 .andExpect(jsonPath("$.codigo", is("CADASTRO_DADOS_INDISPONIVEIS")));
 
         assertThat(usuarioRepository.count()).isZero();
+    }
+
+    @Test
+    void dadoCpfComBloqueioJaLiberado_quandoCadastra_entaoPermite() throws Exception {
+        String cpfLiberado = "52998224725";
+        Instant agora = Instant.now();
+        CpfBloqueado bloqueio = new CpfBloqueado();
+        bloqueio.setCpfHmac(cpfHasher.hash(cpfLiberado));
+        bloqueio.setBloqueadoEm(agora.minus(Duration.ofDays(400)));
+        bloqueio.setLiberadoEm(agora.minus(Duration.ofDays(1)));
+        cpfBloqueadoRepository.save(bloqueio);
+
+        CadastroRequest request = requestValido(cpfLiberado, "novo@example.com");
+
+        mockMvc.perform(post("/auth/cadastro")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
     }
 }
