@@ -28,6 +28,12 @@ public class PerfilEmpregadorService extends BaseService<PerfilEmpregador, UUID,
         return new MeuPerfilEmpregador(perfil, dados);
     }
 
+    public PerfilEmpregador garantirPerfilParaAtualizar(UUID usuarioId) {
+        PerfilEmpregador perfil = garantirPerfil(usuarioId).perfil();
+        return repository.findByIdParaAtualizar(perfil.getId())
+                .orElseThrow(PerfilEmpregadorNaoEncontradoException::new);
+    }
+
     private PerfilEmpregador buscarOuCriar(UUID usuarioId, String nomeInicial) {
         return repository.findByUsuarioId(usuarioId).orElseGet(() -> {
             repository.inserirSeAusente(usuarioId, nomeInicial);

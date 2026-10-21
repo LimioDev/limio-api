@@ -70,6 +70,20 @@ public class EnderecoSalvo extends BaseEntity {
         return removidoEm != null;
     }
 
+    public void substituirDadosPor(EnderecoSalvo novos) {
+        this.apelido = novos.apelido;
+        this.cep = novos.cep;
+        this.rua = novos.rua;
+        this.numero = novos.numero;
+        this.complemento = novos.complemento;
+        this.bairroRegiao = novos.bairroRegiao;
+        this.cidade = novos.cidade;
+        this.uf = novos.uf;
+        this.latitude = novos.latitude;
+        this.longitude = novos.longitude;
+        this.padrao = novos.padrao;
+    }
+
     public void remover(Instant quando) {
         this.removidoEm = quando;
         this.padrao = false;
