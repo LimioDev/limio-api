@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Component;
 
+import com.limio.api.modulos.perfil.categoria.Categoria;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestador;
 import com.limio.api.modulos.perfil.perfilprestador.janelaatendimento.JanelaAtendimento;
 import com.limio.api.modulos.perfil.records.JanelaAtendimentoRequest;
@@ -40,7 +41,9 @@ public class PerfilAtuacaoMapper {
 
     public PerfilAtuacaoResponse toResponse(PerfilPrestador entity) {
         return new PerfilAtuacaoResponse(
-                categoriaMapper.toResponse(entity.getEspecialidades()),
+                // Set, sem ordem: ordena aqui (as categorias de GET /categorias já vêm ordenadas do banco).
+                categoriaMapper.toResponse(
+                        entity.getEspecialidades().stream().sorted(Categoria.ORDEM_EXIBICAO).toList()),
                 entity.getRaioAtendimentoKm(),
                 entity.getMunicipioBase(),
                 entity.getUfBase(),

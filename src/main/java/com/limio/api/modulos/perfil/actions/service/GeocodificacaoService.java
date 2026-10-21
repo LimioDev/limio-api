@@ -57,8 +57,8 @@ public class GeocodificacaoService {
     /**
      * Centro do município na UF. Vazio quando o Nominatim não acha município com esse nome ali.
      *
-     * @throws GeocodificacaoIndisponivelException serviço fora do ar, timeout ou resposta de erro (inclusive
-     *         429 por excesso de consultas)
+     * @throws GeocodificacaoIndisponivelException serviço fora do ar, timeout, resposta de erro (inclusive
+     *         429 por excesso de consultas) ou resposta 200 fora do formato esperado
      */
     public Optional<Coordenadas> localizarMunicipio(String municipio, Uf uf) {
         ResultadoNominatim[] resultados;
@@ -74,15 +74,39 @@ public class GeocodificacaoService {
             log.warn("geocodificação indisponível ({}): {}", e.getClass().getSimpleName(), e.getMessage());
             throw new GeocodificacaoIndisponivelException();
         }
-        if (resultados == null || resultados.length == 0 || resultados[0].placeRank() > RANK_MAXIMO_MUNICIPIO) {
+        if (resultados == null || resultados.length == 0) {
             return Optional.empty();
         }
-        return Optional.of(new Coordenadas(Double.parseDouble(resultados[0].lat()),
-                Double.parseDouble(resultados[0].lon())));
+        ResultadoNominatim resultado = resultados[0];
+        if (resultado.placeRank() == null || resultado.lat() == null || resultado.lon() == null) {
+            throw respostaInvalida(resultado);
+        }
+        if (resultado.placeRank() > RANK_MAXIMO_MUNICIPIO) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(new Coordenadas(Double.parseDouble(resultado.lat()),
+                    Double.parseDouble(resultado.lon())));
+        } catch (IllegalArgumentException e) {
+            // NumberFormatException (texto não numérico) ou coordenada fora da faixa (Coordenadas).
+            throw respostaInvalida(resultado);
+        }
     }
 
-    /** Só o que interessa da resposta {@code jsonv2} — o Nominatim manda lat/lon como texto. */
+    /**
+     * Resposta 200 que não dá pra usar (instância alternativa configurada, mudança de formato): é falha do
+     * provedor, não do que o usuário digitou — mesmo 503 de serviço fora do ar.
+     */
+    private static GeocodificacaoIndisponivelException respostaInvalida(ResultadoNominatim resultado) {
+        log.warn("geocodificação devolveu resultado fora do formato esperado: {}", resultado);
+        return new GeocodificacaoIndisponivelException();
+    }
+
+    /**
+     * Só o que interessa da resposta {@code jsonv2} — o Nominatim manda lat/lon como texto. {@code placeRank}
+     * em {@code Integer}: campo ausente vira {@code null} (resposta inválida), não 0 (que passaria por município).
+     */
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record ResultadoNominatim(String lat, String lon, @JsonProperty("place_rank") int placeRank) {
+    record ResultadoNominatim(String lat, String lon, @JsonProperty("place_rank") Integer placeRank) {
     }
 }

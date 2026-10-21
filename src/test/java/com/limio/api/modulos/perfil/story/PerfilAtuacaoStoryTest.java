@@ -195,8 +195,25 @@ class PerfilAtuacaoStoryTest {
                 .andExpect(jsonPath("$.completo", is(true)));
 
         PerfilPrestador gravado = perfilPrestadorRepository.findByUsuarioId(usuarioId).orElseThrow();
-        assertThat(gravado.getLatitudeBase()).isEqualTo(CAMPINAS.latitude());
-        assertThat(gravado.getLongitudeBase()).isEqualTo(CAMPINAS.longitude());
+        assertThat(gravado.getCoordenadasBase()).isEqualTo(CAMPINAS);
+    }
+
+    // Regressão: especialidades e janelas no mesmo fetch join viravam produto cartesiano (2 x 2 = 4 janelas).
+    @Test
+    void dadoPerfilComVariasEspecialidadesEJanelas_quandoConsulta_entaoNaoRepeteJanelas() throws Exception {
+        UUID usuarioId = UUID.randomUUID();
+        salvar(usuarioId, new PerfilAtuacaoRequest(List.of(categoria("Pintura"), categoria("Elétrica")), 10,
+                "Campinas", Uf.SP, List.of(janela(DiaSemana.QUARTA, 8, 12), janela(DiaSemana.SEGUNDA, 8, 12))))
+                .andExpect(status().isOk());
+
+        consultar(usuarioId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.especialidades", hasSize(2)))
+                .andExpect(jsonPath("$.especialidades[0].nome", is("Elétrica")))
+                .andExpect(jsonPath("$.especialidades[1].nome", is("Pintura")))
+                .andExpect(jsonPath("$.janelas", hasSize(2)))
+                .andExpect(jsonPath("$.janelas[0].diaSemana", is("SEGUNDA")))
+                .andExpect(jsonPath("$.janelas[1].diaSemana", is("QUARTA")));
     }
 
     @Test
@@ -230,6 +247,18 @@ class PerfilAtuacaoStoryTest {
 
         assertThat(perfilPrestadorRepository.count()).isZero();
         assertThat(janelasGravadas()).isZero();
+    }
+
+    @Test
+    void dadoJanelasSobrepostasNoMesmoDia_quandoSalva_entaoRecusaComValidacaoFalhouSemGravar() throws Exception {
+        salvar(UUID.randomUUID(), new PerfilAtuacaoRequest(List.of(categoria("Pintura")), 10, "Campinas", Uf.SP,
+                List.of(janela(DiaSemana.SEGUNDA, 8, 12), janela(DiaSemana.SEGUNDA, 9, 11))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo", is("VALIDACAO_FALHOU")));
+
+        assertThat(perfilPrestadorRepository.count()).isZero();
+        assertThat(janelasGravadas()).isZero();
+        verify(geocodificacaoService, never()).localizarMunicipio(any(), any());
     }
 
     @Test

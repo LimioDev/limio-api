@@ -5,7 +5,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
 
 import com.limio.api.modulos.perfil.actions.service.GeocodificacaoService;
 import com.limio.api.modulos.perfil.categoria.Categoria;
@@ -25,6 +25,10 @@ import com.limio.api.modulos.perfil.perfilprestador.janelaatendimento.JanelaAten
  *
  * O perfil é sempre o do usuário do token, qualquer que seja o papel ativo: a troca pra Prestador (UC09)
  * tende a exigir perfil completo, então quem ainda está como Empregador precisa conseguir preenchê-lo.
+ *
+ * Validação das especialidades e geocodificação rodam antes de abrir a transação: a chamada ao Nominatim
+ * (até o timeout configurado) não segura conexão do pool, e PUTs concorrentes pra municípios novos não
+ * esgotam o pool travando endpoints sem relação. Só lock + leitura + gravação ficam na transação.
  */
 @Service
 public class SalvarPerfilAtuacaoUseCase {
@@ -32,27 +36,31 @@ public class SalvarPerfilAtuacaoUseCase {
     private final PerfilPrestadorService perfilPrestadorService;
     private final CategoriaService categoriaService;
     private final GeocodificacaoService geocodificacaoService;
+    private final TransactionOperations transacao;
 
     public SalvarPerfilAtuacaoUseCase(PerfilPrestadorService perfilPrestadorService,
             CategoriaService categoriaService,
-            GeocodificacaoService geocodificacaoService) {
+            GeocodificacaoService geocodificacaoService,
+            TransactionOperations transacao) {
         this.perfilPrestadorService = perfilPrestadorService;
         this.categoriaService = categoriaService;
         this.geocodificacaoService = geocodificacaoService;
+        this.transacao = transacao;
     }
 
-    @Transactional
     public PerfilPrestador executar(UUID usuarioId, Set<UUID> especialidadeIds, int raioAtendimentoKm,
             String municipioBase, Uf ufBase, List<JanelaAtendimento> janelas) {
         Set<Categoria> especialidades = buscarEspecialidades(especialidadeIds);
         Coordenadas coordenadasBase = localizar(municipioBase, ufBase);
 
-        // Lock só depois da geocodificação: um Nominatim lento não segura o salvamento concorrente do mesmo usuário.
-        perfilPrestadorService.travarPorUsuario(usuarioId);
-        PerfilPrestador perfil = perfilPrestadorService.buscarPorUsuario(usuarioId)
-                .orElseGet(() -> PerfilPrestador.novo(usuarioId));
-        perfil.atualizarAtuacao(especialidades, raioAtendimentoKm, municipioBase, ufBase, coordenadasBase, janelas);
-        return perfilPrestadorService.salvar(perfil);
+        return transacao.execute(status -> {
+            perfilPrestadorService.travarPorUsuario(usuarioId);
+            PerfilPrestador perfil = perfilPrestadorService.buscarPorUsuario(usuarioId)
+                    .orElseGet(() -> PerfilPrestador.novo(usuarioId));
+            perfil.atualizarAtuacao(especialidades, raioAtendimentoKm, municipioBase, ufBase, coordenadasBase,
+                    janelas);
+            return perfilPrestadorService.salvar(perfil);
+        });
     }
 
     /** Só categoria existente e ativa; um id fora disso recusa a gravação inteira. Lista vazia é aceita (UC). */

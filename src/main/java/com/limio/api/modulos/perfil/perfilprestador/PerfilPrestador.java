@@ -11,8 +11,10 @@ import com.limio.api.modulos.perfil.categoria.Categoria;
 import com.limio.api.modulos.perfil.perfilprestador.enums.Uf;
 import com.limio.api.modulos.perfil.perfilprestador.janelaatendimento.JanelaAtendimento;
 
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -53,11 +55,10 @@ public class PerfilPrestador extends BaseEntity {
     @Column(name = "uf_base", nullable = false, length = 2)
     private Uf ufBase;
 
-    @Column(name = "latitude_base", nullable = false)
-    private Double latitudeBase;
-
-    @Column(name = "longitude_base", nullable = false)
-    private Double longitudeBase;
+    @Embedded
+    @AttributeOverride(name = "latitude", column = @Column(name = "latitude_base", nullable = false))
+    @AttributeOverride(name = "longitude", column = @Column(name = "longitude_base", nullable = false))
+    private Coordenadas coordenadasBase;
 
     @Column(name = "completo", nullable = false)
     private boolean completo;
@@ -89,8 +90,7 @@ public class PerfilPrestador extends BaseEntity {
         this.raioAtendimentoKm = raioAtendimentoKm;
         this.municipioBase = municipioBase;
         this.ufBase = ufBase;
-        this.latitudeBase = coordenadasBase.latitude();
-        this.longitudeBase = coordenadasBase.longitude();
+        this.coordenadasBase = coordenadasBase;
 
         // clear + add na mesma coleção (nunca trocar a referência): o Hibernate rastreia a coleção dele, e é
         // assim que o orphanRemoval apaga as janelas antigas e o prestador_categoria perde as linhas tiradas.

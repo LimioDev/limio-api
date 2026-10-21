@@ -60,6 +60,10 @@ class PerfilAtuacaoRequestTest {
         return new JanelaAtendimentoRequest(DiaSemana.SEGUNDA, inicio, fim);
     }
 
+    private static JanelaAtendimentoRequest janela(DiaSemana dia, int horaInicio, int horaFim) {
+        return new JanelaAtendimentoRequest(dia, LocalTime.of(horaInicio, 0), LocalTime.of(horaFim, 0));
+    }
+
     @Test
     void deveAceitarPerfilSemEspecialidadesESemJanelas() {
         assertThat(camposInvalidos(new PerfilAtuacaoRequest(List.of(), 10, "Campinas", Uf.SP, List.of()))).isEmpty();
@@ -87,6 +91,30 @@ class PerfilAtuacaoRequestTest {
     void deveRecusarJanelaComInicioIgualAoFim() {
         assertThat(camposInvalidos(comJanelas(janela(LocalTime.of(9, 0), LocalTime.of(9, 0)))))
                 .containsExactly("janelas[0].intervaloValido");
+    }
+
+    @Test
+    void deveRecusarJanelasSobrepostasNoMesmoDia() {
+        assertThat(camposInvalidos(comJanelas(janela(DiaSemana.SEGUNDA, 8, 12), janela(DiaSemana.SEGUNDA, 9, 11))))
+                .containsExactly("janelasSemSobreposicao");
+    }
+
+    @Test
+    void deveRecusarJanelaRepetidaNoMesmoDia() {
+        assertThat(camposInvalidos(comJanelas(janela(DiaSemana.TERCA, 8, 12), janela(DiaSemana.TERCA, 8, 12))))
+                .containsExactly("janelasSemSobreposicao");
+    }
+
+    @Test
+    void deveAceitarJanelasQueSoEncostamOuSaoDeDiasDiferentes() {
+        assertThat(camposInvalidos(comJanelas(janela(DiaSemana.SEGUNDA, 13, 18), janela(DiaSemana.SEGUNDA, 8, 13),
+                janela(DiaSemana.TERCA, 9, 11)))).isEmpty();
+    }
+
+    @Test
+    void naoDeveAcusarSobreposicaoDeJanelaQueJaEInvalida() {
+        assertThat(camposInvalidos(comJanelas(janela(DiaSemana.SEGUNDA, 8, 12), janela(DiaSemana.SEGUNDA, 11, 9))))
+                .containsExactly("janelas[1].intervaloValido");
     }
 
     @Test

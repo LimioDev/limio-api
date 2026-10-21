@@ -22,6 +22,7 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionOperations;
 
 import com.limio.api.modulos.perfil.actions.service.GeocodificacaoService;
 import com.limio.api.modulos.perfil.actions.usecase.SalvarPerfilAtuacaoUseCase;
@@ -55,7 +56,8 @@ class SalvarPerfilAtuacaoUseCaseTest {
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new SalvarPerfilAtuacaoUseCase(perfilPrestadorService, categoriaService, geocodificacaoService);
+        useCase = new SalvarPerfilAtuacaoUseCase(perfilPrestadorService, categoriaService, geocodificacaoService,
+                TransactionOperations.withoutTransaction());
     }
 
     /** Id preenchido como se viesse do banco: {@code BaseEntity} compara por id. */
@@ -102,8 +104,7 @@ class SalvarPerfilAtuacaoUseCaseTest {
         assertThat(salvo.getRaioAtendimentoKm()).isEqualTo(10);
         assertThat(salvo.getMunicipioBase()).isEqualTo("Campinas");
         assertThat(salvo.getUfBase()).isEqualTo(Uf.SP);
-        assertThat(salvo.getLatitudeBase()).isEqualTo(CAMPINAS.latitude());
-        assertThat(salvo.getLongitudeBase()).isEqualTo(CAMPINAS.longitude());
+        assertThat(salvo.getCoordenadasBase()).isEqualTo(CAMPINAS);
         assertThat(salvo.getJanelas()).singleElement()
                 .satisfies(janela -> assertThat(janela.getPerfilPrestador()).isSameAs(salvo));
         assertThat(salvo.isCompleto()).isTrue();
@@ -132,7 +133,7 @@ class SalvarPerfilAtuacaoUseCaseTest {
 
         PerfilPrestador salvo = useCase.executar(USUARIO_ID, Set.of(), 10, "Campinas", Uf.SP, List.of());
 
-        assertThat(salvo.getLatitudeBase()).isEqualTo(CAMPINAS.latitude());
+        assertThat(salvo.getCoordenadasBase()).isEqualTo(CAMPINAS);
         verifyNoInteractions(geocodificacaoService);
     }
 

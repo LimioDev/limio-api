@@ -3,22 +3,36 @@ package com.limio.api.modulos.perfil.perfilprestador;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.base.BaseService;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.perfil.perfilprestador.enums.Uf;
 
 /** Camada técnica de persistência de {@link PerfilPrestador} — CRUD genérico (herdado) + finders da entity. */
 @Component
 public class PerfilPrestadorService extends BaseService<PerfilPrestador, UUID, PerfilPrestadorRepository> {
 
-    public PerfilPrestadorService(PerfilPrestadorRepository repository) {
+    private final TravaTransacional travaTransacional;
+
+    public PerfilPrestadorService(PerfilPrestadorRepository repository, TravaTransacional travaTransacional) {
         super(repository);
+        this.travaTransacional = travaTransacional;
     }
 
-    /** Com especialidades e janelas carregadas. Vazio é fluxo normal: o Prestador ainda não salvou o perfil. */
+    /**
+     * Com especialidades e janelas carregadas — o mapper lê as duas no controller, fora da transação. Duas
+     * queries (especialidades no fetch, janelas no {@code initialize}) em vez de um join só, que duplicava
+     * as janelas. Vazio é fluxo normal: o Prestador ainda não salvou o perfil.
+     */
+    @Transactional(readOnly = true)
     public Optional<PerfilPrestador> buscarPorUsuario(UUID usuarioId) {
-        return repository.findByUsuarioId(usuarioId);
+        Optional<PerfilPrestador> perfil = repository.findByUsuarioId(usuarioId);
+        perfil.ifPresent(encontrado -> Hibernate.initialize(encontrado.getJanelas()));
+        return perfil;
     }
 
     /**
@@ -27,7 +41,7 @@ public class PerfilPrestadorService extends BaseService<PerfilPrestador, UUID, P
      */
     public Optional<Coordenadas> buscarCoordenadasConhecidas(String municipio, Uf uf) {
         return repository.findFirstByUfBaseAndMunicipioBaseIgnoreCase(uf, municipio)
-                .map(perfil -> new Coordenadas(perfil.getLatitudeBase(), perfil.getLongitudeBase()));
+                .map(PerfilPrestador::getCoordenadasBase);
     }
 
     /**
@@ -36,6 +50,6 @@ public class PerfilPrestadorService extends BaseService<PerfilPrestador, UUID, P
      * registro, e o segundo estourava {@code uk_perfil_prestador_usuario_id} como 500.
      */
     public void travarPorUsuario(UUID usuarioId) {
-        repository.travarPorUsuario(usuarioId.toString());
+        travaTransacional.travar(EscopoTrava.PERFIL_PRESTADOR, usuarioId.toString());
     }
 }

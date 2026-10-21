@@ -116,6 +116,38 @@ class GeocodificacaoServiceTest {
     }
 
     @Test
+    void deveFalharComoIndisponivelQuandoACoordenadaNaoENumerica() throws IOException {
+        GeocodificacaoService servico = nominatimRespondendo(200, resultado("abc", "-47.0595640", 16));
+
+        assertThatThrownBy(() -> servico.localizarMunicipio("Campinas", Uf.SP))
+                .isInstanceOf(GeocodificacaoIndisponivelException.class);
+    }
+
+    @Test
+    void deveFalharComoIndisponivelQuandoACoordenadaEstaForaDaFaixa() throws IOException {
+        GeocodificacaoService servico = nominatimRespondendo(200, resultado("-122.9", "-47.0595640", 16));
+
+        assertThatThrownBy(() -> servico.localizarMunicipio("Campinas", Uf.SP))
+                .isInstanceOf(GeocodificacaoIndisponivelException.class);
+    }
+
+    @Test
+    void deveFalharComoIndisponivelQuandoFaltaLatitudeNaResposta() throws IOException {
+        GeocodificacaoService servico = nominatimRespondendo(200, "[{\"lon\":\"-47.06\",\"place_rank\":16}]");
+
+        assertThatThrownBy(() -> servico.localizarMunicipio("Campinas", Uf.SP))
+                .isInstanceOf(GeocodificacaoIndisponivelException.class);
+    }
+
+    @Test
+    void deveFalharComoIndisponivelQuandoFaltaPlaceRankNaResposta() throws IOException {
+        GeocodificacaoService servico = nominatimRespondendo(200, "[{\"lat\":\"-22.9\",\"lon\":\"-47.06\"}]");
+
+        assertThatThrownBy(() -> servico.localizarMunicipio("Campinas", Uf.SP))
+                .isInstanceOf(GeocodificacaoIndisponivelException.class);
+    }
+
+    @Test
     void deveFalharComoIndisponivelQuandoONominatimEstaForaDoAr() throws IOException {
         nominatimRespondendo(200, "[]");
         int portaFechada = servidor.getAddress().getPort();
