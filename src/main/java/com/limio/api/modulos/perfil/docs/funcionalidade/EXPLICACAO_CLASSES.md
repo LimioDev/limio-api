@@ -22,6 +22,39 @@ Mesmo caminho do `GET` (o mesmo `garantirPerfil`), com `EditarNomeExibicaoUseCas
 `EditarNomeExibicaoRequest` (obrigatório, sem espaços nas pontas, até 80 caracteres), o nome é gravado e a resposta
 é a mesma do `GET`.
 
+## Endereços salvos — `/conta/perfil-empregador/enderecos` (TICKET-0050)
+
+Em todas as rotas o dono vem só do token (`usuario.id()`), nunca da URL ou do corpo.
+
+1. `EnderecoSalvoController` chama o use case da rota. `EnderecoSalvoMapper` converte `EnderecoSalvoRequest` →
+   entity na entrada e entity → `EnderecoSalvoResponse` na saída; o use case nunca vê record.
+2. Exceto listar, todo use case começa com `PerfilEmpregadorService.garantirPerfilParaAtualizar`, que cria o
+   perfil se for o primeiro acesso e o **trava** (`PESSIMISTIC_WRITE`). Escritas do mesmo Empregador ficam
+   serializadas, e é isso que garante um único padrão sem depender só do índice.
+3. O acesso por id usa `EnderecoSalvoService.buscarEnderecoAtivoOuFalhar(id, perfilId)`: id inexistente, removido
+   ou de outro Empregador dá a mesma `EnderecoSalvoNaoEncontradoException` (404 `ENDERECO_NAO_ENCONTRADO`).
+4. **Criar/editar**: com `isPadrao = true`, `desmarcarEnderecoPadrao` roda antes de gravar (UPDATE com flush e
+   clear do contexto — a ordem importa por causa do índice único parcial). `PUT` substitui todos os campos
+   (`EnderecoSalvo.substituirDadosPor`).
+5. **Remover**: `EnderecoSalvo.remover(Instant)` preenche `removidoEm` e zera `isPadrao`; a linha fica no banco.
+   Remover o padrão deixa o Empregador sem padrão.
+6. **Marcar padrão** (`PATCH /{id}/padrao`): idempotente; se ainda não é o padrão, desmarca o atual, recarrega o
+   endereço (o clear do contexto o desanexou) e marca.
+7. `EnderecoSalvoService.salvar` faz `saveAndFlush` e converte a violação de `uk_endereco_salvo_padrao` em
+   `EnderecoPadraoConflitoException` (409 `ENDERECO_PADRAO_CONFLITO`), rede de segurança caso uma escrita escape
+   do lock.
+
+| Classe | Papel |
+|---|---|
+| `endereco/EnderecoSalvo`, `EnderecoSalvoRepository`, `EnderecoSalvoService` | entity (com `remover` e `substituirDadosPor`), finders sempre com `RemovidoEmIsNull` e service (busca ou 404, desmarcar padrão, rede de segurança do índice) |
+| `enums/Uf` | as 27 siglas, valor fechado do domínio |
+| `actions/usecase/ListarEnderecosSalvosUseCase`, `CriarEnderecoSalvoUseCase`, `EditarEnderecoSalvoUseCase`, `RemoverEnderecoSalvoUseCase`, `MarcarEnderecoSalvoPadraoUseCase` | regra de negócio de cada rota |
+| `actions/mapper/EnderecoSalvoMapper` | request/entity/response (só o controller chama) |
+| `actions/controller/EnderecoSalvoController` | tradução HTTP ↔ usecase |
+| `records/EnderecoSalvoRequest`, `EnderecoSalvoResponse` | contrato HTTP; o request normaliza CEP (só dígitos), `strip` e complemento em branco → `null` |
+| `excecao/EnderecoSalvoNaoEncontradoException`, `EnderecoPadraoConflitoException` | 404 e 409 |
+| `empregador/PerfilEmpregadorRepository.findByIdParaAtualizar`, `PerfilEmpregadorService.garantirPerfilParaAtualizar` | lock pessimista do perfil usado por toda escrita de endereço |
+
 ## Classes envolvidas
 
 | Classe | Papel |

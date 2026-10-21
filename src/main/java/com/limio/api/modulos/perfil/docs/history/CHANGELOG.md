@@ -46,3 +46,28 @@ Code review: `ConsultarMeuPerfilUseCase` e `EditarNomeExibicaoUseCase` repetiam 
 `PerfilEmpregadorService.garantirPerfil(usuarioId)` faz a consulta à porta, o 404 e a criação, e devolve
 `MeuPerfilEmpregador`. O corte do nome inicial em 80 caracteres saiu do helper `NomeExibicaoInicial` para
 `PerfilEmpregador.nomeExibicaoInicialDe` (regra da entity; o service não pode importar `actions/helper`).
+
+## 2026-10-21 — TICKET-0050: endereços salvos do Empregador (listar, criar, editar, remover, marcar padrão)
+
+Nova subentidade `EnderecoSalvo` (`perfil/endereco/`, tabela `endereco_salvo`, migration `V14`) e as rotas
+`/conta/perfil-empregador/enderecos` (`GET`, `POST`, `PUT /{id}`, `DELETE /{id}`, `PATCH /{id}/padrao`). Contrato,
+regras e pendências em `docs/features/TICKET-0050-enderecos-salvos-do-empregador.md`.
+
+Decisões que não ficam óbvias só lendo o código:
+
+- **`PerfilEmpregador`, não `PerfilContratante`**: o card usa o nome antigo; o código o renomeou na V4.
+- **`rua`, `numero`, `complemento` em vez de `logradouroCompleto`** (decisão do tech lead). O DER, fora deste
+  repositório, precisa ser atualizado.
+- **Latitude/longitude vêm do cliente** e são `NOT NULL`; o backend só valida a faixa. Sem geocodificação no
+  servidor.
+- **Soft delete** por `removido_em`; todo finder filtra `removidoEm is null`. Remover o padrão deixa o Empregador
+  sem padrão (0..1 padrão, sem promoção automática).
+- **Um único padrão por Empregador** em duas camadas: índice único parcial no banco e lock pessimista no
+  `PerfilEmpregador` em toda escrita. A ordem "desmarcar os outros e só depois marcar" é obrigatória (o índice
+  parcial não é deferível).
+- **Recurso alheio, removido ou inexistente → 404** `ENDERECO_NAO_ENCONTRADO`, nunca 403 (anti-enumeração).
+- **`ENDERECO_PADRAO_CONFLITO` (409)** criado como rede de segurança do índice; o plano inicial previa "sem código
+  novo". `ENDERECO_EM_USO` **não** foi criado (depende do módulo `anuncio`).
+- **`GlobalExceptionHandler`**: id de rota que não é UUID passou de 500 para 400 `VALIDACAO_FALHOU`.
+- **Jackson 3** recusa `boolean` primitivo ausente em record; por isso `isPadrao` é `Boolean` no request e é
+  normalizado para `false` no compact constructor.

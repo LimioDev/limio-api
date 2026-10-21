@@ -9,8 +9,10 @@ TICKET-0034 (encerrar conta e anonimização), módulo `anuncio` (ainda inexiste
 
 ## Status
 
-Em documentação - Este arquivo registra contrato, regras e pendências para
-revisão do tech lead antes do código. Será atualizado ao fim da implementação.
+Implementado (listar, criar, editar, remover e marcar padrão) na branch `feature/50`, com specs e stories.
+As decisões marcadas **Proposto** abaixo foram implementadas como propostas e seguem aguardando confirmação do
+tech lead (ver "Pontos para o tech lead"). Migration: `V14__criar_tabela_endereco_salvo.sql` — o número pode
+mudar no merge.
 
 ## User Story
 
@@ -64,7 +66,7 @@ outra pessoa.
 - **DER fora do repositório.** O DER fica em `limio/docs/`. Tipos, tamanhos e nulabilidade da migration abaixo são
   **Propostos** e precisam ser conferidos contra o DER antes do código.
 
-## Contrato da API (**Proposto** — o card deixa as rotas "a definir")
+## Contrato da API (**Implementado**, rotas **Propostas** — o card deixa as rotas "a definir")
 
 Prefixo `/conta/perfil-empregador`, mesmo padrão do TICKET-0048. O dono vem sempre do token
 (`@AuthenticationPrincipal UsuarioAutenticado`); o id do dono nunca vai na URL nem no corpo.
@@ -112,6 +114,8 @@ nos textos e só dígitos no CEP, antes da validação (padrão de `EditarNomeEx
 | `ENDERECO_NAO_ENCONTRADO` (404) | id inexistente, removido ou **de outro Empregador** | **novo, Definido** (sugerido no card) |
 | `VALIDACAO_FALHOU` (400) | CEP ≠ 8 dígitos, UF fora das 27, campo obrigatório vazio, coordenada ausente/fora da faixa | existente — cobre o `DADOS_INVALIDOS` do card, **não criar** código novo |
 | `NAO_AUTENTICADO` (401) | sem token ou token inválido | existente |
+| `ENDERECO_PADRAO_CONFLITO` (409) | rede de segurança do índice único do padrão (duas escritas simultâneas escaparam do lock); o cliente pode repetir a chamada | **novo**, criado na Parte 5 — a decisão inicial era "sem código novo", mas a rede de segurança precisa de um erro para devolver em vez de 500 |
+| `VALIDACAO_FALHOU` (400) também para `{id}` que não é UUID | `MethodArgumentTypeMismatchException` tratada no `GlobalExceptionHandler` | **novo handler** (antes caía em 500) |
 | `ENDERECO_EM_USO` (409) | remoção bloqueada por anúncio ativo | **Dependência** — só criar quando `anuncio` existir (hoje seria código morto) |
 
 ## Regras de negócio
@@ -145,9 +149,11 @@ são vazias). Proposta: manter consistente com `PerfilEmpregadorController` e de
    do use case. Operações do mesmo Empregador são serializadas.
 3. **Ordem em "marcar padrão":** primeiro `UPDATE … SET is_padrao = false` nos demais do perfil (com flush), depois
    `is_padrao = true` no escolhido — o índice parcial não é deferível, então a ordem importa.
-4. **Rede de segurança:** capturar `DataIntegrityViolationException` cujo `constraintName` seja
-   `uk_endereco_salvo_padrao` (padrão de `UsuarioService.salvarComEmailUnico`) e converter em erro de negócio em
-   vez de 500.
+4. **Rede de segurança (implementada):** `EnderecoSalvoService.salvar` usa `saveAndFlush` e converte
+   `DataIntegrityViolationException` cujo `constraintName` seja `uk_endereco_salvo_padrao` (padrão de
+   `UsuarioService.salvarComEmailUnico`) em `EnderecoPadraoConflitoException` (409 `ENDERECO_PADRAO_CONFLITO`).
+   Com o lock do passo 2 esse caminho só deve ocorrer se uma escrita escapar do lock; outras violações de
+   integridade são relançadas sem conversão.
 5. Sem `@Version`: o projeto não usa locking otimista; o lock pessimista é o precedente existente.
 
 ### Existência de endereço padrão (**Pendente** — o card não define)
@@ -161,7 +167,7 @@ são vazias). Proposta: manter consistente com `PerfilEmpregadorController` e de
 
 ### Remoção e módulo `anuncio` (**Dependência**)
 
-Não implementar a checagem agora. O `RemoverEnderecoSalvoUseCase` documenta o ponto de extensão; quando `anuncio`
+Checagem não implementada. O `RemoverEnderecoSalvoUseCase` é o ponto de extensão; quando `anuncio`
 existir, usar uma porta em `comum/portas` (padrão de `ConsultaDadosUsuario`), nunca dependência direta de módulo
 (ADR-0001), e só então criar `ENDERECO_EM_USO`.
 
@@ -199,21 +205,29 @@ mantém (fora deste repositório).
 - Quem precisar de uma linha única de endereço (ex.: o snapshot do anúncio, futuro módulo `anuncio`) monta o texto a
   partir dos três campos; o `perfil` não grava texto montado. Não há parsing de texto nem coluna redundante.
 
+## Implementação
+
+- **Migration** `V14`: tabela `endereco_salvo` com CHECKs de CEP (8 dígitos), UF (27 siglas) e faixas de
+  latitude/longitude; índice único parcial `uk_endereco_salvo_padrao`; índice `idx_endereco_salvo_perfil`.
+- **Use cases** (todos `@Transactional`, travam o `PerfilEmpregador` com `garantirPerfilParaAtualizar`, exceto
+  listar): `Listar`, `Criar`, `Editar`, `Remover`, `MarcarEnderecoSalvoPadrao`. `Criar`/`Editar` com
+  `isPadrao = true` desmarcam o padrão atual antes de gravar.
+- **Marcar padrão** é idempotente: se o endereço já é o padrão, devolve-o sem gravar nada.
+- **Remover** chama `EnderecoSalvo.remover(Instant)`: preenche `removidoEm` e zera `isPadrao`.
+- **Lat/long**: o cliente envia; o backend valida só a faixa. **Rua/número/complemento**: três campos.
+- **Listagem** ordenada por padrão primeiro e depois por apelido.
+- **Testes**: specs de cada use case, do service (inclusive a rede de segurança), do request, do mapper, da
+  entity e de `Uf`; stories de persistência/índice, criar-listar-editar (inclui 8 criações simultâneas como
+  padrão), remover e marcar padrão (inclui 8 marcações simultâneas).
+
 ## Fora de escopo
 
 - Checagem de endereço em uso por anúncio e o código `ENDERECO_EM_USO` (depende de `anuncio`).
 - Anonimização/expurgo de endereços ao encerrar a conta (LGPD; listener de `ContaEncerradaEvent`).
 - Checagem do papel ativo `EMPREGADOR` nas rotas.
-- Preencher `enderecos.{quantidade, apelidoPadrao}` no `GET /conta/perfil-empregador` (hoje placeholder do
-  TICKET-0048) — avaliar ao final deste card.
+- Preencher `enderecos.{quantidade, apelidoPadrao}` no `GET /conta/perfil-empregador`: **não feito** neste card;
+  continua o placeholder `{"quantidade": 0, "apelidoPadrao": null}` do TICKET-0048. Já dá para implementar
+  (`EnderecoSalvoService` conta os ativos e acha o padrão), mas exige a porta/ligação no `PerfilEmpregadorMapper`
+  e decisão de card próprio.
 - Geocodificação no servidor, salvo decisão em contrário do tech lead.
 
-## Pontos para o tech lead
-
-1. Origem de latitude/longitude e se são `NOT NULL` no DER.
-2. ~~`logradouroCompleto` ou campos separados~~ — **resolvido**: `rua`, `numero` e `complemento`; atualizar o DER.
-3. Regra do endereço padrão: 0..1 (recomendado) vs exatamente 1; remover o padrão atual.
-4. Checagem de papel `EMPREGADOR` nas rotas.
-5. Número da migration e tipos/tamanhos exatos do DER.
-6. `PUT`/`DELETE` vs `PATCH`.
-7. Tratamento LGPD de endereços removidos e de conta encerrada.

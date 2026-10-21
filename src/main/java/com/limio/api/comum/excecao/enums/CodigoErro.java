@@ -26,6 +26,7 @@ public enum CodigoErro {
     ENTIDADE_NAO_ENCONTRADA("Registro não encontrado."),
     PERFIL_EMPREGADOR_NAO_ENCONTRADO("Perfil de empregador não encontrado."),
     ENDERECO_NAO_ENCONTRADO("Endereço não encontrado."),
+    ENDERECO_PADRAO_CONFLITO("Outro endereço foi marcado como padrão ao mesmo tempo. Tente novamente."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;

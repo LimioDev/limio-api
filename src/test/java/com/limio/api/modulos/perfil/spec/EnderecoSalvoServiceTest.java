@@ -16,10 +16,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.dao.DataIntegrityViolationException;
+
 import com.limio.api.comum.excecao.enums.CodigoErro;
 import com.limio.api.modulos.perfil.endereco.EnderecoSalvo;
 import com.limio.api.modulos.perfil.endereco.EnderecoSalvoRepository;
 import com.limio.api.modulos.perfil.endereco.EnderecoSalvoService;
+import com.limio.api.modulos.perfil.excecao.EnderecoPadraoConflitoException;
 import com.limio.api.modulos.perfil.excecao.EnderecoSalvoNaoEncontradoException;
 
 @ExtendWith(MockitoExtension.class)
@@ -74,5 +77,29 @@ class EnderecoSalvoServiceTest {
 
         verify(repository).desmarcarPadrao(org.mockito.ArgumentMatchers.eq(perfilId),
                 org.mockito.ArgumentMatchers.any(Instant.class));
+    }
+
+    @Test
+    void deveConverterAViolacaoDoIndiceDoPadraoEmConflito() {
+        EnderecoSalvo endereco = EnderecoSalvo.builder().apelido("Casa").build();
+        var violacao = new org.hibernate.exception.ConstraintViolationException("duplicado",
+                new java.sql.SQLException("duplicado"), "uk_endereco_salvo_padrao");
+        when(repository.saveAndFlush(endereco)).thenThrow(new DataIntegrityViolationException("x", violacao));
+
+        assertThatThrownBy(() -> service.salvar(endereco))
+                .isInstanceOf(EnderecoPadraoConflitoException.class)
+                .satisfies(ex -> assertThat(((EnderecoPadraoConflitoException) ex).getCodigo())
+                        .isEqualTo(CodigoErro.ENDERECO_PADRAO_CONFLITO));
+    }
+
+    @Test
+    void naoDeveEngolirOutraViolacaoDeIntegridade() {
+        EnderecoSalvo endereco = EnderecoSalvo.builder().apelido("Casa").build();
+        var violacao = new org.hibernate.exception.ConstraintViolationException("outra",
+                new java.sql.SQLException("outra"), "ck_endereco_salvo_cep");
+        var original = new DataIntegrityViolationException("x", violacao);
+        when(repository.saveAndFlush(endereco)).thenThrow(original);
+
+        assertThatThrownBy(() -> service.salvar(endereco)).isSameAs(original);
     }
 }
