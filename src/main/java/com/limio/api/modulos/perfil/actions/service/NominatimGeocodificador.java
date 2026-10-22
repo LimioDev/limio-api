@@ -15,9 +15,9 @@ import org.springframework.web.client.RestClientException;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.excecao.GeocodificacaoIndisponivelException;
 import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
-import com.limio.api.modulos.perfil.perfilprestador.enums.Uf;
 
 /**
  * Geocodificação do município-base via Nominatim (OpenStreetMap) — decisão do TICKET-0054, a validar com
@@ -28,9 +28,9 @@ import com.limio.api.modulos.perfil.perfilprestador.enums.Uf;
  * resolveu ainda.
  */
 @Component
-public class GeocodificacaoService {
+public class NominatimGeocodificador implements Geocodificador {
 
-    private static final Logger log = LoggerFactory.getLogger(GeocodificacaoService.class);
+    private static final Logger log = LoggerFactory.getLogger(NominatimGeocodificador.class);
 
     /**
      * {@code place_rank} do Nominatim: 16 é município (limite administrativo); 15 é Brasília (o DF não tem
@@ -41,7 +41,7 @@ public class GeocodificacaoService {
 
     private final RestClient restClient;
 
-    public GeocodificacaoService(@Value("${geocodificacao.nominatim.url}") String url,
+    public NominatimGeocodificador(@Value("${geocodificacao.nominatim.url}") String url,
             @Value("${geocodificacao.nominatim.user-agent}") String userAgent,
             @Value("${geocodificacao.timeout}") Duration timeout) {
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(
@@ -55,11 +55,10 @@ public class GeocodificacaoService {
     }
 
     /**
-     * Centro do município na UF. Vazio quando o Nominatim não acha município com esse nome ali.
-     *
-     * @throws GeocodificacaoIndisponivelException serviço fora do ar, timeout, resposta de erro (inclusive
-     *         429 por excesso de consultas) ou resposta 200 fora do formato esperado
+     * Vazio quando o Nominatim não acha município com esse nome ali. A indisponibilidade inclui o 429 por
+     * excesso de consultas.
      */
+    @Override
     public Optional<Coordenadas> localizarMunicipio(String municipio, Uf uf) {
         ResultadoNominatim[] resultados;
         try {

@@ -14,17 +14,17 @@ import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import com.limio.api.modulos.perfil.actions.service.GeocodificacaoService;
+import com.limio.api.modulos.perfil.actions.service.NominatimGeocodificador;
+import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.excecao.GeocodificacaoIndisponivelException;
 import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
-import com.limio.api.modulos.perfil.perfilprestador.enums.Uf;
 import com.sun.net.httpserver.HttpServer;
 
 /**
- * {@link GeocodificacaoService} contra um Nominatim falso (servidor HTTP do próprio JDK na porta local):
+ * {@link NominatimGeocodificador} contra um Nominatim falso (servidor HTTP do próprio JDK na porta local):
  * exercita a URL montada, o User-Agent e a leitura do JSON de verdade, sem rede e sem Spring context.
  */
-class GeocodificacaoServiceTest {
+class NominatimGeocodificadorTest {
 
     private static final String USER_AGENT = "limio-api-teste/1.0";
 
@@ -39,7 +39,7 @@ class GeocodificacaoServiceTest {
         }
     }
 
-    private GeocodificacaoService nominatimRespondendo(int status, String corpo) throws IOException {
+    private NominatimGeocodificador nominatimRespondendo(int status, String corpo) throws IOException {
         servidor = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
         servidor.createContext("/search", troca -> {
             consultaRecebida = troca.getRequestURI().getRawQuery();
@@ -52,7 +52,7 @@ class GeocodificacaoServiceTest {
             }
         });
         servidor.start();
-        return new GeocodificacaoService("http://127.0.0.1:" + servidor.getAddress().getPort(), USER_AGENT,
+        return new NominatimGeocodificador("http://127.0.0.1:" + servidor.getAddress().getPort(), USER_AGENT,
                 Duration.ofSeconds(2));
     }
 
@@ -63,7 +63,7 @@ class GeocodificacaoServiceTest {
 
     @Test
     void deveDevolverAsCoordenadasDoMunicipioConsultandoComUfPorExtensoEUserAgentDoApp() throws IOException {
-        GeocodificacaoService servico = nominatimRespondendo(200, resultado("-22.9056391", "-47.0595640", 16));
+        NominatimGeocodificador servico = nominatimRespondendo(200, resultado("-22.9056391", "-47.0595640", 16));
 
         Optional<Coordenadas> coordenadas = servico.localizarMunicipio("Campinas", Uf.SP);
 
@@ -79,7 +79,7 @@ class GeocodificacaoServiceTest {
 
     @Test
     void deveCodificarONomeDigitadoInteiroSemAbrirParametroNovo() throws IOException {
-        GeocodificacaoService servico = nominatimRespondendo(200, "[]");
+        NominatimGeocodificador servico = nominatimRespondendo(200, "[]");
 
         servico.localizarMunicipio("Campinas&limit=40", Uf.SP);
 
@@ -88,28 +88,28 @@ class GeocodificacaoServiceTest {
 
     @Test
     void deveAceitarBrasiliaQueVemComRankDeCidade() throws IOException {
-        GeocodificacaoService servico = nominatimRespondendo(200, resultado("-15.7939869", "-47.8828", 15));
+        NominatimGeocodificador servico = nominatimRespondendo(200, resultado("-15.7939869", "-47.8828", 15));
 
         assertThat(servico.localizarMunicipio("Brasília", Uf.DF)).contains(new Coordenadas(-15.7939869, -47.8828));
     }
 
     @Test
     void deveDevolverVazioQuandoNaoAchaNada() throws IOException {
-        GeocodificacaoService servico = nominatimRespondendo(200, "[]");
+        NominatimGeocodificador servico = nominatimRespondendo(200, "[]");
 
         assertThat(servico.localizarMunicipio("Xyzabc", Uf.SP)).isEmpty();
     }
 
     @Test
     void deveDevolverVazioQuandoOResultadoEDistritoOuBairroENaoMunicipio() throws IOException {
-        GeocodificacaoService servico = nominatimRespondendo(200, resultado("-22.28", "-42.5325303", 18));
+        NominatimGeocodificador servico = nominatimRespondendo(200, resultado("-22.28", "-42.5325303", 18));
 
         assertThat(servico.localizarMunicipio("Centro", Uf.RJ)).isEmpty();
     }
 
     @Test
     void deveFalharComoIndisponivelQuandoONominatimRespondeErro() throws IOException {
-        GeocodificacaoService servico = nominatimRespondendo(429, "{\"error\":\"too many requests\"}");
+        NominatimGeocodificador servico = nominatimRespondendo(429, "{\"error\":\"too many requests\"}");
 
         assertThatThrownBy(() -> servico.localizarMunicipio("Campinas", Uf.SP))
                 .isInstanceOf(GeocodificacaoIndisponivelException.class);
@@ -117,7 +117,7 @@ class GeocodificacaoServiceTest {
 
     @Test
     void deveFalharComoIndisponivelQuandoACoordenadaNaoENumerica() throws IOException {
-        GeocodificacaoService servico = nominatimRespondendo(200, resultado("abc", "-47.0595640", 16));
+        NominatimGeocodificador servico = nominatimRespondendo(200, resultado("abc", "-47.0595640", 16));
 
         assertThatThrownBy(() -> servico.localizarMunicipio("Campinas", Uf.SP))
                 .isInstanceOf(GeocodificacaoIndisponivelException.class);
@@ -125,7 +125,7 @@ class GeocodificacaoServiceTest {
 
     @Test
     void deveFalharComoIndisponivelQuandoACoordenadaEstaForaDaFaixa() throws IOException {
-        GeocodificacaoService servico = nominatimRespondendo(200, resultado("-122.9", "-47.0595640", 16));
+        NominatimGeocodificador servico = nominatimRespondendo(200, resultado("-122.9", "-47.0595640", 16));
 
         assertThatThrownBy(() -> servico.localizarMunicipio("Campinas", Uf.SP))
                 .isInstanceOf(GeocodificacaoIndisponivelException.class);
@@ -133,7 +133,7 @@ class GeocodificacaoServiceTest {
 
     @Test
     void deveFalharComoIndisponivelQuandoFaltaLatitudeNaResposta() throws IOException {
-        GeocodificacaoService servico = nominatimRespondendo(200, "[{\"lon\":\"-47.06\",\"place_rank\":16}]");
+        NominatimGeocodificador servico = nominatimRespondendo(200, "[{\"lon\":\"-47.06\",\"place_rank\":16}]");
 
         assertThatThrownBy(() -> servico.localizarMunicipio("Campinas", Uf.SP))
                 .isInstanceOf(GeocodificacaoIndisponivelException.class);
@@ -141,7 +141,7 @@ class GeocodificacaoServiceTest {
 
     @Test
     void deveFalharComoIndisponivelQuandoFaltaPlaceRankNaResposta() throws IOException {
-        GeocodificacaoService servico = nominatimRespondendo(200, "[{\"lat\":\"-22.9\",\"lon\":\"-47.06\"}]");
+        NominatimGeocodificador servico = nominatimRespondendo(200, "[{\"lat\":\"-22.9\",\"lon\":\"-47.06\"}]");
 
         assertThatThrownBy(() -> servico.localizarMunicipio("Campinas", Uf.SP))
                 .isInstanceOf(GeocodificacaoIndisponivelException.class);
@@ -153,7 +153,7 @@ class GeocodificacaoServiceTest {
         int portaFechada = servidor.getAddress().getPort();
         servidor.stop(0);
         servidor = null;
-        GeocodificacaoService servico = new GeocodificacaoService("http://127.0.0.1:" + portaFechada, USER_AGENT,
+        NominatimGeocodificador servico = new NominatimGeocodificador("http://127.0.0.1:" + portaFechada, USER_AGENT,
                 Duration.ofSeconds(2));
 
         assertThatThrownBy(() -> servico.localizarMunicipio("Campinas", Uf.SP))

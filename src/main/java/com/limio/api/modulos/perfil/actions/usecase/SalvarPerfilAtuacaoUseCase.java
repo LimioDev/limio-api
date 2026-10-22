@@ -7,15 +7,15 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionOperations;
 
-import com.limio.api.modulos.perfil.actions.service.GeocodificacaoService;
+import com.limio.api.modulos.perfil.actions.service.Geocodificador;
 import com.limio.api.modulos.perfil.categoria.Categoria;
 import com.limio.api.modulos.perfil.categoria.CategoriaService;
+import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.excecao.CategoriaInvalidaException;
 import com.limio.api.modulos.perfil.excecao.MunicipioNaoEncontradoException;
 import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestador;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestadorService;
-import com.limio.api.modulos.perfil.perfilprestador.enums.Uf;
 import com.limio.api.modulos.perfil.perfilprestador.janelaatendimento.JanelaAtendimento;
 
 /**
@@ -35,16 +35,16 @@ public class SalvarPerfilAtuacaoUseCase {
 
     private final PerfilPrestadorService perfilPrestadorService;
     private final CategoriaService categoriaService;
-    private final GeocodificacaoService geocodificacaoService;
+    private final Geocodificador geocodificador;
     private final TransactionOperations transacao;
 
     public SalvarPerfilAtuacaoUseCase(PerfilPrestadorService perfilPrestadorService,
             CategoriaService categoriaService,
-            GeocodificacaoService geocodificacaoService,
+            Geocodificador geocodificador,
             TransactionOperations transacao) {
         this.perfilPrestadorService = perfilPrestadorService;
         this.categoriaService = categoriaService;
-        this.geocodificacaoService = geocodificacaoService;
+        this.geocodificador = geocodificador;
         this.transacao = transacao;
     }
 
@@ -79,7 +79,7 @@ public class SalvarPerfilAtuacaoUseCase {
      */
     private Coordenadas localizar(String municipio, Uf uf) {
         return perfilPrestadorService.buscarCoordenadasConhecidas(municipio, uf)
-                .or(() -> geocodificacaoService.localizarMunicipio(municipio, uf))
+                .or(() -> geocodificador.localizarMunicipio(municipio, uf))
                 .orElseThrow(MunicipioNaoEncontradoException::new);
     }
 }
