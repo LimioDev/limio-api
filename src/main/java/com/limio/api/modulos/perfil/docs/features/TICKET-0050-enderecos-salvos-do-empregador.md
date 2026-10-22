@@ -12,7 +12,7 @@ TICKET-0034 (encerrar conta e anonimização), módulo `anuncio` (ainda inexiste
 Implementado (listar, criar, editar, remover e marcar padrão) na branch `feature/50`, com specs e stories.
 Latitude/longitude são obtidas por geocodificação no servidor.
 As decisões marcadas **Proposto** abaixo foram implementadas como propostas e seguem aguardando confirmação do
-tech lead (ver "Pontos para o tech lead"). Migration: `V14__criar_tabela_endereco_salvo.sql` — o número pode
+tech lead (ver "Pontos para o tech lead"). Migration: `V15__criar_tabela_endereco_salvo.sql` — o número pode
 mudar no merge.
 
 ## User Story
