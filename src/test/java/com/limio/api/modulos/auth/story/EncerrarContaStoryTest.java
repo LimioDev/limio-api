@@ -96,7 +96,9 @@ class EncerrarContaStoryTest {
         logAuditoriaRepository.deleteAll();
         sessaoRepository.deleteAll();
         cpfBloqueadoRepository.deleteAll();
-        usuarioRepository.deleteAll();
+        // TRUNCATE ... CASCADE limpa também as tabelas filhas de usuario (verificacao_contato, sessao, perfis...)
+        // que outras classes de story deixam para trás; deleteAll() esbarrava na FK.
+        jdbcTemplate.execute("TRUNCATE TABLE usuario CASCADE");
     }
 
     // Outras classes de story usam o mesmo CPF fixo de teste (52998224725) como "válido" — não deixar

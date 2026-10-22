@@ -18,6 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -52,6 +53,9 @@ class CadastrarContaUniversalStoryTest {
     private UsuarioRepository usuarioRepository;
 
     @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
     private CpfBloqueadoRepository cpfBloqueadoRepository;
 
     @Autowired
@@ -62,7 +66,9 @@ class CadastrarContaUniversalStoryTest {
 
     @BeforeEach
     void limparBase() {
-        usuarioRepository.deleteAll();
+        // TRUNCATE ... CASCADE limpa também as tabelas filhas de usuario (verificacao_contato, sessao, perfis...)
+        // que outras classes de story deixam para trás; deleteAll() esbarrava na FK.
+        jdbcTemplate.execute("TRUNCATE TABLE usuario CASCADE");
         cpfBloqueadoRepository.deleteAll();
     }
 
