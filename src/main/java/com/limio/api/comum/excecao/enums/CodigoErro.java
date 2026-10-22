@@ -28,6 +28,7 @@ public enum CodigoErro {
     PERFIL_EMPREGADOR_NAO_ENCONTRADO("Perfil de empregador não encontrado."),
     ENDERECO_NAO_ENCONTRADO("Endereço não encontrado."),
     ENDERECO_PADRAO_CONFLITO("Outro endereço foi marcado como padrão ao mesmo tempo. Tente novamente."),
+    ENDERECO_NAO_LOCALIZADO("Não foi possível localizar o endereço informado. Confira rua, número, cidade e UF."),
     CATEGORIA_INVALIDA("Uma ou mais especialidades selecionadas não estão disponíveis."),
     CATEGORIA_PROTEGIDA("Esta categoria não pode ser desativada."),
     MUNICIPIO_NAO_ENCONTRADO("Município não encontrado na UF informada."),
