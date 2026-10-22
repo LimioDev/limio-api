@@ -8,8 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.eventos.ContaEncerradaEvent;
-import com.limio.api.modulos.auth.auditoria.LogAuditoriaService;
-import com.limio.api.modulos.auth.auditoria.enums.TipoAcaoAuditoria;
+import com.limio.api.comum.auditoria.LogAuditoriaService;
+import com.limio.api.comum.auditoria.enums.TipoAcaoAuditoria;
 import com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueadoService;
 import com.limio.api.modulos.auth.sessao.SessaoService;
 import com.limio.api.modulos.auth.usuario.Usuario;

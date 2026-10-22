@@ -33,6 +33,9 @@ public enum CodigoErro {
     CATEGORIA_PROTEGIDA("Esta categoria não pode ser desativada."),
     MUNICIPIO_NAO_ENCONTRADO("Município não encontrado na UF informada."),
     GEOCODIFICACAO_INDISPONIVEL("Não foi possível localizar o município agora. Tente novamente em instantes."),
+    FOTO_INVALIDA("Envie uma foto JPG ou PNG."),
+    ARQUIVO_GRANDE_DEMAIS("O arquivo é maior que o permitido."),
+    ARMAZENAMENTO_INDISPONIVEL("Não foi possível guardar o arquivo agora. Tente novamente em instantes."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;

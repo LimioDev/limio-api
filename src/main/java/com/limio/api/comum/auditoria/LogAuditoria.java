@@ -1,9 +1,9 @@
-package com.limio.api.modulos.auth.auditoria;
+package com.limio.api.comum.auditoria;
 
 import java.util.UUID;
 
+import com.limio.api.comum.auditoria.enums.TipoAcaoAuditoria;
 import com.limio.api.comum.base.BaseEntity;
-import com.limio.api.modulos.auth.auditoria.enums.TipoAcaoAuditoria;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -18,11 +18,13 @@ import lombok.Setter;
 
 /**
  * Trilha de auditoria — retida por 5 anos (rotina de limpeza diária apaga o
- * resto, ver {@code LimparRetencaoUseCase}). Só {@code modulos.auth} grava
- * aqui hoje; fica neste módulo em vez de {@code comum/} até um segundo módulo
- * precisar (critério do ADR-0001) — não tem FK pra {@code Usuario}
- * de propósito: {@code entidadeId} sozinho não identifica ninguém depois que a
- * entidade referenciada for anonimizada.
+ * resto, ver {@code auth.actions.usecase.LimparRetencaoUseCase}). Começou em
+ * {@code modulos.auth} (TICKET-0034, só escritor até então) e subiu pra
+ * {@code comum/} no TICKET-0049, quando {@code anuncio} passou a gravar
+ * aqui também (critério do ADR-0001: 2+ módulos usando). Não tem FK pra
+ * nenhuma entity de propósito: {@code entidadeId} sozinho não identifica
+ * ninguém depois que a entidade referenciada for anonimizada/encerrada, e
+ * uma FK de verdade exigiria {@code comum/} importar módulo.
  */
 @Entity
 @Table(name = "log_auditoria")

@@ -1,4 +1,4 @@
-package com.limio.api.modulos.auth.auditoria.enums;
+package com.limio.api.comum.auditoria.enums;
 
 /**
  * Valor fechado de ação auditável. Diagrama de classes e DER não definem os
@@ -6,5 +6,6 @@ package com.limio.api.modulos.auth.auditoria.enums;
  * valor por vez, conforme a ação que passar a ser registrada.
  */
 public enum TipoAcaoAuditoria {
-    CONTA_ENCERRADA
+    CONTA_ENCERRADA,
+    COMBINADO_CANCELADO
 }

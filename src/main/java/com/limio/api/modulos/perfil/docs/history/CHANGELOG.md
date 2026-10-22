@@ -94,6 +94,21 @@ completo, e exigir o papel aqui criaria um ciclo em que ninguém consegue virar 
 
 Detalhe completo em `docs/features/TICKET-0054-salvar-perfil-de-atuacao-e-perfil-completo.md`.
 
+## 2026-10-19 — TICKET-0056: foto de perfil e a entity `Midia` no `perfil`
+
+A foto é do usuário, não do papel: uma só para Empregador e Prestador. Por isso não existe `foto_midia_id` nos
+perfis; a foto atual é a `Midia` `FOTO_PERFIL` sem `expurgo_em`, garantida única pelo índice parcial
+`uk_midia_foto_perfil_ativa` (desvio do DER, que liga `fotoMidia` ao perfil).
+
+`Midia` estava prevista no `anuncio`, mas o `perfil` não pode importá-lo (ADR-0001). Como só o `perfil` usa hoje, a
+entity nasce em `perfil/midia/`; a tabela já é genérica (`tipo`) e sobe para `comum/` quando anúncio/chat precisarem.
+
+O app envia o arquivo para a API (multipart), não direto ao bucket: o EXIF (localização) tem de sair antes de a foto
+ser guardada. O bucket é privado; `url_s3` guarda a chave do objeto e o app recebe um link assinado que expira em 1 h.
+
+Formatos (JPEG/PNG) e tamanho (5 MB) são provisórios até o PO decidir. Detalhe em
+`docs/features/TICKET-0056-enviar-e-trocar-foto-de-perfil.md`.
+
 ## 2026-10-21 — TICKET-0054: ajustes do review da PR #9
 
 - `GET /perfil/prestador/atuacao` devolvia janelas repetidas com 2+ especialidades e 2+ janelas: as duas coleções
@@ -129,3 +144,13 @@ Contrato, falhas e pendências em `docs/features/TICKET-0050-enderecos-salvos-do
   devolvendo as duas. O front precisa remover os campos e tratar 422/503.
 - Pendente com o tech lead: provedor em produção (servidor público: 1 req/s e sem SLA), taxa de "não localizado" no
   Brasil, LGPD (endereço enviado a terceiro), DER.
+
+## 2026-10-21 — TICKET-0056: ajustes do review da PR #10
+
+- Advisory lock da foto saiu do `MidiaRepository` e passou pro helper `comum/persistencia/TravaTransacional`
+  (escopo `EscopoTrava.FOTO_PERFIL`), o mesmo que o login usa — e o mesmo arquivo da PR #9 (TICKET-0054), que traz o
+  escopo `PERFIL_PRESTADOR`. Quem entrar depois resolve só o conflito do enum.
+- Runtime sem writer ImageIO vira 500 (problema do servidor), não mais 422 `FOTO_INVALIDA`.
+- Scanner de EXIF para em segmento com tamanho < 2 e em IFD0 fora do APP1. Os dois casos já davam "sem rotação" por
+  acaso; a regra ficou explícita.
+- `ArmazenamentoService`: sai o `contentLength` manual, o `RequestBody.fromBytes` já define.

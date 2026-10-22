@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import com.limio.api.comum.excecao.enums.CodigoErro;
 import com.limio.api.comum.records.ErroResponse;
@@ -55,6 +56,17 @@ public class GlobalExceptionHandler {
             WebRequest request) {
         ErroResponse corpo = ErroResponse.de(CodigoErro.VALIDACAO_FALHOU, CodigoErro.VALIDACAO_FALHOU.mensagemPadrao(), caminho(request));
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(corpo);
+    }
+
+    /**
+     * Upload acima do limite do multipart ({@code spring.servlet.multipart.max-file-size}): recusado pelo
+     * servlet antes de chegar ao controller. Limite de cada tipo de arquivo (ex.: foto de perfil) é
+     * conferido no usecase, com o código de erro do próprio cenário.
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErroResponse> tratarArquivoGrandeDemais(MaxUploadSizeExceededException ex, WebRequest request) {
+        ErroResponse corpo = ErroResponse.de(CodigoErro.ARQUIVO_GRANDE_DEMAIS, CodigoErro.ARQUIVO_GRANDE_DEMAIS.mensagemPadrao(), caminho(request));
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(corpo);
     }
 
     /**

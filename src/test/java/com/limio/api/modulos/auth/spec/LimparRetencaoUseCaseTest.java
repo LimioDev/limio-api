@@ -14,7 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.limio.api.modulos.auth.actions.usecase.LimparRetencaoUseCase;
-import com.limio.api.modulos.auth.auditoria.LogAuditoriaService;
+import com.limio.api.comum.auditoria.LogAuditoriaService;
 import com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueadoService;
 import com.limio.api.modulos.auth.sessao.SessaoService;
 

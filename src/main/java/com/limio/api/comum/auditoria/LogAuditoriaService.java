@@ -1,4 +1,4 @@
-package com.limio.api.modulos.auth.auditoria;
+package com.limio.api.comum.auditoria;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -6,8 +6,8 @@ import java.util.UUID;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.limio.api.comum.auditoria.enums.TipoAcaoAuditoria;
 import com.limio.api.comum.base.BaseService;
-import com.limio.api.modulos.auth.auditoria.enums.TipoAcaoAuditoria;
 
 /** Camada técnica de persistência de {@link LogAuditoria} — CRUD genérico (herdado) + limpeza por retenção. */
 @Component
