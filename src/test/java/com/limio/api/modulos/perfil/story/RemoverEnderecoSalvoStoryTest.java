@@ -3,6 +3,8 @@ package com.limio.api.modulos.perfil.story;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -11,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -23,10 +26,13 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import com.limio.api.TestcontainersConfiguration;
+import com.limio.api.modulos.perfil.actions.service.Geocodificador;
+import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -43,6 +49,14 @@ class RemoverEnderecoSalvoStoryTest {
 
     private static final String MARIA_EMAIL = "maria@example.com";
     private static final String JOAO_EMAIL = "joao@example.com";
+
+    @MockitoBean
+    private Geocodificador geocodificador;
+
+    @BeforeEach
+    void stubGeocodificador() {
+        when(geocodificador.localizarEndereco(any())).thenReturn(Optional.of(new Coordenadas(-23.5614, -46.6559)));
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -187,8 +201,6 @@ class RemoverEnderecoSalvoStoryTest {
         corpo.put("bairroRegiao", "Bela Vista");
         corpo.put("cidade", "São Paulo");
         corpo.put("uf", "SP");
-        corpo.put("latitude", -23.5614);
-        corpo.put("longitude", -46.6559);
         corpo.put("isPadrao", padrao);
         return corpo;
     }

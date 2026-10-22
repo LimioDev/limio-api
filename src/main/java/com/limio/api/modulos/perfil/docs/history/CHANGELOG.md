@@ -58,8 +58,8 @@ Decisões que não ficam óbvias só lendo o código:
 - **`PerfilEmpregador`, não `PerfilContratante`**: o card usa o nome antigo; o código o renomeou na V4.
 - **`rua`, `numero`, `complemento` em vez de `logradouroCompleto`** (decisão do tech lead). O DER, fora deste
   repositório, precisa ser atualizado.
-- **Latitude/longitude vêm do cliente** e são `NOT NULL`; o backend só valida a faixa. Sem geocodificação no
-  servidor.
+- **Latitude/longitude** são `NOT NULL`. Vinham do cliente; hoje o servidor as obtém (ver a entrada
+  de geocodificação abaixo).
 - **Soft delete** por `removido_em`; todo finder filtra `removidoEm is null`. Remover o padrão deixa o Empregador
   sem padrão (0..1 padrão, sem promoção automática).
 - **Um único padrão por Empregador** em duas camadas: índice único parcial no banco e lock pessimista no
@@ -106,4 +106,26 @@ Detalhe completo em `docs/features/TICKET-0054-salvar-perfil-de-atuacao-e-perfil
   banco.
 - Advisory lock virou helper em `comum/persistencia/` (`TravaTransacional` + `EscopoTrava`), usado pelo perfil e pelo
   login — o lock do login passou pra forma de duas chaves, com escopo `LOGIN`.
-- `GeocodificacaoService` continua em `modulos/perfil` (só ele usa hoje — critério do ADR-0001).
+- O geocodificador continua em `modulos/perfil` (só ele usa hoje — critério do ADR-0001); hoje é a porta
+  `Geocodificador` com `NominatimGeocodificador` (ver a entrada de geocodificação).
+
+## 2026-10-22 — TICKET-0050: endereços obtêm latitude/longitude no servidor
+
+O backend geocodifica o endereço; o cliente deixa de enviar `latitude`/`longitude`.
+Contrato, falhas e pendências em `docs/features/TICKET-0050-enderecos-salvos-do-empregador.md`.
+
+- **Porta `Geocodificador`** (`perfil/actions/service/`), com `NominatimGeocodificador` (antes
+  `GeocodificacaoService`, do 0054) como implementação. Os dois use cases de endereço e o do 0054 dependem só da
+  interface; trocar de provedor é nova implementação + propriedade.
+- **`Uf` unificado** em `perfil/enums` (agora com nome por extenso); o `Uf` de `perfilprestador/enums` foi removido.
+- **Consulta só com rua, número, cidade e UF**: sem CEP (esparso no OSM brasileiro), sem bairro (a busca estruturada
+  não aceita) e sem complemento. Resultado só vale com `place_rank` ≥ 26 e mesma UF; senão, 422
+  `ENDERECO_NAO_LOCALIZADO` (novo). Falha do provedor → 503 `GEOCODIFICACAO_INDISPONIVEL`, sem retry.
+- **Fora da transação** (`TransactionOperations`, como o `SalvarPerfilAtuacaoUseCase`). Coordenadas seguem
+  `NOT NULL`; falha impede a gravação; nenhuma migration nova.
+- **Edição só reconsulta** se rua, número, cidade ou UF mudarem. Risco aceito: duas edições simultâneas do mesmo
+  endereço podem misturar texto e coordenadas.
+- **Contrato**: `EnderecoSalvoRequest` sem `latitude`/`longitude` (enviadas, são ignoradas); a resposta continua
+  devolvendo as duas. O front precisa remover os campos e tratar 422/503.
+- Pendente com o tech lead: provedor em produção (servidor público: 1 req/s e sem SLA), taxa de "não localizado" no
+  Brasil, LGPD (endereço enviado a terceiro), DER.

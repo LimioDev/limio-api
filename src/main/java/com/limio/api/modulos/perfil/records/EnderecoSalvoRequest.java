@@ -3,16 +3,14 @@ package com.limio.api.modulos.perfil.records;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.limio.api.modulos.perfil.enums.Uf;
 
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
- * Corpo de {@code POST} e {@code PUT /conta/perfil-empregador/enderecos}. Latitude e longitude vêm do
- * cliente (o app já geocodifica na tela "Novo endereço"); o backend só valida a faixa. {@code isPadrao}
+ * Corpo de {@code POST} e {@code PUT /conta/perfil-empregador/enderecos}. Não há latitude/longitude:
+ * o servidor as obtém pelo geocodificador (propriedade enviada pelo cliente é ignorada). {@code isPadrao}
  * ausente vale {@code false} (por isso {@code Boolean}: o Jackson 3 recusa primitivo ausente).
  */
 public record EnderecoSalvoRequest(
@@ -45,16 +43,6 @@ public record EnderecoSalvoRequest(
 
         @NotNull(message = "{enderecoSalvo.uf.obrigatoria}")
         Uf uf,
-
-        @NotNull(message = "{enderecoSalvo.latitude.obrigatoria}")
-        @DecimalMin(value = "-90", message = "{enderecoSalvo.latitude.faixa}")
-        @DecimalMax(value = "90", message = "{enderecoSalvo.latitude.faixa}")
-        Double latitude,
-
-        @NotNull(message = "{enderecoSalvo.longitude.obrigatoria}")
-        @DecimalMin(value = "-180", message = "{enderecoSalvo.longitude.faixa}")
-        @DecimalMax(value = "180", message = "{enderecoSalvo.longitude.faixa}")
-        Double longitude,
 
         @JsonProperty("isPadrao")
         Boolean padrao) {

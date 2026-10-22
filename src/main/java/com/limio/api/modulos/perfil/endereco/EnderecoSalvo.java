@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.limio.api.comum.base.BaseEntity;
 import com.limio.api.modulos.perfil.enums.Uf;
+import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -70,6 +71,21 @@ public class EnderecoSalvo extends BaseEntity {
         return removidoEm != null;
     }
 
+    /** Coordenadas vêm sempre do geocodificador, nunca do cliente.*/
+    public void definirCoordenadas(Coordenadas coordenadas) {
+        this.latitude = coordenadas.latitude();
+        this.longitude = coordenadas.longitude();
+    }
+
+    /** Só rua, número, cidade e UF vão ao provedor; mudar bairro, CEP, complemento ou apelido não move o ponto.*/
+    public boolean mesmaLocalizacaoQue(EnderecoSalvo outro) {
+        return paraGeocodificar().equals(outro.paraGeocodificar());
+    }
+
+    public EnderecoParaGeocodificar paraGeocodificar() {
+        return new EnderecoParaGeocodificar(rua, numero, cidade, uf);
+    }
+
     public void substituirDadosPor(EnderecoSalvo novos) {
         this.apelido = novos.apelido;
         this.cep = novos.cep;
@@ -79,8 +95,6 @@ public class EnderecoSalvo extends BaseEntity {
         this.bairroRegiao = novos.bairroRegiao;
         this.cidade = novos.cidade;
         this.uf = novos.uf;
-        this.latitude = novos.latitude;
-        this.longitude = novos.longitude;
         this.padrao = novos.padrao;
     }
 

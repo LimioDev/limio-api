@@ -5,6 +5,10 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -15,6 +19,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -31,10 +36,14 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import com.limio.api.TestcontainersConfiguration;
+import com.limio.api.modulos.perfil.actions.service.Geocodificador;
+import com.limio.api.modulos.perfil.excecao.GeocodificacaoIndisponivelException;
+import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -57,6 +66,14 @@ class CriarListarEEditarEnderecoSalvoStoryTest {
     private static final Conta JOAO = new Conta("João Pereira", "joao@example.com", "21988887777", "11144477735");
 
     private record Conta(String nomeCompleto, String email, String telefone, String cpf) {
+    }
+
+    @MockitoBean
+    private Geocodificador geocodificador;
+
+    @BeforeEach
+    void stubGeocodificador() {
+        when(geocodificador.localizarEndereco(any())).thenReturn(Optional.of(new Coordenadas(-23.5614, -46.6559)));
     }
 
     @Autowired
@@ -188,10 +205,6 @@ class CriarListarEEditarEnderecoSalvoStoryTest {
                 com(corpo("Casa", false), "uf", "XX"),
                 com(corpo("Casa", false), "uf", "sp"),
                 semCampo(corpo("Casa", false), "uf"),
-                com(corpo("Casa", false), "latitude", 90.1),
-                com(corpo("Casa", false), "longitude", -180.1),
-                semCampo(corpo("Casa", false), "latitude"),
-                semCampo(corpo("Casa", false), "longitude"),
                 com(corpo("Casa", false), "apelido", "  "),
                 com(corpo("Casa", false), "rua", ""),
                 com(corpo("Casa", false), "numero", " "),
@@ -266,6 +279,60 @@ class CriarListarEEditarEnderecoSalvoStoryTest {
         listar(tokenJoao).andExpect(jsonPath("$", hasSize(1))).andExpect(jsonPath("$[0].apelido", is("Casa do João")));
     }
 
+    // ---------- geocodificação no servidor ----------
+
+    @Test
+    void dadoEnderecoNaoLocalizado_quandoCria_entaoDevolve422ENadaEhGravado() throws Exception {
+        String token = cadastrarELogar(MARIA);
+        when(geocodificador.localizarEndereco(any())).thenReturn(Optional.empty());
+
+        criar(token, corpo("Casa", false))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.codigo", is("ENDERECO_NAO_LOCALIZADO")));
+
+        assertThat(totalEnderecos()).isZero();
+    }
+
+    @Test
+    void dadoGeocodificadorIndisponivel_quandoCria_entaoDevolve503ENadaEhGravado() throws Exception {
+        String token = cadastrarELogar(MARIA);
+        when(geocodificador.localizarEndereco(any())).thenThrow(new GeocodificacaoIndisponivelException());
+
+        criar(token, corpo("Casa", false))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.codigo", is("GEOCODIFICACAO_INDISPONIVEL")));
+
+        assertThat(totalEnderecos()).isZero();
+    }
+
+    @Test
+    void dadoCoordenadasNoCorpo_quandoCria_entaoSaoIgnoradasEValeAsDoGeocodificador() throws Exception {
+        String token = cadastrarELogar(MARIA);
+        Map<String, Object> corpo = corpo("Casa", false);
+        corpo.put("latitude", 10.0);
+        corpo.put("longitude", 20.0);
+
+        criar(token, corpo)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.latitude", is(-23.5614)))
+                .andExpect(jsonPath("$.longitude", is(-46.6559)));
+    }
+
+    @Test
+    void dadoSoOApelidoMudando_quandoEdita_entaoMantemCoordenadasESemNovaConsulta() throws Exception {
+        String token = cadastrarELogar(MARIA);
+        String id = idCriado(criar(token, corpo("Casa", false)));
+        clearInvocations(geocodificador);
+        when(geocodificador.localizarEndereco(any())).thenThrow(new GeocodificacaoIndisponivelException());
+
+        editar(token, id, corpo("Casa nova", false))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.apelido", is("Casa nova")))
+                .andExpect(jsonPath("$.latitude", is(-23.5614)));
+
+        verifyNoInteractions(geocodificador);
+    }
+
     // ---------- editar ----------
 
     @Test
@@ -280,8 +347,8 @@ class CriarListarEEditarEnderecoSalvoStoryTest {
         novo.put("bairroRegiao", "Centro");
         novo.put("cidade", "Rio de Janeiro");
         novo.put("uf", "RJ");
-        novo.put("latitude", -22.9068);
-        novo.put("longitude", -43.1729);
+        when(geocodificador.localizarEndereco(any()))
+                .thenReturn(Optional.of(new Coordenadas(-22.9068, -43.1729)));
 
         editar(token, id, novo)
                 .andExpect(status().isOk())
@@ -472,8 +539,6 @@ class CriarListarEEditarEnderecoSalvoStoryTest {
         corpo.put("bairroRegiao", "Bela Vista");
         corpo.put("cidade", "São Paulo");
         corpo.put("uf", "SP");
-        corpo.put("latitude", -23.5614);
-        corpo.put("longitude", -46.6559);
         corpo.put("isPadrao", padrao);
         return corpo;
     }

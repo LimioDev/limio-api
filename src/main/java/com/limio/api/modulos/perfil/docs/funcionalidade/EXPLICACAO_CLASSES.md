@@ -28,14 +28,20 @@ Em todas as rotas o dono vem só do token (`usuario.id()`), nunca da URL ou do c
 
 1. `EnderecoSalvoController` chama o use case da rota. `EnderecoSalvoMapper` converte `EnderecoSalvoRequest` →
    entity na entrada e entity → `EnderecoSalvoResponse` na saída; o use case nunca vê record.
-2. Exceto listar, todo use case começa com `PerfilEmpregadorService.garantirPerfilParaAtualizar`, que cria o
+2. Exceto listar, todo use case (criar e editar, dentro da transação, depois de geocodificar) começa com `PerfilEmpregadorService.garantirPerfilParaAtualizar`, que cria o
    perfil se for o primeiro acesso e o **trava** (`PESSIMISTIC_WRITE`). Escritas do mesmo Empregador ficam
    serializadas, e é isso que garante um único padrão sem depender só do índice.
 3. O acesso por id usa `EnderecoSalvoService.buscarEnderecoAtivoOuFalhar(id, perfilId)`: id inexistente, removido
    ou de outro Empregador dá a mesma `EnderecoSalvoNaoEncontradoException` (404 `ENDERECO_NAO_ENCONTRADO`).
-4. **Criar/editar**: com `isPadrao = true`, `desmarcarEnderecoPadrao` roda antes de gravar (UPDATE com flush e
-   clear do contexto — a ordem importa por causa do índice único parcial). `PUT` substitui todos os campos
-   (`EnderecoSalvo.substituirDadosPor`).
+4. **Criar/editar**: antes de abrir a transação, o use case obtém as coordenadas em
+   `Geocodificador.localizarEndereco(EnderecoParaGeocodificar)` (rua, número, cidade, UF; sem CEP, bairro ou
+   complemento). Vazio → `EnderecoNaoLocalizadoException` (422 `ENDERECO_NAO_LOCALIZADO`); provedor fora do ar →
+   `GeocodificacaoIndisponivelException` (503). Só então `TransactionOperations` abre a transação (passo 2) e grava.
+   Na **edição** a consulta só acontece se `EnderecoSalvo.mesmaLocalizacaoQue` der falso (rua, número, cidade ou UF
+   mudaram); senão as coordenadas gravadas ficam. Com `isPadrao = true`, `desmarcarEnderecoPadrao` roda antes de
+   gravar (UPDATE com flush e clear do contexto — a ordem importa por causa do índice único parcial). `PUT`
+   substitui todos os campos (`EnderecoSalvo.substituirDadosPor`, que não copia coordenadas;
+   `definirCoordenadas` as aplica).
 5. **Remover**: `EnderecoSalvo.remover(Instant)` preenche `removidoEm` e zera `isPadrao`; a linha fica no banco.
    Remover o padrão deixa o Empregador sem padrão.
 6. **Marcar padrão** (`PATCH /{id}/padrao`): idempotente; se ainda não é o padrão, desmarca o atual, recarrega o
@@ -47,12 +53,13 @@ Em todas as rotas o dono vem só do token (`usuario.id()`), nunca da URL ou do c
 | Classe | Papel |
 |---|---|
 | `endereco/EnderecoSalvo`, `EnderecoSalvoRepository`, `EnderecoSalvoService` | entity (com `remover` e `substituirDadosPor`), finders sempre com `RemovidoEmIsNull` e service (busca ou 404, desmarcar padrão, rede de segurança do índice) |
-| `enums/Uf` | as 27 siglas, valor fechado do domínio |
+| `enums/Uf` | as 27 siglas com nome por extenso (usado no `state` do Nominatim), valor fechado do domínio |
+| `actions/service/Geocodificador`, `NominatimGeocodificador` | porta de geocodificação (município e endereço) e sua implementação no Nominatim; `endereco/EnderecoParaGeocodificar` é o record de entrada |
 | `actions/usecase/ListarEnderecosSalvosUseCase`, `CriarEnderecoSalvoUseCase`, `EditarEnderecoSalvoUseCase`, `RemoverEnderecoSalvoUseCase`, `MarcarEnderecoSalvoPadraoUseCase` | regra de negócio de cada rota |
 | `actions/mapper/EnderecoSalvoMapper` | request/entity/response (só o controller chama) |
 | `actions/controller/EnderecoSalvoController` | tradução HTTP ↔ usecase |
 | `records/EnderecoSalvoRequest`, `EnderecoSalvoResponse` | contrato HTTP; o request normaliza CEP (só dígitos), `strip` e complemento em branco → `null` |
-| `excecao/EnderecoSalvoNaoEncontradoException`, `EnderecoPadraoConflitoException` | 404 e 409 |
+| `excecao/EnderecoSalvoNaoEncontradoException`, `EnderecoPadraoConflitoException`, `EnderecoNaoLocalizadoException` | 404, 409 e 422 |
 | `empregador/PerfilEmpregadorRepository.findByIdParaAtualizar`, `PerfilEmpregadorService.garantirPerfilParaAtualizar` | lock pessimista do perfil usado por toda escrita de endereço |
 
 As rotas do TICKET-0054 também exigem login: o `JwtAuthFilter` (`comum/seguranca/`) põe o `UsuarioAutenticado` no SecurityContext e
@@ -86,7 +93,7 @@ o controller recebe com `@AuthenticationPrincipal`. Sem token válido, 401 `NAO_
    - `CategoriaService.buscarAtivasPorIds` — veio menos do que foi pedido (id inexistente ou inativo) →
      `CategoriaInvalidaException`.
    - Coordenadas: `PerfilPrestadorService.buscarCoordenadasConhecidas` (algum perfil já gravou esse município/UF —
-     cache) ou, se não, `GeocodificacaoService.localizarMunicipio` (Nominatim). Não achou →
+     cache) ou, se não, `Geocodificador.localizarMunicipio` (implementado por `NominatimGeocodificador`). Não achou →
      `MunicipioNaoEncontradoException`; serviço fora do ar ou resposta fora do formato →
      `GeocodificacaoIndisponivelException` (lançada pelo service).
    - Abre a transação (`TransactionOperations`): `PerfilPrestadorService.travarPorUsuario` (advisory lock até o fim

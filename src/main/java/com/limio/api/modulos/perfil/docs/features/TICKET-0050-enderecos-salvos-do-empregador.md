@@ -10,6 +10,7 @@ TICKET-0034 (encerrar conta e anonimização), módulo `anuncio` (ainda inexiste
 ## Status
 
 Implementado (listar, criar, editar, remover e marcar padrão) na branch `feature/50`, com specs e stories.
+Latitude/longitude são obtidas por geocodificação no servidor.
 As decisões marcadas **Proposto** abaixo foram implementadas como propostas e seguem aguardando confirmação do
 tech lead (ver "Pontos para o tech lead"). Migration: `V14__criar_tabela_endereco_salvo.sql` — o número pode
 mudar no merge.
@@ -24,6 +25,7 @@ mais rápido.
 ### Campos de `EnderecoSalvo`
 
 `apelido`, `cep`, `rua`, `numero`, `complemento`, `bairroRegiao`, `cidade`, `uf`, `latitude`, `longitude`, `isPadrao`.
+`latitude` e `longitude` **não vêm do cliente**: o servidor as obtém por geocodificação (ver "Decisão técnica: latitude e longitude").
 
 ### Validações
 
@@ -33,7 +35,8 @@ mais rápido.
 ### Fluxo
 
 - **Listar**: devolve os endereços do Empregador logado; não devolve registros com `removidoEm` preenchido.
-- **Criar e editar**: grava o endereço com `latitude` e `longitude`.
+- **Criar e editar**: o servidor geocodifica rua, número, cidade e UF e grava o endereço com `latitude` e `longitude`.
+  A edição só consulta o provedor se rua, número, cidade ou UF mudarem.
 - **Remover**: preenche `removidoEm`; o endereço some da listagem e permanece no banco.
 - **Marcar como padrão**: marca `isPadrao` no escolhido e desmarca os outros do mesmo Empregador.
 
@@ -98,13 +101,12 @@ Pontos de contrato:
   "bairroRegiao": "Bela Vista",
   "cidade": "São Paulo",
   "uf": "SP",
-  "latitude": -23.5614,
-  "longitude": -46.6559,
   "isPadrao": true
 }
 ```
 
-A resposta acrescenta `id`. `removidoEm` não é exposto. Normalização no compact constructor do record: `strip`
+O **request não tem `latitude`/`longitude`**; se o cliente as enviar, são ignoradas. A resposta acrescenta `id`,
+`latitude` e `longitude` (obtidas no servidor, ex.: `-23.5614` e `-46.6559`). `removidoEm` não é exposto. Normalização no compact constructor do record: `strip`
 nos textos e só dígitos no CEP, antes da validação (padrão de `EditarNomeExibicaoRequest`).
 
 ### Códigos de erro
@@ -112,10 +114,12 @@ nos textos e só dígitos no CEP, antes da validação (padrão de `EditarNomeEx
 | CodigoErro | Situação | Estado |
 |---|---|---|
 | `ENDERECO_NAO_ENCONTRADO` (404) | id inexistente, removido ou **de outro Empregador** | **novo, Definido** (sugerido no card) |
-| `VALIDACAO_FALHOU` (400) | CEP ≠ 8 dígitos, UF fora das 27, campo obrigatório vazio, coordenada ausente/fora da faixa | existente — cobre o `DADOS_INVALIDOS` do card, **não criar** código novo |
+| `VALIDACAO_FALHOU` (400) | CEP ≠ 8 dígitos, UF fora das 27, campo obrigatório vazio | existente — cobre o `DADOS_INVALIDOS` do card, **não criar** código novo |
 | `NAO_AUTENTICADO` (401) | sem token ou token inválido | existente |
 | `ENDERECO_PADRAO_CONFLITO` (409) | rede de segurança do índice único do padrão (duas escritas simultâneas escaparam do lock); o cliente pode repetir a chamada | **novo**, criado na Parte 5 — a decisão inicial era "sem código novo", mas a rede de segurança precisa de um erro para devolver em vez de 500 |
 | `VALIDACAO_FALHOU` (400) também para `{id}` que não é UUID | `MethodArgumentTypeMismatchException` tratada no `GlobalExceptionHandler` | **novo handler** (antes caía em 500) |
+| `ENDERECO_NAO_LOCALIZADO` (422) | a geocodificação respondeu, mas não achou rua e número na cidade/UF informadas (ou só achou a cidade, o bairro ou outra UF) | **novo**, criado na Parte 7 |
+| `GEOCODIFICACAO_INDISPONIVEL` (503) | provedor fora do ar, lento (timeout), 429/erro HTTP ou resposta fora do formato; nada é gravado | existente (TICKET-0054), reutilizado |
 | `ENDERECO_EM_USO` (409) | remoção bloqueada por anúncio ativo | **Dependência** — só criar quando `anuncio` existir (hoje seria código morto) |
 
 ## Regras de negócio
@@ -171,27 +175,37 @@ Checagem não implementada. O `RemoverEnderecoSalvoUseCase` é o ponto de extens
 existir, usar uma porta em `comum/portas` (padrão de `ConsultaDadosUsuario`), nunca dependência direta de módulo
 (ADR-0001), e só então criar `ENDERECO_EM_USO`.
 
-## Decisão técnica: latitude e longitude (**Pendente**)
+## Decisão técnica: latitude e longitude (geocodificação no servidor)
 
-Achados no projeto: não há geocodificação, ViaCEP, `RestClient` em uso nem PostGIS/hibernate-spatial. Coordenadas
-são `DOUBLE PRECISION` comuns. `RestClient` já vem no `spring-boot-starter-webmvc` (sem dependência nova).
+O backend obtém as coordenadas por serviço de geocodificação; o request perdeu os dois campos e o servidor nunca
+confia em coordenada do cliente.
 
-| Opção | Prós | Contras |
-|---|---|---|
-| **1. Cliente envia lat/long** | Sem dependência nem falha externa; determinístico em teste; o app já geocodifica na tela "Novo endereço" | Confia no cliente (valida só faixa) |
-| 2. Backend geocodifica o endereço completo (Google/Nominatim) | Dado confiável e centralizado | Custo, chave, rate limit, envio de dado pessoal a terceiro (LGPD), precisa de fallback |
-| 3. Backend geocodifica pelo CEP (ViaCEP/BrasilAPI) | Simples | Precisão baixa (centro do CEP), dependência externa |
+- **Porta e provedor**: interface `Geocodificador` (`perfil/actions/service/`) com `localizarMunicipio` (TICKET-0054)
+  e `localizarEndereco(EnderecoParaGeocodificar)`; implementação `NominatimGeocodificador` (OpenStreetMap), a mesma
+  do 0054. Os use cases dependem só da interface; trocar de provedor é nova implementação + propriedade. Fica em
+  `perfil` (critério "2+ módulos hoje" do ADR-0001); se `anuncio` precisar, sobe para `comum/portas/`.
+- **Consulta**: busca estruturada `street={numero} {rua}`, `city`, `state` (UF por extenso), `countrycodes=br`,
+  `limit=1`. **Sem CEP** (CEP no OSM brasileiro é esparso e um valor desconhecido zera o resultado), **sem bairro**
+  (a busca estruturada não o aceita) e **sem complemento** (não ajuda e é dado pessoal desnecessário).
+- **Validação do resultado**: só aceita `place_rank` ≥ 26 (rua ou mais preciso) **e** `address.state` igual à UF
+  pedida (sem caixa/acento). Resultado só da cidade, de bairro ou de outra UF → "não localizado" (evita gravar o
+  centro da cidade como se fosse o endereço).
+- **Falhas**: não encontrado → 422 `ENDERECO_NAO_LOCALIZADO`; timeout, erro HTTP, 429, JSON inválido, campos
+  ausentes ou coordenada fora da faixa → 503 `GEOCODIFICACAO_INDISPONIVEL`. **Sem retry** (agravaria o 429). Em
+  ambos a operação é recusada e nada é gravado: `latitude`/`longitude` continuam `NOT NULL`, **sem migration nova**.
+- **Fora da transação**: criar e editar geocodificam antes de abrir a transação (padrão do
+  `SalvarPerfilAtuacaoUseCase`, `TransactionOperations`); só lock + gravação ficam dentro. A chamada externa não
+  segura conexão do pool nem o lock do perfil.
+- **Edição condicional**: só reconsulta se rua, número, cidade ou UF mudarem; apelido, CEP, bairro, complemento e
+  `isPadrao` mantêm as coordenadas gravadas (poupa o limite do provedor). Remover e marcar padrão nunca geocodificam.
+- **Risco aceito**: duas edições simultâneas do mesmo endereço pelo mesmo dono podem misturar o texto de uma com as
+  coordenadas da outra. Fechar exigiria reconferir dentro da transação se o texto lido ainda é o gravado.
 
-**Recomendação:** opção 1 neste card. O backend valida as faixas (-90..90 e -180..180) e persiste na mesma
-transação; colunas `NOT NULL`; coordenada ausente → 400 `VALIDACAO_FALHOU`. Não há falha de serviço externo a
-tratar.
+Alternativas descartadas: cliente enviar lat/long (confia no cliente); geocodificar só pelo CEP (precisão baixa);
+coordenadas anuláveis com "salvar sem coordenadas" (todo consumidor futuro — anúncio, mural — teria de tratar
+`null`, e seria preciso uma rotina de reprocessamento).
 
-Se o tech lead escolher geocodificação no servidor: `GeocodificacaoService` em `perfil/actions/service/`
-(`@Component` com propriedades no `application.properties`, como `EmailService`/`StorageProperties`), chamada
-**fora** da transação de escrita, e latitude/longitude passam a ser anuláveis (criar/editar sem coordenadas quando
-a geocodificação falhar). Essa decisão muda a migration; por isso precisa sair antes do código.
-
-## Decisão técnica: Rua, Número e Complemento (**Definido** pelo tech lead)
+## Decisão técnica: Rua, Número e Complemento 
 
 Não existe modelo de endereço reutilizável no projeto (só `Usuario.cidadeUf`, string). O card lista
 `logradouroCompleto`, mas a tela "Novo endereço" tem Rua, Número e Complemento. **Decisão do tech lead:** o
@@ -209,15 +223,16 @@ mantém (fora deste repositório).
 
 - **Migration** `V14`: tabela `endereco_salvo` com CHECKs de CEP (8 dígitos), UF (27 siglas) e faixas de
   latitude/longitude; índice único parcial `uk_endereco_salvo_padrao`; índice `idx_endereco_salvo_perfil`.
-- **Use cases** (todos `@Transactional`, travam o `PerfilEmpregador` com `garantirPerfilParaAtualizar`, exceto
-  listar): `Listar`, `Criar`, `Editar`, `Remover`, `MarcarEnderecoSalvoPadrao`. `Criar`/`Editar` com
-  `isPadrao = true` desmarcam o padrão atual antes de gravar.
+- **Use cases** (travam o `PerfilEmpregador` com `garantirPerfilParaAtualizar`, exceto listar): `Listar`, `Criar`,
+  `Editar`, `Remover`, `MarcarEnderecoSalvoPadrao`. `Remover`, `Marcar` e `Listar` usam `@Transactional`; `Criar` e
+  `Editar` geocodificam fora da transação e abrem a sua com `TransactionOperations`. Com `isPadrao = true` desmarcam
+  o padrão atual antes de gravar.
 - **Marcar padrão** é idempotente: se o endereço já é o padrão, devolve-o sem gravar nada.
 - **Remover** chama `EnderecoSalvo.remover(Instant)`: preenche `removidoEm` e zera `isPadrao`.
-- **Lat/long**: o cliente envia; o backend valida só a faixa. **Rua/número/complemento**: três campos.
+- **Lat/long**: obtidas pelo `Geocodificador` no servidor (ver decisão acima). **Rua/número/complemento**: três campos.
 - **Listagem** ordenada por padrão primeiro e depois por apelido.
 - **Testes**: specs de cada use case, do service (inclusive a rede de segurança), do request, do mapper, da
-  entity e de `Uf`; stories de persistência/índice, criar-listar-editar (inclui 8 criações simultâneas como
+  entity e de `Uf`, com `Geocodificador` mockado (inclui 422, 503 e edição sem nova consulta); stories de persistência/índice, criar-listar-editar (inclui 8 criações simultâneas como
   padrão), remover e marcar padrão (inclui 8 marcações simultâneas).
 
 ## Fora de escopo
@@ -229,5 +244,5 @@ mantém (fora deste repositório).
   continua o placeholder `{"quantidade": 0, "apelidoPadrao": null}` do TICKET-0048. Já dá para implementar
   (`EnderecoSalvoService` conta os ativos e acha o padrão), mas exige a porta/ligação no `PerfilEmpregadorMapper`
   e decisão de card próprio.
-- Geocodificação no servidor, salvo decisão em contrário do tech lead.
+- Cache por endereço e limitador de 1 req/s no `NominatimGeocodificador` (evolução opcional).
 

@@ -19,19 +19,13 @@ class EnderecoSalvoRequestTest {
 
     private static EnderecoSalvoRequest valido() {
         return new EnderecoSalvoRequest("Casa", "01310100", "Avenida Paulista", "1000", "Apto 12",
-                "Bela Vista", "São Paulo", Uf.SP, -23.5614, -46.6559, false);
+                "Bela Vista", "São Paulo", Uf.SP, false);
     }
 
     private static EnderecoSalvoRequest comCep(String cep) {
         var base = valido();
         return new EnderecoSalvoRequest(base.apelido(), cep, base.rua(), base.numero(), base.complemento(),
-                base.bairroRegiao(), base.cidade(), base.uf(), base.latitude(), base.longitude(), base.padrao());
-    }
-
-    private static EnderecoSalvoRequest comCoordenadas(Double latitude, Double longitude) {
-        var base = valido();
-        return new EnderecoSalvoRequest(base.apelido(), base.cep(), base.rua(), base.numero(), base.complemento(),
-                base.bairroRegiao(), base.cidade(), base.uf(), latitude, longitude, base.padrao());
+                base.bairroRegiao(), base.cidade(), base.uf(), base.padrao());
     }
 
     private Set<String> camposInvalidos(EnderecoSalvoRequest request) {
@@ -45,14 +39,14 @@ class EnderecoSalvoRequestTest {
         assertThat(validator.validate(valido())).isEmpty();
 
         var semComplemento = new EnderecoSalvoRequest("Casa", "01310100", "Avenida Paulista", "S/N", null,
-                "Bela Vista", "São Paulo", Uf.SP, -23.5614, -46.6559, true);
+                "Bela Vista", "São Paulo", Uf.SP, true);
         assertThat(validator.validate(semComplemento)).isEmpty();
     }
 
     @Test
     void deveNormalizarTextosCepEComplementoEmBranco() {
         var request = new EnderecoSalvoRequest("  Casa ", "01310-100", " Avenida Paulista ", " 1000 ", "   ",
-                " Bela Vista ", " São Paulo ", Uf.SP, -23.5614, -46.6559, false);
+                " Bela Vista ", " São Paulo ", Uf.SP, false);
 
         assertThat(request.apelido()).isEqualTo("Casa");
         assertThat(request.cep()).isEqualTo("01310100");
@@ -75,7 +69,7 @@ class EnderecoSalvoRequestTest {
 
     @Test
     void deveRecusarCamposObrigatoriosVaziosEUfNula() {
-        var vazio = new EnderecoSalvoRequest(" ", "01310100", null, " ", null, "", null, null, -23.0, -46.0, false);
+        var vazio = new EnderecoSalvoRequest(" ", "01310100", null, " ", null, "", null, null, false);
 
         assertThat(camposInvalidos(vazio)).containsExactlyInAnyOrder("apelido", "rua", "numero", "bairroRegiao",
                 "cidade", "uf");
@@ -84,20 +78,9 @@ class EnderecoSalvoRequestTest {
     @Test
     void deveRecusarTextosAcimaDoLimite() {
         var longo = new EnderecoSalvoRequest("a".repeat(61), "01310100", "a".repeat(256), "1".repeat(21),
-                "a".repeat(101), "a".repeat(101), "a".repeat(101), Uf.SP, -23.0, -46.0, false);
+                "a".repeat(101), "a".repeat(101), "a".repeat(101), Uf.SP, false);
 
         assertThat(camposInvalidos(longo)).containsExactlyInAnyOrder("apelido", "rua", "numero", "complemento",
                 "bairroRegiao", "cidade");
-    }
-
-    @Test
-    void deveExigirCoordenadasDentroDaFaixa() {
-        assertThat(camposInvalidos(comCoordenadas(null, null))).containsExactlyInAnyOrder("latitude", "longitude");
-        assertThat(camposInvalidos(comCoordenadas(90.1, 0.0))).containsExactly("latitude");
-        assertThat(camposInvalidos(comCoordenadas(-90.1, 0.0))).containsExactly("latitude");
-        assertThat(camposInvalidos(comCoordenadas(0.0, 180.1))).containsExactly("longitude");
-        assertThat(camposInvalidos(comCoordenadas(0.0, -180.1))).containsExactly("longitude");
-        assertThat(camposInvalidos(comCoordenadas(90.0, 180.0))).isEmpty();
-        assertThat(camposInvalidos(comCoordenadas(-90.0, -180.0))).isEmpty();
     }
 }

@@ -21,7 +21,7 @@ class EnderecoSalvoMapperTest {
     @Test
     void deveMontarEntidadeSemDonoAPartirDoRequest() {
         var request = new EnderecoSalvoRequest("Casa", "01310100", "Avenida Paulista", "1000", "Apto 12",
-                "Bela Vista", "São Paulo", Uf.SP, -23.5614, -46.6559, true);
+                "Bela Vista", "São Paulo", Uf.SP, true);
 
         EnderecoSalvo endereco = mapper.toEntity(request);
 
@@ -34,8 +34,8 @@ class EnderecoSalvoMapperTest {
         assertThat(endereco.getBairroRegiao()).isEqualTo("Bela Vista");
         assertThat(endereco.getCidade()).isEqualTo("São Paulo");
         assertThat(endereco.getUf()).isEqualTo(Uf.SP);
-        assertThat(endereco.getLatitude()).isEqualTo(-23.5614);
-        assertThat(endereco.getLongitude()).isEqualTo(-46.6559);
+        assertThat(endereco.getLatitude()).isZero();
+        assertThat(endereco.getLongitude()).isZero();
         assertThat(endereco.isPadrao()).isTrue();
         assertThat(endereco.isRemovido()).isFalse();
     }
