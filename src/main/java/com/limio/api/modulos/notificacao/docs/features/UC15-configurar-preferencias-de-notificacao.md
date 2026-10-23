@@ -25,7 +25,7 @@ Critérios de aceite cobertos:
     (módulo prestador); não compartilham flag nem regra.
 - Regras de envio (contrato para quem notifica): sem consentimento ativo nada sai pelo WhatsApp; e-mails de segurança
   (senha alterada, exclusão de conta, novo login) saem sempre, mesmo com `email = false`.
-- Banco (Flyway): migration `V8` cria a tabela `preferencia_notificacao` (`CREATE TABLE` simples, sem `IF NOT EXISTS`; o Flyway
+- Banco (Flyway): migration `V9` cria a tabela `preferencia_notificacao` (`CREATE TABLE` simples, sem `IF NOT EXISTS`; o Flyway
   garante a execução única).
 
 ### Contrato HTTP

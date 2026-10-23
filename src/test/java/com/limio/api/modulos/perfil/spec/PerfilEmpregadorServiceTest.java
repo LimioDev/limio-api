@@ -100,4 +100,26 @@ class PerfilEmpregadorServiceTest {
 
         verifyNoInteractions(repository);
     }
+
+    @Test
+    void garantirPerfilParaAtualizarDeveTravarOPerfilExistenteEDevolverOMesmoPerfil() {
+        PerfilEmpregador existente = perfil("Maria");
+        when(consultaDadosUsuario.buscarPorId(USUARIO_ID)).thenReturn(Optional.of(dados("Maria da Silva")));
+        when(repository.findByUsuarioId(USUARIO_ID)).thenReturn(Optional.of(existente));
+        when(repository.findByIdParaAtualizar(existente.getId())).thenReturn(Optional.of(existente));
+
+        assertThat(service.garantirPerfilParaAtualizar(USUARIO_ID)).isSameAs(existente);
+
+        verify(repository).findByIdParaAtualizar(existente.getId());
+    }
+
+    @Test
+    void garantirPerfilParaAtualizarNaoDeveTravarQuandoAContaFoiEncerrada() {
+        when(consultaDadosUsuario.buscarPorId(USUARIO_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.garantirPerfilParaAtualizar(USUARIO_ID))
+                .isInstanceOf(PerfilEmpregadorNaoEncontradoException.class);
+
+        verify(repository, never()).findByIdParaAtualizar(any());
+    }
 }

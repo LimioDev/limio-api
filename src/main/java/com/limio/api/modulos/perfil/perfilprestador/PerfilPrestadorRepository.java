@@ -6,7 +6,7 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.EntityGraph;
 
 import com.limio.api.comum.base.BaseRepository;
-import com.limio.api.modulos.perfil.perfilprestador.enums.Uf;
+import com.limio.api.modulos.perfil.enums.Uf;
 
 public interface PerfilPrestadorRepository extends BaseRepository<PerfilPrestador, UUID> {
 

@@ -43,12 +43,12 @@ import org.springframework.test.web.servlet.ResultActions;
 import com.limio.api.TestcontainersConfiguration;
 import com.limio.api.comum.seguranca.JwtAuthFilter;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
-import com.limio.api.modulos.perfil.actions.service.GeocodificacaoService;
+import com.limio.api.modulos.perfil.actions.service.Geocodificador;
 import com.limio.api.modulos.perfil.categoria.CategoriaRepository;
+import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestador;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestadorRepository;
-import com.limio.api.modulos.perfil.perfilprestador.enums.Uf;
 import com.limio.api.modulos.perfil.perfilprestador.janelaatendimento.enums.DiaSemana;
 import com.limio.api.modulos.perfil.records.JanelaAtendimentoRequest;
 import com.limio.api.modulos.perfil.records.PerfilAtuacaoRequest;
@@ -90,12 +90,12 @@ class PerfilAtuacaoStoryTest {
     private JdbcTemplate jdbcTemplate;
 
     @MockitoBean
-    private GeocodificacaoService geocodificacaoService;
+    private Geocodificador geocodificador;
 
     @BeforeEach
     void limparBase() {
         perfilPrestadorRepository.deleteAll();
-        when(geocodificacaoService.localizarMunicipio("Campinas", Uf.SP)).thenReturn(Optional.of(CAMPINAS));
+        when(geocodificador.localizarMunicipio("Campinas", Uf.SP)).thenReturn(Optional.of(CAMPINAS));
     }
 
     private String token(UUID usuarioId, PapelUsuario papel) {
@@ -258,7 +258,7 @@ class PerfilAtuacaoStoryTest {
 
         assertThat(perfilPrestadorRepository.count()).isZero();
         assertThat(janelasGravadas()).isZero();
-        verify(geocodificacaoService, never()).localizarMunicipio(any(), any());
+        verify(geocodificador, never()).localizarMunicipio(any(), any());
     }
 
     @Test
@@ -273,7 +273,7 @@ class PerfilAtuacaoStoryTest {
 
     @Test
     void dadoMunicipioQueAGeocodificacaoNaoAcha_quandoSalva_entaoRecusaComMunicipioNaoEncontrado() throws Exception {
-        when(geocodificacaoService.localizarMunicipio("Campinass", Uf.SP)).thenReturn(Optional.empty());
+        when(geocodificador.localizarMunicipio("Campinass", Uf.SP)).thenReturn(Optional.empty());
 
         salvar(UUID.randomUUID(), new PerfilAtuacaoRequest(List.of(), 10, "Campinass", Uf.SP, List.of()))
                 .andExpect(status().isUnprocessableEntity())
@@ -300,7 +300,7 @@ class PerfilAtuacaoStoryTest {
 
         assertThat(perfilPrestadorRepository.count()).isEqualTo(1);
         assertThat(janelasGravadas()).isEqualTo(1);
-        verify(geocodificacaoService, times(1)).localizarMunicipio("Campinas", Uf.SP);
+        verify(geocodificador, times(1)).localizarMunicipio("Campinas", Uf.SP);
     }
 
     @Test
@@ -309,7 +309,7 @@ class PerfilAtuacaoStoryTest {
 
         salvar(UUID.randomUUID(), perfilCompleto()).andExpect(status().isOk());
 
-        verify(geocodificacaoService, times(1)).localizarMunicipio(any(), any());
+        verify(geocodificador, times(1)).localizarMunicipio(any(), any());
     }
 
     @Test
@@ -338,6 +338,6 @@ class PerfilAtuacaoStoryTest {
                         .content(objectMapper.writeValueAsString(perfilCompleto())))
                 .andExpect(status().isUnauthorized());
 
-        verify(geocodificacaoService, never()).localizarMunicipio(any(), any());
+        verify(geocodificador, never()).localizarMunicipio(any(), any());
     }
 }

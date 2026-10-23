@@ -14,6 +14,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import com.limio.api.comum.excecao.enums.CodigoErro;
@@ -46,6 +47,13 @@ public class GlobalExceptionHandler {
     /** JSON malformado ou valor fora de um enum (ex.: papel inexistente) — erro do cliente, não 500. */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErroResponse> tratarCorpoIlegivel(HttpMessageNotReadableException ex, WebRequest request) {
+        ErroResponse corpo = ErroResponse.de(CodigoErro.VALIDACAO_FALHOU, CodigoErro.VALIDACAO_FALHOU.mensagemPadrao(), caminho(request));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(corpo);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErroResponse> tratarTipoDeParametroInvalido(MethodArgumentTypeMismatchException ex,
+            WebRequest request) {
         ErroResponse corpo = ErroResponse.de(CodigoErro.VALIDACAO_FALHOU, CodigoErro.VALIDACAO_FALHOU.mensagemPadrao(), caminho(request));
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(corpo);
     }

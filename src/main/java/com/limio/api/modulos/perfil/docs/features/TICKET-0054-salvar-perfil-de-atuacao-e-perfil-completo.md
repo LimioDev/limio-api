@@ -88,7 +88,7 @@ Erro: `ErroResponse { codigo, mensagem, timestamp, path }`, sempre via `GlobalEx
 Pendências do card resolvidas com o dev, a validar com tech lead/PO:
 
 - **Coordenadas do município-base (tech lead)**: geocodificação pelo Nominatim (OpenStreetMap), em
-  `actions/service/GeocodificacaoService`. Consulta estruturada `city` + `state` (nome da UF por extenso) +
+  `actions/service/NominatimGeocodificador` (implementa a porta `Geocodificador`). Consulta estruturada `city` + `state` (nome da UF por extenso) +
   `countrycodes=br` + `featureType=city`; só aceita resultado com `place_rank` ≤ 16 (município; Brasília vem como 15)
   — num teste manual, "Centro"/RJ devolvia um distrito de Nova Friburgo (rank 18). Descartados: tabela de municípios
   do IBGE carregada por migration (offline e determinística, mas 5.570 linhas de dados de terceiro no repo); deixar
@@ -104,6 +104,8 @@ Pendências do card resolvidas com o dev, a validar com tech lead/PO:
   - **Pendente**: atribuição "© OpenStreetMap contributors" — decidir com o front onde exibir.
   - **Risco aceito**: não há fila/limitador global de 1 req/s. Gravação de perfil é rara e o cache corta a maior
     parte das consultas; se o volume crescer, subir instância própria ou trocar de provedor (só configuração).
+- **`Uf` unificado**: o `Uf` com nome por extenso (usado no `state` do Nominatim) é o de `perfil/enums`, o mesmo do
+  `EnderecoSalvo` (TICKET-0050); o enum duplicado em `perfilprestador/enums` foi removido.
 - **Falha da geocodificação**: não salva (503 `GEOCODIFICACAO_INDISPONIVEL`). Descartado salvar sem coordenadas: o
   mural do Prestador ficaria vazio sem aviso nenhum.
 - **`diaSemana` (tech lead: 0–6 ou 1–7?)**: nenhum dos dois — enum `DiaSemana` por extenso (`SEGUNDA`…`DOMINGO`),
@@ -144,7 +146,7 @@ Demais decisões:
 - **Coordenadas em `DOUBLE PRECISION`**: centro de município não precisa de precisão decimal exata; facilita o
   cálculo de distância do mural. Na entity, `Coordenadas` é record `@Embeddable` (colunas `latitude_base` /
   `longitude_base`) e valida a faixa (-90..90, -180..180) na criação.
-- **`GeocodificacaoService` fica em `modulos/perfil`**: só o perfil geocodifica hoje (critério do ADR-0001 pra
+- **`Geocodificador`/`NominatimGeocodificador` ficam em `modulos/perfil`**: só o perfil geocodifica hoje (critério do ADR-0001 pra
   subir pra `comum/`: 2+ módulos usando agora). Quando o mural precisar, sobe pra `comum/` — e aí, com dois
   chamadores, entra um limitador de 1 req/s compartilhado.
 
@@ -172,7 +174,7 @@ O agrupamento acima foi inferido da ordem do Figma — confirmar com o PO.
 
 - `spec/`: `SalvarPerfilAtuacaoUseCaseTest`, `ConsultarPerfilAtuacaoUseCaseTest`, `PerfilPrestadorTest` (critério de
   completo), `PerfilAtuacaoRequestTest` (validação), `PerfilAtuacaoMapperTest` (ordenação),
-  `GeocodificacaoServiceTest` (Nominatim falso com o servidor HTTP do JDK — URL, User-Agent, rank, erro, fora do ar).
+  `NominatimGeocodificadorTest` (Nominatim falso com o servidor HTTP do JDK — URL, User-Agent, rank, erro, timeout, fora do ar; também cobre `localizarEndereco` do TICKET-0050).
 - `story/` (`PerfilAtuacaoStoryTest`, geocodificação mockada): salvar completo, salvar sem especialidades, raio fora
   de 1–40, janela com início depois do fim (os quatro do card) + listar categorias, perfil nunca salvo, categoria
   inválida, município não encontrado, re-salvamento substituindo especialidades/janelas, cache de coordenadas entre

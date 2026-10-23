@@ -1,4 +1,4 @@
-package com.limio.api.modulos.perfil.perfilprestador.enums;
+package com.limio.api.modulos.perfil.enums;
 
 /**
  * As 27 unidades federativas oficiais (26 estados + DF). {@code nome} é o nome oficial por extenso,

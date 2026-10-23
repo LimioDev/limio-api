@@ -47,6 +47,30 @@ Code review: `ConsultarMeuPerfilUseCase` e `EditarNomeExibicaoUseCase` repetiam 
 `MeuPerfilEmpregador`. O corte do nome inicial em 80 caracteres saiu do helper `NomeExibicaoInicial` para
 `PerfilEmpregador.nomeExibicaoInicialDe` (regra da entity; o service não pode importar `actions/helper`).
 
+## 2026-10-21 — TICKET-0050: endereços salvos do Empregador (listar, criar, editar, remover, marcar padrão)
+
+Nova subentidade `EnderecoSalvo` (`perfil/endereco/`, tabela `endereco_salvo`, migration `V14`) e as rotas
+`/conta/perfil-empregador/enderecos` (`GET`, `POST`, `PUT /{id}`, `DELETE /{id}`, `PATCH /{id}/padrao`). Contrato,
+regras e pendências em `docs/features/TICKET-0050-enderecos-salvos-do-empregador.md`.
+
+Decisões que não ficam óbvias só lendo o código:
+
+- **`PerfilEmpregador`, não `PerfilContratante`**: o card usa o nome antigo; o código o renomeou na V4.
+- **`rua`, `numero`, `complemento` em vez de `logradouroCompleto`** (decisão do tech lead). O DER, fora deste
+  repositório, precisa ser atualizado.
+- **Latitude/longitude** são `NOT NULL`. Vinham do cliente; hoje o servidor as obtém (ver a entrada
+  de geocodificação abaixo).
+- **Soft delete** por `removido_em`; todo finder filtra `removidoEm is null`. Remover o padrão deixa o Empregador
+  sem padrão (0..1 padrão, sem promoção automática).
+- **Um único padrão por Empregador** em duas camadas: índice único parcial no banco e lock pessimista no
+  `PerfilEmpregador` em toda escrita. A ordem "desmarcar os outros e só depois marcar" é obrigatória (o índice
+  parcial não é deferível).
+- **Recurso alheio, removido ou inexistente → 404** `ENDERECO_NAO_ENCONTRADO`, nunca 403 (anti-enumeração).
+- **`ENDERECO_PADRAO_CONFLITO` (409)** criado como rede de segurança do índice; o plano inicial previa "sem código
+  novo". `ENDERECO_EM_USO` **não** foi criado (depende do módulo `anuncio`).
+- **`GlobalExceptionHandler`**: id de rota que não é UUID passou de 500 para 400 `VALIDACAO_FALHOU`.
+- **Jackson 3** recusa `boolean` primitivo ausente em record; por isso `isPadrao` é `Boolean` no request e é
+  normalizado para `false` no compact constructor.
 ## 2026-10-14 — TICKET-0054: perfil de atuação do Prestador
 
 Entram `categoria/` (entity raiz, taxonomia), `perfilprestador/` (entity raiz) e
@@ -97,7 +121,29 @@ Formatos (JPEG/PNG) e tamanho (5 MB) são provisórios até o PO decidir. Detalh
   banco.
 - Advisory lock virou helper em `comum/persistencia/` (`TravaTransacional` + `EscopoTrava`), usado pelo perfil e pelo
   login — o lock do login passou pra forma de duas chaves, com escopo `LOGIN`.
-- `GeocodificacaoService` continua em `modulos/perfil` (só ele usa hoje — critério do ADR-0001).
+- O geocodificador continua em `modulos/perfil` (só ele usa hoje — critério do ADR-0001); hoje é a porta
+  `Geocodificador` com `NominatimGeocodificador` (ver a entrada de geocodificação).
+
+## 2026-10-22 — TICKET-0050: endereços obtêm latitude/longitude no servidor
+
+O backend geocodifica o endereço; o cliente deixa de enviar `latitude`/`longitude`.
+Contrato, falhas e pendências em `docs/features/TICKET-0050-enderecos-salvos-do-empregador.md`.
+
+- **Porta `Geocodificador`** (`perfil/actions/service/`), com `NominatimGeocodificador` (antes
+  `GeocodificacaoService`, do 0054) como implementação. Os dois use cases de endereço e o do 0054 dependem só da
+  interface; trocar de provedor é nova implementação + propriedade.
+- **`Uf` unificado** em `perfil/enums` (agora com nome por extenso); o `Uf` de `perfilprestador/enums` foi removido.
+- **Consulta só com rua, número, cidade e UF**: sem CEP (esparso no OSM brasileiro), sem bairro (a busca estruturada
+  não aceita) e sem complemento. Resultado só vale com `place_rank` ≥ 26 e mesma UF; senão, 422
+  `ENDERECO_NAO_LOCALIZADO` (novo). Falha do provedor → 503 `GEOCODIFICACAO_INDISPONIVEL`, sem retry.
+- **Fora da transação** (`TransactionOperations`, como o `SalvarPerfilAtuacaoUseCase`). Coordenadas seguem
+  `NOT NULL`; falha impede a gravação; nenhuma migration nova.
+- **Edição só reconsulta** se rua, número, cidade ou UF mudarem. Risco aceito: duas edições simultâneas do mesmo
+  endereço podem misturar texto e coordenadas.
+- **Contrato**: `EnderecoSalvoRequest` sem `latitude`/`longitude` (enviadas, são ignoradas); a resposta continua
+  devolvendo as duas. O front precisa remover os campos e tratar 422/503.
+- Pendente com o tech lead: provedor em produção (servidor público: 1 req/s e sem SLA), taxa de "não localizado" no
+  Brasil, LGPD (endereço enviado a terceiro), DER.
 
 ## 2026-10-21 — TICKET-0056: ajustes do review da PR #10
 
