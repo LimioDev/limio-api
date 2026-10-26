@@ -198,6 +198,30 @@ class AcessarContaEAlternarPapelStoryTest {
         assertThat(sessaoRepository.count()).isZero();
     }
 
+    /** Limite por IP (tech lead, 2026-10-26): 30 falhas do mesmo IP, em e-mails diferentes, bloqueiam o IP. */
+    @Test
+    void dadoTrintaFalhasDoMesmoIpEmEmailsDiferentes_quandoTentaDeNovo_entaoBloqueiaOIp() throws Exception {
+        cadastrar(StatusConta.ATIVA);
+        for (int i = 0; i < 30; i++) {
+            loginDoIp("203.0.113.7", "pessoa" + i + "@example.com", "senhaErrada99").andExpect(status().isUnauthorized());
+        }
+
+        loginDoIp("203.0.113.7", EMAIL, SENHA)
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.codigo", is("LOGIN_TEMPORARIAMENTE_BLOQUEADO")));
+        loginDoIp("198.51.100.20", EMAIL, SENHA).andExpect(status().isOk());
+    }
+
+    private ResultActions loginDoIp(String ip, String email, String senha) throws Exception {
+        return mockMvc.perform(post("/auth/login")
+                .with(requisicao -> {
+                    requisicao.setRemoteAddr(ip);
+                    return requisicao;
+                })
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LoginRequest(email, senha, null))));
+    }
+
     @Test
     void dadoCincoSenhasErradas_quandoTentaDeNovo_entaoBloqueiaMesmoComSenhaCerta() throws Exception {
         cadastrar(StatusConta.ATIVA);

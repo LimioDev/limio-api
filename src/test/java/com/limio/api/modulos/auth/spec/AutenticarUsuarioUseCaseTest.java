@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -24,6 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.auth.actions.helper.LimiteTentativasLogin;
+import com.limio.api.modulos.auth.actions.helper.LimiteTentativasLoginPorIp;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
 import com.limio.api.modulos.auth.actions.service.TokenService;
 import com.limio.api.modulos.auth.actions.usecase.AutenticarUsuarioUseCase;
@@ -69,8 +72,9 @@ class AutenticarUsuarioUseCaseTest {
     @BeforeEach
     void montarUseCase() {
         var limite = new LimiteTentativasLogin(5, Duration.ofMinutes(15), Duration.ofMinutes(15));
+        var limitePorIp = new LimiteTentativasLoginPorIp(30, Duration.ofMinutes(15), Duration.ofMinutes(15));
         useCase = new AutenticarUsuarioUseCase(usuarioService, sessaoService, tentativaLoginService, limite,
-                senhaHasher, tokenService);
+                limitePorIp, senhaHasher, tokenService);
     }
 
     private Usuario usuario(StatusConta status) {
@@ -83,7 +87,7 @@ class AutenticarUsuarioUseCaseTest {
     }
 
     private void tentativaLiberada() {
-        when(tentativaLoginService.registrarSeLiberado(anyString(), eq(IP), anyInt(), any()))
+        when(tentativaLoginService.registrarSeLiberado(anyString(), eq(IP), any(), any()))
                 .thenReturn(Optional.of(tentativa));
     }
 
@@ -155,7 +159,8 @@ class AutenticarUsuarioUseCaseTest {
                 .isInstanceOf(CredenciaisInvalidasException.class);
 
         verify(senhaHasher).simularConferencia(SENHA);
-        verify(tentativaLoginService).registrarSeLiberado(eq(EMAIL), eq(IP), eq(5), any());
+        verify(tentativaLoginService).registrarSeLiberado(eq(EMAIL), eq(IP), argThat(regra -> regra.quantidade() == 5),
+                argThat(regra -> regra.quantidade() == 30));
         verify(tentativaLoginService, never()).remover(any());
         verifyNoInteractions(tokenService, sessaoService);
     }
@@ -171,7 +176,8 @@ class AutenticarUsuarioUseCaseTest {
         assertThatThrownBy(() -> useCase.executar(grafiaDiferente, SENHA, DISPOSITIVO, IP))
                 .isInstanceOf(CredenciaisInvalidasException.class);
 
-        verify(tentativaLoginService).registrarSeLiberado(eq(EMAIL), eq(IP), eq(5), any());
+        verify(tentativaLoginService).registrarSeLiberado(eq(EMAIL), eq(IP), argThat(regra -> regra.quantidade() == 5),
+                argThat(regra -> regra.quantidade() == 30));
     }
 
     @Test
@@ -214,12 +220,25 @@ class AutenticarUsuarioUseCaseTest {
     @Test
     void deveBloquearSemConferirSenhaQuandoOLimiteEstourou() {
         when(usuarioService.buscarPorEmail(EMAIL)).thenReturn(Optional.of(usuario(StatusConta.ATIVA)));
-        when(tentativaLoginService.registrarSeLiberado(anyString(), eq(IP), anyInt(), any()))
+        when(tentativaLoginService.registrarSeLiberado(anyString(), eq(IP), any(), any()))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.executar(EMAIL, SENHA, DISPOSITIVO, IP))
                 .isInstanceOf(LoginTemporariamenteBloqueadoException.class);
 
         verifyNoInteractions(senhaHasher, tokenService, sessaoService);
+    }
+
+    /** IP interno = o IP real não chegou: sem limite por IP, senão todo mundo dividiria o mesmo contador. */
+    @Test
+    void ipInternoNaoEntraNoLimitePorIp() {
+        when(usuarioService.buscarPorEmail(EMAIL)).thenReturn(Optional.empty());
+        when(tentativaLoginService.registrarSeLiberado(anyString(), eq("10.0.0.5"), any(), any()))
+                .thenReturn(Optional.of(tentativa));
+
+        assertThatThrownBy(() -> useCase.executar(EMAIL, SENHA, DISPOSITIVO, "10.0.0.5"))
+                .isInstanceOf(CredenciaisInvalidasException.class);
+
+        verify(tentativaLoginService).registrarSeLiberado(eq(EMAIL), eq("10.0.0.5"), any(), isNull());
     }
 }

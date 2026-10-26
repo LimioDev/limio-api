@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Predicate;
 
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Component;
@@ -32,20 +31,35 @@ public class TentativaLoginService extends BaseService<TentativaLogin, UUID, Ten
                 .toList();
     }
 
+    /** Instantes das últimas falhas vindas do IP, da mais recente pra mais antiga. */
+    public List<Instant> ultimasFalhasDoIp(String ip, int quantidade) {
+        return repository.findByIpOrderByCriadoEmDesc(ip, Limit.of(quantidade)).stream()
+                .map(TentativaLogin::getCriadoEm)
+                .toList();
+    }
+
     /**
-     * Confere o bloqueio e já grava a tentativa, atomicamente por e-mail: com o
+     * Confere o bloqueio e já grava a tentativa, atomicamente por e-mail (e por IP, se houver regra): com o
      * lock, requisições simultâneas pro mesmo e-mail passam aqui uma de cada vez
      * e cada uma enxerga as anteriores. Sem isso, uma rajada paralela passava
-     * inteira pela checagem antes de qualquer falha ser gravada.
+     * inteira pela checagem antes de qualquer falha ser gravada. Trava sempre o
+     * e-mail antes do IP.
      *
-     * @return vazio se {@code bloqueado} disser que o e-mail está bloqueado (nada é gravado)
+     * @param porIp regra do limite por IP, ou {@code null} pra não limitar por IP
+     * @return vazio se alguma regra disser que está bloqueado (nada é gravado)
      */
     @Transactional
-    public Optional<TentativaLogin> registrarSeLiberado(String email, String ip, int quantidade,
-            Predicate<List<Instant>> bloqueado) {
+    public Optional<TentativaLogin> registrarSeLiberado(String email, String ip, RegraBloqueio porEmail,
+            RegraBloqueio porIp) {
         travaTransacional.travar(EscopoTrava.LOGIN, email);
-        if (bloqueado.test(ultimasFalhas(email, quantidade))) {
+        if (porEmail.bloqueado().test(ultimasFalhas(email, porEmail.quantidade()))) {
             return Optional.empty();
+        }
+        if (porIp != null) {
+            travaTransacional.travar(EscopoTrava.LOGIN_IP, ip);
+            if (porIp.bloqueado().test(ultimasFalhasDoIp(ip, porIp.quantidade()))) {
+                return Optional.empty();
+            }
         }
         return Optional.of(repository.save(TentativaLogin.builder().email(email).ip(ip).build()));
     }

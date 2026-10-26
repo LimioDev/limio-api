@@ -15,6 +15,8 @@ public interface TentativaLoginRepository extends BaseRepository<TentativaLogin,
 
     List<TentativaLogin> findByEmailOrderByCriadoEmDesc(String email, Limit limite);
 
+    List<TentativaLogin> findByIpOrderByCriadoEmDesc(String ip, Limit limite);
+
     @Modifying
     @Query("delete from TentativaLogin t where t.criadoEm < :limite")
     int apagarAntesDe(@Param("limite") Instant limite);
