@@ -111,10 +111,12 @@ Demais decisões:
 ## Fora de escopo / pendências
 
 - Checagem de perfil de Prestador completo na troca de papel (ver acima).
-- Recuperação de senha (UC06): quando existir, a rota entra na lista pública do `SecurityConfig`.
+- ~~Recuperação de senha (UC06): quando existir, a rota entra na lista pública do `SecurityConfig`.~~ Resolvido no
+  TICKET-0033 (`/auth/recuperar-senha`, `/auth/redefinir-senha`).
 - IP real atrás do proxy do Railway: hoje é `request.getRemoteAddr()` (o IP do proxy). Precisa de
   `server.forward-headers-strategy` — decisão de infra, não deste card.
-- Limpeza periódica de `tentativa_login` antigas.
+- ~~Limpeza periódica de `tentativa_login` antigas.~~ Resolvido no TICKET-0047: `LimparRetencaoUseCase` apaga falhas
+  com mais de `auth.retencao.tentativa-login.validade` (30 dias).
 - Rate limit é só por e-mail: não há limite por IP (um atacante pode testar uma senha em muitos e-mails), e qualquer um
   consegue bloquear o login de um e-mail alheio por 15 min errando a senha de propósito. Mitigação fica pra infra
   (limite por IP no proxy) ou CAPTCHA.

@@ -18,7 +18,10 @@
    - `validarCpfNaoBloqueado` — chama `CpfBloqueadoService.estaBloqueado` com o limite de 12 meses atrás; CPF
      bloqueado lança a mesma `CadastroIndisponivelException`.
    - Se passou em tudo: `SenhaHasher.hash` (BCrypt via `PasswordEncoder` de `comum/config/SecurityConfig`) e
-     `UsuarioService.salvar` (herdado de `BaseService`).
+     `UsuarioService.salvarNovo`, que traduz a violação de `uk_usuario_email`/`uk_usuario_cpf` (cadastro simultâneo)
+     na mesma `CadastroIndisponivelException`.
+   - `EmitirConfirmacaoEmailUseCase.emitir` grava o token `CONFIRMACAO_EMAIL` e publica o evento do link, enviado
+     depois do commit (o usecase é `@Transactional`).
 5. `Controller` usa `UsuarioMapper.toResponse` pra converter o `Usuario` salvo em `UsuarioResponse` e devolve 201.
 6. Qualquer exceção de negócio lançada no caminho é interceptada por `GlobalExceptionHandler`
    (`comum/excecao/`), que mapeia pro `CodigoErro` correspondente e devolve `ErroResponse` — o controller nunca
@@ -81,8 +84,8 @@ usuário pelo id do token, recusa conta encerrada/suspensa e grava `papelAtivo`.
 5. Troca: grava e-mail, zera `emailConfirmadoEm` e força o `UPDATE` (`UsuarioService.salvarComEmailUnico`, que traduz a
    violação de `uk_usuario_email`).
 6. Consome os tokens `CONFIRMACAO_EMAIL` pendentes, cria o token novo (só o hash) e publica o evento do link
-   (`ConfirmacaoEmailSolicitadaEvent`), enviado depois do commit por `EmailEventosService`. **O link não conclui a
-   confirmação: não há UC05.**
+   (`ConfirmacaoEmailSolicitadaEvent`), enviado depois do commit por `EmailEventosService` — tudo via
+   `EmitirConfirmacaoEmailUseCase`. O link abre a página `/confirmar-email` (ver abaixo).
 7. O controller devolve `ContatoResponse` via `UsuarioMapper.toContatoResponse`.
 
 ## `PATCH /auth/telefone` (TICKET-0048 — trocar telefone)
@@ -91,6 +94,37 @@ Mesmo começo (lock, conta ativa, senha atual). `TrocarTelefoneRequest` normaliz
 dígitos nacionais (`DDNNNNNNNNN`, o formato do banco); o usecase grava e zera `telefoneConfirmadoEm`. A resposta
 (`UsuarioMapper.toContatoResponse`) devolve o número em `+55...` via `TelefoneHelper.paraInternacional`. Não cria token,
 não envia SMS (UC04 inexistente).
+
+## Links dos e-mails e páginas web (TICKET-0047, ADR-0002)
+
+`LinkWeb` monta `<app.web.url>/<pagina>#token=<token>`. O token vai no fragmento, que o navegador nunca envia ao
+servidor. `comum/config/PaginasWebConfig` encaminha `GET /nova-senha` e `GET /confirmar-email` para o HTML estático
+em `src/main/resources/static/paginas/`; o `SecurityConfig` libera essas rotas e `/paginas/**`. O JavaScript da
+página lê e apaga o fragmento e chama um dos POSTs abaixo. A página não tem regra.
+
+## `POST /auth/confirmar-email` (UC05)
+
+1. `AuthController.confirmarEmail` recebe `ConfirmarEmailRequest` (`token` obrigatório) e chama
+   `ConfirmarEmailUseCase.executar(token)`.
+2. O usecase calcula o SHA-256 do token, busca **só o dono** (`VerificacaoContatoService.buscarUsuarioIdPorTokenHash`),
+   trava a conta (`UsuarioService.buscarParaAtualizarOuFalhar`) e relê o token com `SELECT ... FOR UPDATE`
+   (`buscarParaConsumir`). Conta antes de token: mesma ordem da troca de e-mail, que trava a conta e depois mexe nos
+   tokens.
+3. Token inexistente, expirado, já consumido ou conta encerrada → `LinkConfirmacaoEmailInvalidoException` (401).
+4. Sucesso: preenche `emailConfirmadoEm` e consome o token. Responde 200 sem corpo.
+
+## `POST /auth/reenviar-confirmacao-email` ("Reenviar link" do app)
+
+`ReenviarConfirmacaoEmailUseCase`: busca só o id pelo e-mail (`UsuarioService.buscarIdPorEmail`), trava a conta e, se
+ela não está encerrada, o e-mail ainda não foi confirmado, é o mesmo e-mail pedido e o limite não bateu, chama
+`EmitirConfirmacaoEmailUseCase.emitir`. Em qualquer outro caso não faz nada. O controller sempre responde 200
+(anti-enumeração).
+
+## `POST /auth/redefinir-senha` (UC06)
+
+`RedefinirSenhaUseCase` segue o mesmo caminho de consumo do `ConfirmarEmailUseCase` (dono → lock da conta → token
+travado): dois envios simultâneos do mesmo link não redefinem a senha duas vezes. Depois grava a nova senha, consome
+o token e encerra todas as sessões.
 
 ## Classes envolvidas
 
@@ -102,7 +136,14 @@ não envia SMS (UC04 inexistente).
 | `RenovarSessaoUseCase` | Renovação do token de acesso com rotação do refresh token |
 | `EncerrarSessaoUseCase` | Logout do aparelho (UC08) |
 | `TrocarPapelAtivoUseCase` | Troca de papel ativo (UC09) |
-| `TrocarEmailUseCase` | Troca de e-mail (TICKET-0048): lock, unicidade, limite, invalida tokens, emite link e avisa o e-mail antigo após o commit |
+| `TrocarEmailUseCase` | Troca de e-mail (TICKET-0048): lock, unicidade, limite, emite link (via `EmitirConfirmacaoEmailUseCase`) e avisa o e-mail antigo após o commit |
+| `EmitirConfirmacaoEmailUseCase` | Emissão do link de confirmação, usada pelo cadastro, troca de e-mail e reenvio: consome os pendentes, grava o novo, publica o evento; `limiteAtingido` (3/h por conta) |
+| `ConfirmarEmailUseCase` | UC05 (TICKET-0047): consome o token `CONFIRMACAO_EMAIL` sob lock e preenche `emailConfirmadoEm` |
+| `ReenviarConfirmacaoEmailUseCase` | "Reenviar link" (TICKET-0047): público, anti-enumeração |
+| `RedefinirSenhaUseCase` | UC06: consome o token `RECUPERACAO_SENHA` sob lock, grava a senha, encerra todas as sessões |
+| `LimparRetencaoUseCase` | Rotina diária de retenção: `cpf_bloqueado`, `log_auditoria`, `sessao`, `tentativa_login`, cada uma isolada |
+| `LinkWeb` | Helper — monta o link `https` da página web com o token no fragmento |
+| `PaginasWebConfig` (`comum/config/`) | URLs limpas `/nova-senha` e `/confirmar-email` para o HTML estático |
 | `TrocarTelefoneUseCase` | Troca de telefone (TICKET-0048): grava dígitos nacionais, limpa confirmação; sem SMS |
 | `ConsultaDadosUsuarioService` | Implementa a porta `comum/portas/ConsultaDadosUsuario` para outros módulos (só leitura) |
 | `TelefoneHelper` | Helper puro — `normalizar` (entrada → dígitos nacionais, só a troca) e `paraInternacional` (saída → `+55...`, usado pelo mapper e pela porta) |
@@ -110,7 +151,8 @@ não envia SMS (UC04 inexistente).
 | `EmailEventosService` | Escuta os eventos com `@TransactionalEventListener(AFTER_COMMIT)` e envia os e-mails; falha só é logada, sem `fallbackExecution` |
 | `UsuarioMapper` | `Usuario` ⇄ `CadastroRequest`/`UsuarioResponse`/`PapelAtivoResponse`/`ContatoResponse` |
 | `SessaoMapper` | `TokensSessao` → `LoginResponse` |
-| `UsuarioService` | Extends `comum/base/BaseService` — CRUD genérico + `existePorEmail`/`existePorCpf`/`buscarPorEmail`/`buscarPorId`, `buscarParaAtualizarOuFalhar` (lock) e `salvarComEmailUnico` |
+| `UsuarioService` | Extends `comum/base/BaseService` — CRUD genérico + `existePorEmail`/`existePorCpf`/`buscarPorEmail`/`buscarIdPorEmail`/`buscarPorId`, `buscarParaAtualizarOuFalhar` (lock), `salvarComEmailUnico` e `salvarNovo` |
+| `VerificacaoContatoService` | Extends `comum/base/BaseService` — tokens de uso único: busca por hash, `buscarUsuarioIdPorTokenHash`, `buscarParaConsumir` (lock), contagem do limite, pendentes |
 | `CpfBloqueadoService` | Extends `comum/base/BaseService` — CRUD genérico + `estaBloqueado` (cooldown 12 meses) |
 | `SessaoService` | Extends `comum/base/BaseService` — CRUD genérico + busca por hash do refresh token |
 | `TentativaLoginService` | Extends `comum/base/BaseService` — CRUD genérico + `ultimasFalhas` do e-mail |
@@ -123,6 +165,7 @@ não envia SMS (UC04 inexistente).
 | `LimiteTentativasLogin` | Helper — regra do rate limit (máx. de falhas, janela, duração do bloqueio) |
 | `IdadeMinimaNaoAtingidaException`, `CpfInvalidoException`, `CadastroIndisponivelException` | Exceções de negócio do UC01 |
 | `ContatoNaoPermitidoException`, `TrocaContatoLimiteExcedidaException` | Exceções de negócio do TICKET-0048 (troca de contato) |
+| `LinkConfirmacaoEmailInvalidoException` | Link de confirmação inválido, expirado, usado ou de conta encerrada (TICKET-0047) |
 | `CredenciaisInvalidasException`, `LoginTemporariamenteBloqueadoException`, `ContaSuspensaException`, `SessaoInvalidaException`, `PapelInvalidoException` | Exceções de negócio do TICKET-0032 |
 
 ## Porta de consulta `comum/portas/` (leitura síncrona entre módulos)

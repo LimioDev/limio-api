@@ -87,7 +87,10 @@ rota. Sem token válido, o `SecurityConfig` responde `401` (`NAO_AUTENTICADO`) a
 7. **Coerção de tipo no JSON** (comportamento conhecido, mantido por decisão): o Jackson aceita `1`/`0` e
    `"true"`/`"false"` como booleano (resposta `200`). Valor não conversível (ex.: `"talvez"`) ou `null` dá `400`. A
    configuração global do Jackson não foi alterada.
-8. **Limpeza na exclusão de conta (registros órfãos)**: `usuario_id` é coluna crua, sem FK (ADR-0001 §1.6). O
+8. ~~**Limpeza na exclusão de conta (registros órfãos)**~~ — **resolvido no TICKET-0047**:
+   `RemoverPreferenciaDaContaEncerradaUseCase` escuta `ContaEncerradaEvent` e apaga a linha. Fica só o risco aceito
+   do TICKET-0032: um token de acesso já emitido vale até expirar (no máximo 15 min) e ainda consegue gravar via `PUT`
+   nesse intervalo. O registro recriado não tem dado pessoal além do `usuario_id`. Texto original: `usuario_id` é coluna crua, sem FK (ADR-0001 §1.6). O
    mecanismo previsto no lugar — evento de domínio publicado por `modulos.auth` na exclusão da conta, com listener em
    `notificacao` apagando a linha — **não existe**: o caso de uso de exclusão de conta ainda não foi implementado.
    Hoje a linha permanece para sempre depois da exclusão. Além disso, um access token ainda válido de conta excluída

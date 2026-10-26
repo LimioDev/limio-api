@@ -123,6 +123,8 @@ o controller recebe com `@AuthenticationPrincipal`. Sem token válido, 401 `NAO_
 | `actions/service/ArmazenamentoService` | integração com o bucket S3 (`enviar`, `gerarLink`, `remover`); 503 sem storage configurado |
 | `actions/service/FotoPerfilEventosService` | apaga do bucket o objeto anterior (commit) ou o novo (rollback) |
 | `eventos/FotoPerfilTrocadaEvent` | evento interno da troca: chave nova + chave anterior |
+| `eventos/FotoPerfilRemovidaEvent` | evento interno: foto tirada de uso sem substituta (conta encerrada); o objeto sai do bucket depois do commit |
+| `actions/usecase/AnonimizarPerfilDaContaEncerradaUseCase` | reação a `comum/eventos/ContaEncerradaEvent` (UC10): anonimiza o nome de exibição, apaga o `PerfilPrestador`, expurga a foto; cada parte isolada |
 | `actions/usecase/TrocarFotoPerfilUseCase`, `ConsultarFotoPerfilUseCase` | regra de negócio da foto |
 | `actions/mapper/FotoPerfilMapper`, `actions/controller/FotoPerfilController`, `records/FotoPerfilResponse` | contrato HTTP da foto |
 | `excecao/FotoInvalidaException`, `ArmazenamentoIndisponivelException` | 422 e 503 da foto |

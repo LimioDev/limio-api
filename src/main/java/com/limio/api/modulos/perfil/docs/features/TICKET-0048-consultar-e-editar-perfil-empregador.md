@@ -248,10 +248,10 @@ candidatura é feito por `*ConfirmadoEm` nulo. Pergunta do card, **aberta**.
 
 | Item | Situação hoje | Resolvido por |
 |---|---|---|
-| Confirmação de e-mail | Não existe fluxo. Só `FinalidadeVerificacao.CONFIRMACAO_EMAIL` e a tabela `verificacao_contato` existem; nenhum usecase emite. O link enviado nesta feature fica inerte até haver endpoint que o consuma. | UC05 + card [auth] "Confirmar e-mail" |
+| Confirmação de e-mail | **Resolvido (TICKET-0047).** O cadastro e a troca enviam o link; `POST /auth/confirmar-email` preenche `emailConfirmadoEm`, que o `GET` já devolve pela porta. | — |
 | SMS / OTP | Não existe `SmsService` nem gateway. `CanalVerificacao.SMS` existe, sem uso. `verificacao_contato.token_hash` (`UNIQUE`, 64 caracteres) não comporta código curto sem novo desenho. | UC04 + escolha de gateway |
-| Cadastro sem verificação | O UC01 implementado (ETI-30) declara "Sem OTP" e "Fora de escopo: OTP/SMS e confirmação de e-mail". Por isso `emailConfirmadoEm` e `telefoneConfirmadoEm` são `null` para todas as contas hoje, e "as mesmas regras do cadastro (ETI-30)" não existem no código. | UC04, UC05 |
-| Foto | Tabela `midia` não existe (prevista no módulo `anuncio`). | módulo `anuncio` |
+| Cadastro sem verificação | E-mail: resolvido no TICKET-0047 (o cadastro envia o link). Telefone: segue sem OTP, `telefoneConfirmadoEm` é `null` para todas as contas. | UC04 |
+| Foto | **Resolvido (TICKET-0056).** Tabela `midia` no módulo `perfil`, `PUT/GET /conta/foto-perfil`. | — |
 | Avaliações | Não existe módulo de avaliação. | UC45–UC47 |
 | Endereços salvos | `endereco_salvo` não existe (prevista no módulo `perfil`). | card próprio de endereços |
 | Funcionalidades de anúncio | Bloqueio de publicar/candidatar, snapshot de anúncio Combinado, "anúncios futuros usam os dados novos" e contadores de "Atividade" (serviços publicados e concluídos). | módulo `anuncio` |

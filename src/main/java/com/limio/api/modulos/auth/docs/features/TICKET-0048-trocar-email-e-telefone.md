@@ -89,7 +89,10 @@ mensagem sempre genérica) e `TROCA_CONTATO_LIMITE_EXCEDIDO` (429).
   pela porta `ConsultaDadosUsuario` (testado). Alternativa descartada: rotas sob `/conta/perfil-empregador` com porta de
   comando em `comum/` (transformaria o `perfil` em repasse).
 
-## Contrato para a futura UC05 (não implementada)
+## Contrato para a UC05 (implementada no TICKET-0047)
+
+> `ConfirmarEmailUseCase` segue os itens 1 a 3 abaixo. O item 3 também foi aplicado ao `RedefinirSenhaUseCase`.
+> O item 4 continua dependendo da D10.
 
 O token foi desenhado para ser consumível por uma UC05: só o SHA-256 (64 caracteres) é gravado, a finalidade
 `CONFIRMACAO_EMAIL` é filtrada por `buscarPorTokenHashEFinalidade` (token de recuperação de senha não confirma e-mail e
@@ -118,10 +121,13 @@ numeração da `V9` do perfil e, se a D10 for aprovada, a migration do `destino_
 - **E-mail pendente promovido na confirmação (review)**: hoje o e-mail de login troca na hora; um typo (`@gmial.com`) deixa
   a conta presa, pois a recuperação de senha vai para a caixa errada. O aviso ao e-mail antigo cobre o takeover, não o typo.
   Resolver exige guardar o novo endereço como pendente e promovê-lo na UC05 (coluna/migration nova); não implementado.
-- UC05 (endpoint de consumo do link), UC04 (OTP/SMS e gateway), regra de telefone do UC01 (PO: recusar fixo?), ordem de merge e
-  numeração das migrations (`V9`, e a da D10 se aprovada), `app.frontend.url` vs `app.deeplink.url` (`feature/36`; o link sai de um único método).
-- Riscos aceitos: recusa por e-mail em uso tem status diferente do sucesso e não consome limite (igual ao cadastro); o
-  cadastro não trata a violação de `uk_usuario_email` (500 pré-existente).
+- ~~UC05 (endpoint de consumo do link)~~: `POST /auth/confirmar-email` (TICKET-0047).
+- ~~`app.frontend.url` vs `app.deeplink.url`~~: os dois saíram; o link é `https` em `app.web.url` (ADR-0002).
+- UC04 (OTP/SMS e gateway), regra de telefone do UC01 (PO: recusar fixo?) e, se a D10 for aprovada, a numeração da
+  migration do `destino_hash` continuam pendentes.
+- Riscos aceitos: recusa por e-mail em uso tem status diferente do sucesso e não consome limite (igual ao cadastro).
+  ~~O cadastro não trata a violação de `uk_usuario_email` (500)~~: resolvido no TICKET-0047
+  (`UsuarioService.salvarNovo` → 409 `CADASTRO_DADOS_INDISPONIVEIS`).
 
 ## Fora de escopo
 
