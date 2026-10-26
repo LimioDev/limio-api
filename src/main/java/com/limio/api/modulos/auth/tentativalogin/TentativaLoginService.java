@@ -49,4 +49,10 @@ public class TentativaLoginService extends BaseService<TentativaLogin, UUID, Ten
         }
         return Optional.of(repository.save(TentativaLogin.builder().email(email).ip(ip).build()));
     }
+
+    /** Apaga falhas de login mais antigas que a retenção (rotina diária — ver {@code LimparRetencaoUseCase}). */
+    @Transactional
+    public void limparAntigas(Instant limite) {
+        repository.apagarAntesDe(limite);
+    }
 }

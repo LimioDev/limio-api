@@ -1,6 +1,7 @@
 package com.limio.api.modulos.auth.spec;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
 import java.time.Duration;
@@ -17,12 +18,14 @@ import com.limio.api.modulos.auth.actions.usecase.LimparRetencaoUseCase;
 import com.limio.api.comum.auditoria.LogAuditoriaService;
 import com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueadoService;
 import com.limio.api.modulos.auth.sessao.SessaoService;
+import com.limio.api.modulos.auth.tentativalogin.TentativaLoginService;
 
 @ExtendWith(MockitoExtension.class)
 class LimparRetencaoUseCaseTest {
 
     private static final Duration VALIDADE_LOG = Duration.ofDays(1825);
     private static final Duration VALIDADE_SESSAO = Duration.ofDays(180);
+    private static final Duration VALIDADE_TENTATIVA = Duration.ofDays(30);
 
     @Mock
     private CpfBloqueadoService cpfBloqueadoService;
@@ -33,12 +36,15 @@ class LimparRetencaoUseCaseTest {
     @Mock
     private SessaoService sessaoService;
 
+    @Mock
+    private TentativaLoginService tentativaLoginService;
+
     private LimparRetencaoUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new LimparRetencaoUseCase(cpfBloqueadoService, logAuditoriaService, sessaoService, VALIDADE_LOG,
-                VALIDADE_SESSAO);
+        useCase = new LimparRetencaoUseCase(cpfBloqueadoService, logAuditoriaService, sessaoService,
+                tentativaLoginService, VALIDADE_LOG, VALIDADE_SESSAO, VALIDADE_TENTATIVA);
     }
 
     @Test
@@ -56,6 +62,21 @@ class LimparRetencaoUseCaseTest {
         ArgumentCaptor<Instant> limiteSessao = ArgumentCaptor.forClass(Instant.class);
         verify(sessaoService).limparEncerradasOuExpiradas(limiteSessao.capture());
         assertAproximadamenteHaDuracao(antes, limiteSessao.getValue(), VALIDADE_SESSAO);
+
+        ArgumentCaptor<Instant> limiteTentativa = ArgumentCaptor.forClass(Instant.class);
+        verify(tentativaLoginService).limparAntigas(limiteTentativa.capture());
+        assertAproximadamenteHaDuracao(antes, limiteTentativa.getValue(), VALIDADE_TENTATIVA);
+    }
+
+    @Test
+    void falhaNumaTabelaNaoImpedeAsOutras() {
+        doThrow(new IllegalStateException("banco fora")).when(cpfBloqueadoService).limparLiberados(any());
+
+        useCase.executar();
+
+        verify(logAuditoriaService).limparAntigos(any(Instant.class));
+        verify(sessaoService).limparEncerradasOuExpiradas(any(Instant.class));
+        verify(tentativaLoginService).limparAntigas(any(Instant.class));
     }
 
     private static void assertAproximadamenteHaDuracao(Instant agoraAproximado, Instant limite, Duration validade) {
