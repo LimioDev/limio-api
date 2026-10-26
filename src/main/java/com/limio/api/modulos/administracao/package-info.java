@@ -11,10 +11,9 @@
  *   <li>{@code parametro}, {@code parametro_historico} — configuração versionada do sistema</li>
  * </ul>
  *
- * <p><b>Pendência em aberto (não resolvida nesta ticket, ver ADR-0001
- * revisão 3):</b> {@code PapelUsuario.ADMIN} (enum em {@code modulos.auth})
- * e esta tabela {@code administrador} coexistem no DER sem relação
- * explicada — decidir se {@code ADMIN} é vestigial/não usado ou se os dois
- * caminhos de login administrativo devem de fato existir em paralelo.</p>
+ * <p><b>Decisão (tech lead, 2026-10-26):</b> administrador é ator próprio, com login
+ * nesta tabela {@code administrador}. {@code PapelUsuario.ADMIN} foi removido
+ * (migration V15) — não existe caminho de login administrativo por
+ * {@code Usuario}.</p>
  */
 package com.limio.api.modulos.administracao;

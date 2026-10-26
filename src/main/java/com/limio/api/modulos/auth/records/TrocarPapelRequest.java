@@ -4,7 +4,7 @@ import com.limio.api.comum.seguranca.enums.PapelUsuario;
 
 import jakarta.validation.constraints.NotNull;
 
-/** Só EMPREGADOR ou PRESTADOR — a regra fica no usecase (ADMIN é recusado lá com PAPEL_INVALIDO). */
+/** EMPREGADOR ou PRESTADOR; qualquer outro valor não desserializa e responde 400 {@code VALIDACAO_FALHOU}. */
 public record TrocarPapelRequest(
         @NotNull(message = "{papel.obrigatorio}")
         PapelUsuario papel) {

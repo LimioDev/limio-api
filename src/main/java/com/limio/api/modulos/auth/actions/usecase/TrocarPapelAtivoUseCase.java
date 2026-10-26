@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
-import com.limio.api.modulos.auth.excecao.PapelInvalidoException;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
 
@@ -17,7 +16,8 @@ import com.limio.api.modulos.auth.usuario.UsuarioService;
  * até ser renovado.
  *
  * Fora deste usecase: checar se o perfil de Prestador está completo (fluxo
- * alternativo da UC09) — o módulo {@code perfil} ainda é só esqueleto.
+ * alternativo da UC09). O {@code perfil} já calcula {@code completo}; falta o PO
+ * definir o que acontece com perfil incompleto (bloquear a troca ou só avisar).
  */
 @Service
 public class TrocarPapelAtivoUseCase {
@@ -30,20 +30,10 @@ public class TrocarPapelAtivoUseCase {
 
     @Transactional
     public Usuario executar(UUID usuarioId, PapelUsuario novoPapel) {
-        if (!isAlternavel(novoPapel)) {
-            throw new PapelInvalidoException();
-        }
         Usuario usuario = usuarioService.buscarPorIdOuFalhar(usuarioId);
         usuario.exigirAtiva();
 
         usuario.setPapelAtivo(novoPapel);
         return usuarioService.salvar(usuario);
-    }
-
-    private static boolean isAlternavel(PapelUsuario papel) {
-        return switch (papel) {
-            case EMPREGADOR, PRESTADOR -> true;
-            case ADMIN -> false;
-        };
     }
 }

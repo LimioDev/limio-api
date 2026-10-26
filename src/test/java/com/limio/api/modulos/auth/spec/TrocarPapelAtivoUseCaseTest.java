@@ -19,7 +19,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.auth.actions.usecase.TrocarPapelAtivoUseCase;
 import com.limio.api.modulos.auth.excecao.ContaSuspensaException;
-import com.limio.api.modulos.auth.excecao.PapelInvalidoException;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
 import com.limio.api.modulos.auth.usuario.enums.StatusConta;
@@ -55,13 +54,6 @@ class TrocarPapelAtivoUseCaseTest {
         verify(usuarioService).salvar(usuario);
     }
 
-    @Test
-    void deveRecusarTrocaParaAdmin() {
-        assertThatThrownBy(() -> useCase.executar(USUARIO_ID, PapelUsuario.ADMIN))
-                .isInstanceOf(PapelInvalidoException.class);
-
-        verifyNoInteractions(usuarioService);
-    }
 
     @Test
     void deveRecusarTrocaComContaSuspensa() {

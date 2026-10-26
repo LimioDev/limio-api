@@ -283,8 +283,8 @@ class AcessarContaEAlternarPapelStoryTest {
         LoginResponse celular = logado("celular");
 
         trocarPapel(celular.token(), "ADMIN")
-                .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.codigo", is("PAPEL_INVALIDO")));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo", is("VALIDACAO_FALHOU")));
         trocarPapel(celular.token(), "SUPERVISOR")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.codigo", is("VALIDACAO_FALHOU")));

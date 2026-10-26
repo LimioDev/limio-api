@@ -17,7 +17,6 @@ public enum CodigoErro {
     NAO_AUTENTICADO("Faça login para continuar."),
     ACESSO_NEGADO("Você não tem permissão para acessar este recurso."),
     SESSAO_INVALIDA("Sua sessão expirou. Faça login novamente."),
-    PAPEL_INVALIDO("Só é possível alternar entre Empregador e Prestador."),
     TOKEN_RECUPERACAO_INVALIDO("Link de recuperação de senha inválido ou expirado."),
     LINK_CONFIRMACAO_EMAIL_INVALIDO("Link de confirmação de e-mail inválido, expirado ou já usado."),
     SENHA_ATUAL_INCORRETA("Senha atual incorreta."),
