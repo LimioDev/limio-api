@@ -23,4 +23,8 @@ public class PreferenciaNotificacaoService
     public void gravarCanais(UUID usuarioId, boolean push, boolean email, boolean sms, boolean whatsapp) {
         repository.upsert(usuarioId, push, email, sms, whatsapp);
     }
+
+    public void apagarDoUsuario(UUID usuarioId) {
+        repository.apagarDoUsuario(usuarioId);
+    }
 }
