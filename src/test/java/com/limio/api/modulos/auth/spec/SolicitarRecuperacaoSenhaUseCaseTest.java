@@ -19,7 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
-import com.limio.api.modulos.auth.actions.helper.LinkApp;
+import com.limio.api.modulos.auth.actions.helper.LinkWeb;
 import com.limio.api.modulos.auth.actions.service.EmailService;
 import com.limio.api.modulos.auth.actions.usecase.SolicitarRecuperacaoSenhaUseCase;
 import com.limio.api.modulos.auth.usuario.Usuario;
@@ -49,7 +49,7 @@ class SolicitarRecuperacaoSenhaUseCaseTest {
     @BeforeEach
     void montarUseCase() {
         useCase = new SolicitarRecuperacaoSenhaUseCase(usuarioService, verificacaoContatoService, emailService,
-                new LinkApp(FRONTEND_URL), Duration.ofHours(1), 3, Duration.ofHours(1));
+                new LinkWeb(FRONTEND_URL), Duration.ofHours(1), 3, Duration.ofHours(1));
     }
 
     private Usuario usuario(StatusConta status) {

@@ -6,7 +6,6 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.limio.api.modulos.auth.actions.helper.LinkApp;
 import com.limio.api.modulos.auth.actions.helper.RefreshTokenHelper;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
 import com.limio.api.modulos.auth.actions.service.EmailService;
@@ -34,20 +33,17 @@ public class AlterarSenhaUseCase {
     private final SenhaHasher senhaHasher;
     private final TokenService tokenService;
     private final EmailService emailService;
-    private final LinkApp linkApp;
 
     public AlterarSenhaUseCase(UsuarioService usuarioService,
             SessaoService sessaoService,
             SenhaHasher senhaHasher,
             TokenService tokenService,
-            EmailService emailService,
-            LinkApp linkApp) {
+            EmailService emailService) {
         this.usuarioService = usuarioService;
         this.sessaoService = sessaoService;
         this.senhaHasher = senhaHasher;
         this.tokenService = tokenService;
         this.emailService = emailService;
-        this.linkApp = linkApp;
     }
 
     @Transactional
@@ -75,7 +71,7 @@ public class AlterarSenhaUseCase {
         sessaoService.salvar(sessaoAtual);
         sessaoService.revogarTodas(usuarioId, sessaoAtual.getId(), agora);
 
-        emailService.enviarSenhaAlterada(usuario.getEmail(), linkApp.linkApp("recuperar-senha"));
+        emailService.enviarSenhaAlterada(usuario.getEmail());
         return tokens;
     }
 }

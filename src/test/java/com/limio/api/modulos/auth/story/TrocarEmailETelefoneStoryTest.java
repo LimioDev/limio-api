@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
@@ -57,7 +58,10 @@ import tools.jackson.databind.ObjectMapper;
  * BDD ponta a ponta (controller -> banco real) das trocas de e-mail e de telefone
  * (TICKET-0048). Caixa-preta via HTTP; SQL só pra limpar e pré-popular. O envio de
  * e-mail é espiado ({@link EmailService} real, que só loga com {@code email.enviar=false}).
- * Não há UC05 nem UC04: nenhum teste aqui confirma e-mail ou telefone.
+ * Nenhum teste aqui confirma e-mail ou telefone (UC05 tem story própria, {@code ConfirmarEmailStoryTest}).
+ *
+ * O cadastro já emite um link de confirmação (TICKET-0047); {@link #cadastrarELogar} o descarta, pra cada
+ * teste partir de uma conta sem link pendente nem e-mail enviado — aqui só interessa a troca.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -67,7 +71,7 @@ class TrocarEmailETelefoneStoryTest {
     private static final String SENHA = "senhaForte123";
     private static final Conta MARIA = new Conta("Maria da Silva", "maria@example.com", "11999998888", "52998224725");
     private static final Conta JOAO = new Conta("João Pereira", "joao@example.com", "21988887777", "11144477735");
-    private static final String PREFIXO_LINK = "limio://confirmar-email?token=";
+    private static final String PREFIXO_LINK = "http://localhost:8080/confirmar-email#token=";
 
     private record Conta(String nome, String email, String telefone, String cpf) {
     }
@@ -109,6 +113,9 @@ class TrocarEmailETelefoneStoryTest {
                         "senha", SENHA, "cpf", conta.cpf(), "dataNascimento", "1990-01-01",
                         "cidadeUf", "São Paulo/SP"))))
                 .andExpect(status().isCreated());
+        jdbc.update("delete from verificacao_contato where usuario_id = (select id from usuario where email = ?)",
+                conta.email());
+        clearInvocations(emailService);
         return logar(conta.email()).andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString().transform(this::tokenDe);
     }

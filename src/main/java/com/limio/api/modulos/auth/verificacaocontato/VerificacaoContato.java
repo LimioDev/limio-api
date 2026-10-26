@@ -23,8 +23,8 @@ import lombok.Setter;
 
 /**
  * Token de uso único enviado por um canal de contato, pra confirmar a posse
- * dele — recuperação de senha (TICKET-0033) ou, no futuro, confirmação de
- * e-mail (UC05). Tabela compartilhada com o Cadastro (UC01).
+ * dele — recuperação de senha (TICKET-0033) ou confirmação de e-mail (UC05,
+ * TICKET-0047). Emitido no cadastro, na troca de e-mail e no reenvio.
  *
  * Nunca guarda o token em texto puro, só {@code tokenHash} (mesma lógica do
  * refresh token da {@link com.limio.api.modulos.auth.sessao.Sessao}).

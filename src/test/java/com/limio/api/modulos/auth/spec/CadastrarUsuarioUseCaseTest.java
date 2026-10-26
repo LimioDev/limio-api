@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -20,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
 import com.limio.api.modulos.auth.actions.usecase.CadastrarUsuarioUseCase;
+import com.limio.api.modulos.auth.actions.usecase.EmitirConfirmacaoEmailUseCase;
 import com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueadoService;
 import com.limio.api.modulos.auth.excecao.CadastroIndisponivelException;
 import com.limio.api.modulos.auth.excecao.CpfInvalidoException;
@@ -42,11 +44,15 @@ class CadastrarUsuarioUseCaseTest {
     @Mock
     private SenhaHasher senhaHasher;
 
+    @Mock
+    private EmitirConfirmacaoEmailUseCase emitirConfirmacaoEmail;
+
     private CadastrarUsuarioUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new CadastrarUsuarioUseCase(usuarioService, cpfBloqueadoService, senhaHasher);
+        useCase = new CadastrarUsuarioUseCase(usuarioService, cpfBloqueadoService, senhaHasher,
+                emitirConfirmacaoEmail);
     }
 
     private Usuario candidatoMaiorDeIdade() {
@@ -123,7 +129,7 @@ class CadastrarUsuarioUseCaseTest {
         when(usuarioService.existePorCpf(anyString())).thenReturn(false);
         when(cpfBloqueadoService.estaBloqueado(anyString(), any(Instant.class))).thenReturn(false);
         when(senhaHasher.hash("senha12345")).thenReturn("hash-fake");
-        when(usuarioService.salvar(candidato)).thenReturn(candidato);
+        when(usuarioService.salvarNovo(candidato)).thenReturn(candidato);
 
         candidato.setPapelAtivo(PapelUsuario.EMPREGADOR);
         candidato.setStatusConta(StatusConta.ATIVA);
@@ -132,6 +138,31 @@ class CadastrarUsuarioUseCaseTest {
 
         assertThat(salvo.getSenhaHash()).isEqualTo("hash-fake");
         assertThat(salvo.getPapelAtivo()).isEqualTo(PapelUsuario.EMPREGADOR);
-        verify(usuarioService).salvar(candidato);
+        verify(usuarioService).salvarNovo(candidato);
+    }
+
+    @Test
+    void contaCriadaDeveReceberOLinkDeConfirmacaoDeEmail() {
+        Usuario candidato = candidatoMaiorDeIdade();
+        when(usuarioService.existePorEmail(anyString())).thenReturn(false);
+        when(usuarioService.existePorCpf(anyString())).thenReturn(false);
+        when(cpfBloqueadoService.estaBloqueado(anyString(), any(Instant.class))).thenReturn(false);
+        when(senhaHasher.hash("senha12345")).thenReturn("hash-fake");
+        when(usuarioService.salvarNovo(candidato)).thenReturn(candidato);
+
+        useCase.executar(candidato, "senha12345");
+
+        verify(emitirConfirmacaoEmail).emitir(eq(candidato), any(Instant.class));
+    }
+
+    @Test
+    void cadastroRecusadoNaoDeveEmitirLink() {
+        Usuario candidato = candidatoMaiorDeIdade();
+        when(usuarioService.existePorEmail(anyString())).thenReturn(true);
+
+        assertThatThrownBy(() -> useCase.executar(candidato, "senha12345"))
+                .isInstanceOf(CadastroIndisponivelException.class);
+
+        verifyNoInteractions(emitirConfirmacaoEmail);
     }
 }

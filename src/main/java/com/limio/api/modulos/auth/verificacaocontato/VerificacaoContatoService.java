@@ -22,6 +22,21 @@ public class VerificacaoContatoService extends BaseService<VerificacaoContato, U
         return repository.findByTokenHashAndFinalidade(tokenHash, finalidade);
     }
 
+    /** Dono do token, sem carregar o token. Primeiro passo de quem consome: ver {@link #buscarParaConsumir}. */
+    public Optional<UUID> buscarUsuarioIdPorTokenHash(String tokenHash, FinalidadeVerificacao finalidade) {
+        return repository.findUsuarioIdByTokenHashAndFinalidade(tokenHash, finalidade);
+    }
+
+    /**
+     * Token com {@code SELECT ... FOR UPDATE}: dois consumos simultâneos do mesmo link se enfileiram e o
+     * segundo já vê {@code consumidoEm}. Quem chama trava a conta antes
+     * ({@code UsuarioService.buscarParaAtualizarOuFalhar}) — mesma ordem (conta, depois token) da troca de
+     * e-mail, senão as duas podem se travar mutuamente.
+     */
+    public Optional<VerificacaoContato> buscarParaConsumir(String tokenHash, FinalidadeVerificacao finalidade) {
+        return repository.findParaConsumir(tokenHash, finalidade);
+    }
+
     /** Quantos tokens desta finalidade foram emitidos pro usuário desde {@code desde} — base do rate limit. */
     public long contarDesde(UUID usuarioId, FinalidadeVerificacao finalidade, Instant desde) {
         return repository.countByUsuarioIdAndFinalidadeAndCriadoEmAfter(usuarioId, finalidade, desde);

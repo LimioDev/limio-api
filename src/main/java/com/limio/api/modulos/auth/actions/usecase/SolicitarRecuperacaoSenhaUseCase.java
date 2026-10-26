@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.limio.api.modulos.auth.actions.helper.LinkApp;
+import com.limio.api.modulos.auth.actions.helper.LinkWeb;
 import com.limio.api.modulos.auth.actions.helper.TokenRecuperacaoHelper;
 import com.limio.api.modulos.auth.actions.service.EmailService;
 import com.limio.api.modulos.auth.usuario.Usuario;
@@ -36,12 +36,12 @@ public class SolicitarRecuperacaoSenhaUseCase {
     private final Duration validadeToken;
     private final int maxSolicitacoes;
     private final Duration janelaSolicitacoes;
-    private final LinkApp linkApp;
+    private final LinkWeb linkWeb;
 
     public SolicitarRecuperacaoSenhaUseCase(UsuarioService usuarioService,
             VerificacaoContatoService verificacaoContatoService,
             EmailService emailService,
-            LinkApp linkApp,
+            LinkWeb linkWeb,
             @Value("${auth.recuperacao-senha.validade-token}") Duration validadeToken,
             @Value("${auth.recuperacao-senha.max-solicitacoes}") int maxSolicitacoes,
             @Value("${auth.recuperacao-senha.janela-solicitacoes}") Duration janelaSolicitacoes) {
@@ -51,7 +51,7 @@ public class SolicitarRecuperacaoSenhaUseCase {
         this.validadeToken = validadeToken;
         this.maxSolicitacoes = maxSolicitacoes;
         this.janelaSolicitacoes = janelaSolicitacoes;
-        this.linkApp = linkApp;
+        this.linkWeb = linkWeb;
     }
 
     @Transactional
@@ -79,6 +79,6 @@ public class SolicitarRecuperacaoSenhaUseCase {
                 .build();
         verificacaoContatoService.salvar(verificacao);
 
-        emailService.enviarRecuperacaoSenha(usuario.getEmail(), linkApp.linkApp("nova-senha?token=" + token));
+        emailService.enviarRecuperacaoSenha(usuario.getEmail(), linkWeb.pagina("nova-senha", token));
     }
 }

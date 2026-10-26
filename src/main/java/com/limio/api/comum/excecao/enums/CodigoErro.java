@@ -19,6 +19,7 @@ public enum CodigoErro {
     SESSAO_INVALIDA("Sua sessão expirou. Faça login novamente."),
     PAPEL_INVALIDO("Só é possível alternar entre Empregador e Prestador."),
     TOKEN_RECUPERACAO_INVALIDO("Link de recuperação de senha inválido ou expirado."),
+    LINK_CONFIRMACAO_EMAIL_INVALIDO("Link de confirmação de e-mail inválido, expirado ou já usado."),
     SENHA_ATUAL_INCORRETA("Senha atual incorreta."),
     SENHA_IGUAL_ANTERIOR("A nova senha deve ser diferente da atual."),
     WHATSAPP_INDISPONIVEL("Ainda não é possível ativar notificações por WhatsApp."),

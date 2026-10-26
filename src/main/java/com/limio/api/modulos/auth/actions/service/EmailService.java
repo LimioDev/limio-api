@@ -50,10 +50,15 @@ public class EmailService {
                         + "<p>O link é válido por tempo limitado. Se não foi você, ignore este e-mail.</p>");
     }
 
-    public void enviarSenhaAlterada(String destinatario, String linkRecuperacao) {
+    /**
+     * Sem link: não existe página web pra pedir a recuperação, e link {@code limio://} é bloqueado por
+     * vários clientes de e-mail (ADR-0002). O caminho é o "Esqueci minha senha" do app.
+     */
+    public void enviarSenhaAlterada(String destinatario) {
         enviar(destinatario, "Sua senha foi alterada",
                 "<p>Sua senha foi alterada agora.</p>"
-                        + "<p>Não foi você? <a href=\"" + linkRecuperacao + "\">Recupere o acesso à sua conta</a></p>");
+                        + "<p>Não foi você? Abra o app Limio e toque em <strong>Esqueci minha senha</strong> "
+                        + "na tela de entrada para recuperar o acesso à sua conta.</p>");
     }
 
     public void enviarEmailAlterado(String destinatarioAntigo, String novoEmail) {

@@ -31,9 +31,10 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
-import com.limio.api.modulos.auth.actions.helper.LinkApp;
+import com.limio.api.modulos.auth.actions.helper.LinkWeb;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
 import com.limio.api.modulos.auth.actions.helper.TokenRecuperacaoHelper;
+import com.limio.api.modulos.auth.actions.usecase.EmitirConfirmacaoEmailUseCase;
 import com.limio.api.modulos.auth.actions.usecase.TrocarEmailUseCase;
 import com.limio.api.modulos.auth.eventos.ConfirmacaoEmailSolicitadaEvent;
 import com.limio.api.modulos.auth.eventos.EmailContaAlteradoEvent;
@@ -54,7 +55,7 @@ import com.limio.api.modulos.auth.verificacaocontato.enums.FinalidadeVerificacao
 class TrocarEmailUseCaseTest {
 
     private static final UUID USUARIO_ID = UUID.randomUUID();
-    private static final String FRONTEND_URL = "https://app.limio.test";
+    private static final String FRONTEND_URL = "https://api.limio.test";
     private static final String EMAIL_ATUAL = "maria@example.com";
     private static final String EMAIL_NOVO = "maria.nova@example.com";
     private static final Instant CONFIRMADO = Instant.parse("2026-10-01T10:00:00Z");
@@ -76,8 +77,9 @@ class TrocarEmailUseCaseTest {
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new TrocarEmailUseCase(usuarioService, verificacaoContatoService, senhaHasher, eventos,
-                new LinkApp(FRONTEND_URL), Duration.ofHours(24), 3, Duration.ofHours(1));
+        EmitirConfirmacaoEmailUseCase emitir = new EmitirConfirmacaoEmailUseCase(verificacaoContatoService, eventos,
+                new LinkWeb(FRONTEND_URL), Duration.ofHours(24), 3, Duration.ofHours(1));
+        useCase = new TrocarEmailUseCase(usuarioService, senhaHasher, eventos, emitir);
     }
 
     private <E> E eventoPublicado(Class<E> tipo) {
@@ -173,7 +175,7 @@ class TrocarEmailUseCaseTest {
 
         ConfirmacaoEmailSolicitadaEvent evento = eventoPublicado(ConfirmacaoEmailSolicitadaEvent.class);
         assertThat(evento.destinatario()).isEqualTo(EMAIL_NOVO);
-        assertThat(evento.link()).startsWith(FRONTEND_URL + "/confirmar-email?token=");
+        assertThat(evento.link()).startsWith(FRONTEND_URL + "/confirmar-email#token=");
         String token = evento.link().substring(evento.link().indexOf("token=") + "token=".length());
         assertThat(TokenRecuperacaoHelper.hash(token)).isEqualTo(tokenSalvo().getTokenHash());
     }
