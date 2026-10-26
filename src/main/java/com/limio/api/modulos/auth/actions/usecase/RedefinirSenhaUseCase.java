@@ -56,7 +56,9 @@ public class RedefinirSenhaUseCase {
         VerificacaoContato verificacao = verificacaoContatoService.buscarParaConsumir(hash, FINALIDADE)
                 .filter(encontrada -> encontrada.isValido(agora))
                 .orElseThrow(TokenRecuperacaoInvalidoException::new);
-        if (usuario.isEncerrada()) {
+        // D10: e-mail trocado depois do pedido → o link enviado ao endereço antigo não vale mais
+        if (usuario.isEncerrada()
+                || !verificacao.valeParaDestino(TokenRecuperacaoHelper.hashDestino(usuario.getEmail()))) {
             throw new TokenRecuperacaoInvalidoException();
         }
 

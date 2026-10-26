@@ -73,6 +73,7 @@ public class EmitirConfirmacaoEmailUseCase {
                 .canal(CanalVerificacao.EMAIL)
                 .finalidade(FinalidadeVerificacao.CONFIRMACAO_EMAIL)
                 .tokenHash(TokenRecuperacaoHelper.hash(token))
+                .destinoHash(TokenRecuperacaoHelper.hashDestino(usuario.getEmail()))
                 .expiraEm(agora.plus(validadeToken))
                 .build());
 

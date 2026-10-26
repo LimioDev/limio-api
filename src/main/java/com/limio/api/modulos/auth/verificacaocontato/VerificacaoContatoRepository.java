@@ -28,6 +28,10 @@ public interface VerificacaoContatoRepository extends BaseRepository<Verificacao
     Optional<VerificacaoContato> findParaConsumir(@Param("tokenHash") String tokenHash,
             @Param("finalidade") FinalidadeVerificacao finalidade);
 
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("delete from VerificacaoContato v where v.usuario.id = :usuarioId")
+    int apagarDoUsuario(@Param("usuarioId") UUID usuarioId);
+
     long countByUsuarioIdAndFinalidadeAndCriadoEmAfter(UUID usuarioId, FinalidadeVerificacao finalidade, Instant desde);
 
     List<VerificacaoContato> findByUsuarioIdAndFinalidadeAndConsumidoEmIsNull(UUID usuarioId,

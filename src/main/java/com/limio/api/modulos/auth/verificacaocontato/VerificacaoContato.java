@@ -53,6 +53,13 @@ public class VerificacaoContato extends BaseEntity {
     @Column(name = "token_hash", nullable = false, length = 64)
     private String tokenHash;
 
+    /**
+     * SHA-256 do e-mail de destino (D10 do TICKET-0048, aprovada em 2026-10-26). Nulo em token emitido
+     * antes da V16: esse continua valendo só pelas outras regras.
+     */
+    @Column(name = "destino_hash", length = 64)
+    private String destinoHash;
+
     @Column(name = "expira_em", nullable = false)
     private Instant expiraEm;
 
@@ -61,6 +68,11 @@ public class VerificacaoContato extends BaseEntity {
 
     public boolean isValido(Instant agora) {
         return consumidoEm == null && agora.isBefore(expiraEm);
+    }
+
+    /** Vale pro e-mail atual da conta? Quem chama passa o hash ({@code TokenRecuperacaoHelper.hashDestino}). */
+    public boolean valeParaDestino(String hashDestinoAtual) {
+        return destinoHash == null || destinoHash.equals(hashDestinoAtual);
     }
 
     public void consumir(Instant agora) {

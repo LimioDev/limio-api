@@ -75,6 +75,7 @@ public class SolicitarRecuperacaoSenhaUseCase {
                 .canal(CanalVerificacao.EMAIL)
                 .finalidade(FinalidadeVerificacao.RECUPERACAO_SENHA)
                 .tokenHash(TokenRecuperacaoHelper.hash(token))
+                .destinoHash(TokenRecuperacaoHelper.hashDestino(usuario.getEmail()))
                 .expiraEm(agora.plus(validadeToken))
                 .build();
         verificacaoContatoService.salvar(verificacao);

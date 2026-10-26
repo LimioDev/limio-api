@@ -6,6 +6,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.Locale;
 
 /**
  * Token de recuperação de senha, opaco: 256 bits aleatórios em base64url. No
@@ -25,6 +26,14 @@ public final class TokenRecuperacaoHelper {
         byte[] bytes = new byte[TAMANHO_BYTES];
         ALEATORIO.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    /**
+     * Hash do e-mail para onde o link foi enviado (D10 do TICKET-0048): o token só vale enquanto a conta
+     * tiver esse mesmo e-mail. Normaliza como o cadastro (trim + minúsculas), pra caixa não importar.
+     */
+    public static String hashDestino(String email) {
+        return hash(email.trim().toLowerCase(Locale.ROOT));
     }
 
     public static String hash(String token) {

@@ -19,7 +19,8 @@ import com.limio.api.modulos.auth.verificacaocontato.enums.FinalidadeVerificacao
  *   <li>trava a conta ({@code buscarParaAtualizarOuFalhar}) e só então relê o token, também travado —
  *       fecha a corrida com uma troca de e-mail simultânea, que invalida os links pendentes;</li>
  *   <li>recusa conta encerrada;</li>
- *   <li>consome o token sob esses locks: dois cliques no mesmo link não confirmam duas vezes.</li>
+ *   <li>consome o token sob esses locks: dois cliques no mesmo link não confirmam duas vezes;</li>
+ *   <li>recusa token emitido para outro e-mail ({@code destino_hash}, D10).</li>
  * </ol>
  * Token inexistente, expirado, já usado ou de conta encerrada têm a mesma resposta.
  */
@@ -46,7 +47,8 @@ public class ConfirmarEmailUseCase {
         VerificacaoContato verificacao = verificacaoContatoService.buscarParaConsumir(hash, FINALIDADE)
                 .filter(encontrada -> encontrada.isValido(agora))
                 .orElseThrow(LinkConfirmacaoEmailInvalidoException::new);
-        if (usuario.isEncerrada()) {
+        if (usuario.isEncerrada()
+                || !verificacao.valeParaDestino(TokenRecuperacaoHelper.hashDestino(usuario.getEmail()))) {
             throw new LinkConfirmacaoEmailInvalidoException();
         }
 

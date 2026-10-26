@@ -37,6 +37,11 @@ public class VerificacaoContatoService extends BaseService<VerificacaoContato, U
         return repository.findParaConsumir(tokenHash, finalidade);
     }
 
+    /** Encerramento de conta (UC10): nenhum token da conta tem uso depois, e o {@code destino_hash} identifica o e-mail. */
+    public void apagarDoUsuario(UUID usuarioId) {
+        repository.apagarDoUsuario(usuarioId);
+    }
+
     /** Quantos tokens desta finalidade foram emitidos pro usuário desde {@code desde} — base do rate limit. */
     public long contarDesde(UUID usuarioId, FinalidadeVerificacao finalidade, Instant desde) {
         return repository.countByUsuarioIdAndFinalidadeAndCriadoEmAfter(usuarioId, finalidade, desde);

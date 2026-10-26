@@ -74,6 +74,7 @@ class EmitirConfirmacaoEmailUseCaseTest {
         String token = evento.getValue().link().substring(evento.getValue().link().indexOf("#token=") + 7);
         assertThat(salvo.getValue().getTokenHash()).isEqualTo(TokenRecuperacaoHelper.hash(token));
         assertThat(salvo.getValue().getExpiraEm()).isEqualTo(AGORA.plus(Duration.ofHours(24)));
+        assertThat(salvo.getValue().getDestinoHash()).isEqualTo(TokenRecuperacaoHelper.hashDestino("maria@example.com"));
     }
 
     @Test

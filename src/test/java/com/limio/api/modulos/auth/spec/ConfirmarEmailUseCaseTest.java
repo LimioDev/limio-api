@@ -142,6 +142,30 @@ class ConfirmarEmailUseCaseTest {
     }
 
     @Test
+    void tokenEmitidoParaOutroEmailDeveSerRecusado() {
+        Usuario usuario = usuario();
+        VerificacaoContato paraOutro = tokenValido(usuario);
+        paraOutro.setDestinoHash(TokenRecuperacaoHelper.hashDestino("antigo@example.com"));
+        tokenEncontrado(usuario, paraOutro);
+
+        assertThatThrownBy(() -> useCase.executar(TOKEN)).isInstanceOf(LinkConfirmacaoEmailInvalidoException.class);
+
+        assertThat(usuario.getEmailConfirmadoEm()).isNull();
+    }
+
+    @Test
+    void tokenDoMesmoEmailComOutraCaixaDeveValer() {
+        Usuario usuario = usuario();
+        VerificacaoContato verificacao = tokenValido(usuario);
+        verificacao.setDestinoHash(TokenRecuperacaoHelper.hashDestino("Maria@Example.com"));
+        tokenEncontrado(usuario, verificacao);
+
+        useCase.executar(TOKEN);
+
+        assertThat(usuario.getEmailConfirmadoEm()).isNotNull();
+    }
+
+    @Test
     void contaEncerradaDeveSerRecusada() {
         Usuario encerrada = usuario();
         encerrada.setAnonimizadoEm(Instant.now());

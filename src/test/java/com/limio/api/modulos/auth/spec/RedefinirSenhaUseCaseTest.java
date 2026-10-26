@@ -125,6 +125,19 @@ class RedefinirSenhaUseCaseTest {
     }
 
     @Test
+    void deveRecusarLinkEnviadoParaUmEmailQueAContaNaoTemMais() {
+        Usuario usuario = usuario();
+        VerificacaoContato verificacao = verificacaoValida(usuario);
+        verificacao.setDestinoHash(TokenRecuperacaoHelper.hashDestino("antigo@example.com"));
+        tokenEncontrado(usuario, verificacao);
+
+        assertThatThrownBy(() -> useCase.executar(TOKEN, NOVA_SENHA))
+                .isInstanceOf(TokenRecuperacaoInvalidoException.class);
+
+        verify(usuarioService, never()).salvar(any());
+    }
+
+    @Test
     void deveRecusarTokenDeContaEncerrada() {
         Usuario encerrada = usuario();
         encerrada.setAnonimizadoEm(Instant.now());

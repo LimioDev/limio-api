@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -74,7 +75,9 @@ class ConfirmarEmailStoryTest {
     private EmailService emailService;
 
     @BeforeEach
+    @AfterEach
     void limparBase() {
+        jdbc.execute("delete from cpf_bloqueado");
         jdbc.execute("TRUNCATE TABLE usuario CASCADE");
         clearInvocations(emailService);
     }
@@ -207,6 +210,34 @@ class ConfirmarEmailStoryTest {
                 () -> confirmar(token).andReturn().getResponse().getStatus()));
 
         assertThat(status).containsExactlyInAnyOrder(200, 401);
+    }
+
+    /** D10: o link de confirmação não vale se o e-mail da conta já for outro. */
+    @Test
+    void dadoEmailDaContaAlteradoPorFora_quandoConfirmaOLinkAntigo_entaoRecusa() throws Exception {
+        cadastrar();
+        String token = tokenDoLink(linksEnviados(1).get(0));
+        jdbc.update("update usuario set email = 'outra@example.com' where email = ?", EMAIL);
+
+        confirmar(token).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void dadoContaEncerrada_entaoOsLinksPendentesSaoApagados() throws Exception {
+        cadastrar();
+        String corpo = mockMvc.perform(post("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("email", EMAIL, "senha", SENHA))))
+                .andReturn().getResponse().getContentAsString();
+        String acesso = objectMapper.readTree(corpo).get("token").asString();
+
+        mockMvc.perform(post("/auth/encerrar-conta")
+                .header("Authorization", "Bearer " + acesso)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("confirmacao", true))))
+                .andExpect(status().isOk());
+
+        assertThat(jdbc.queryForObject("select count(*) from verificacao_contato", Integer.class)).isZero();
     }
 
     // ---------- reenviar link ----------

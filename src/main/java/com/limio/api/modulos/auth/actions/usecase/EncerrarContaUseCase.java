@@ -14,11 +14,13 @@ import com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueadoService;
 import com.limio.api.modulos.auth.sessao.SessaoService;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
+import com.limio.api.modulos.auth.verificacaocontato.VerificacaoContatoService;
 
 /**
  * Regra de negócio do UC10 (encerrar conta, LGPD — TICKET-0034/ETI-36).
  * Reação do próprio {@code auth}: bloqueia o CPF por 12 meses, anonimiza o
- * {@link Usuario}, encerra todas as sessões (inclusive a atual) e grava a
+ * {@link Usuario}, encerra todas as sessões (inclusive a atual), apaga os
+ * links de e-mail pendentes ({@code verificacao_contato}) e grava a
  * auditoria — tudo numa transação só. Publica {@link ContaEncerradaEvent}
  * depois, pros outros módulos reagirem (perfil, consentimento) sem
  * {@code auth} importar nenhum deles.
@@ -35,17 +37,20 @@ public class EncerrarContaUseCase {
     private final SessaoService sessaoService;
     private final LogAuditoriaService logAuditoriaService;
     private final ApplicationEventPublisher eventPublisher;
+    private final VerificacaoContatoService verificacaoContatoService;
 
     public EncerrarContaUseCase(UsuarioService usuarioService,
             CpfBloqueadoService cpfBloqueadoService,
             SessaoService sessaoService,
             LogAuditoriaService logAuditoriaService,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            VerificacaoContatoService verificacaoContatoService) {
         this.usuarioService = usuarioService;
         this.cpfBloqueadoService = cpfBloqueadoService;
         this.sessaoService = sessaoService;
         this.logAuditoriaService = logAuditoriaService;
         this.eventPublisher = eventPublisher;
+        this.verificacaoContatoService = verificacaoContatoService;
     }
 
     @Transactional
@@ -63,6 +68,7 @@ public class EncerrarContaUseCase {
         usuarioService.salvar(usuario);
 
         sessaoService.revogarTodas(usuarioId, null, agora);
+        verificacaoContatoService.apagarDoUsuario(usuarioId);
 
         logAuditoriaService.registrar("Usuario", usuarioId, TipoAcaoAuditoria.CONTA_ENCERRADA,
                 "auth-encerrar-conta", ip);
