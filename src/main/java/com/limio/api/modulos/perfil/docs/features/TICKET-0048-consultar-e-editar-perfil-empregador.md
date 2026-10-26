@@ -10,12 +10,19 @@ Relacionados: UC01 (ETI-30, cadastro), UC04 (confirmar telefone por OTP), UC05 (
 
 ## Status
 
-Em implementação por partes. **Implementado** (aguardando confirmação do tech lead nos pontos marcados): tabela
+> **Decisão do tech lead (2026-10-26)**: aprovadas as decisões técnicas deste doc — rotas (`PATCH /auth/email|telefone`, `/conta/perfil-empregador`),
+> troca de contato como usecase do `auth`, porta `ConsultaDadosUsuario` (formalizada no ADR-0003), criação do perfil
+> sob demanda, `+55` como contrato da API (banco com dígitos nacionais), `statusConta` sem voltar para
+> `PENDENTE_VERIFICACAO` e o endpoint sem exigir papel `EMPREGADOR`. Seguem com o PO só as perguntas de produto
+> (contadores de "Atividade", e-mail de contato = e-mail de login, nome por papel, tamanho do nome, telefone fixo no
+> cadastro). A confirmação de e-mail entrou no TICKET-0047.
+
+Em implementação por partes. **Implementado**: tabela
 `perfil_empregador`, `GET /conta/perfil-empregador`, `PATCH /conta/perfil-empregador/nome-exibicao` (Parte 1) e a
 leitura dos dados do usuário pela porta de `comum/`, com criação do perfil no primeiro acesso (Parte 2), e a troca de
 e-mail e de telefone (Parte 3, módulo `auth` — ver `auth/docs/features/TICKET-0048-trocar-email-e-telefone.md`).
-**Não implementado**: confirmação de e-mail (UC05) e de telefone (UC04/SMS) — o link de confirmação enviado na troca de
-e-mail **não permite concluir a confirmação** —, foto, endereços (dependências abaixo).
+**Não implementado**: confirmação de telefone (UC04/SMS) e endereços (dependências abaixo). A confirmação de e-mail
+(UC05) entrou no TICKET-0047 e a foto no TICKET-0056.
 
 Legenda usada neste documento:
 

@@ -79,7 +79,8 @@ rota. Sem token válido, o `SecurityConfig` responde `401` (`NAO_AUTENTICADO`) a
 2. **"WhatsApp igual ao opt-in do cadastro"**: o cadastro atual (UC01) não coleta opt-in de WhatsApp; até lá o padrão é
    `false`. Quando o opt-in existir, a escolha precisa ser gravada no cadastro.
 3. **`documento` e `versao` do `AceiteTermo`**: fixos no backend, enviados pelo cliente ou configuração?
-4. **`ip`**: origem do IP do cliente (cabeçalho de proxy no Railway vs. IP direto).
+4. ~~**`ip`**: origem do IP do cliente~~ — resolvido (tech lead, 2026-10-26): `server.forward-headers-strategy=native`,
+   `request.getRemoteAddr()` já é o IP do cliente atrás do proxy da Railway.
 5. ~~Caminhos HTTP~~ — definidos no contrato do card (`/conta/preferencias-notificacao`). O código ficou em
    `modulos/notificacao/` (com a subentidade `preferencianotificacao/`), não num módulo `preferencianotificacao`
    próprio.

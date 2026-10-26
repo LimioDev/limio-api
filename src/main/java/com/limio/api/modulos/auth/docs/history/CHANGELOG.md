@@ -203,8 +203,8 @@ por thread); sem transação ele ainda rodava a ação na hora. A `TrocarEmailUs
 `ConfirmacaoEmailSolicitadaEvent` e `EmailContaAlteradoEvent`, e `EmailEventosService` envia com
 `@TransactionalEventListener(AFTER_COMMIT)`. Fora de transação o evento é descartado, nunca envia antes de persistir.
 Os eventos ficam em `auth/eventos/` (internos); a #7 usa `comum/eventos/` só para evento entre módulos
-(`ContaEncerradaEvent`). Local provisório, ADR pendente do tech lead. `SolicitarRecuperacaoSenhaUseCase` e
-`AlterarSenhaUseCase` seguem enviando dentro da transação.
+(`ContaEncerradaEvent`). Formalizado no ADR-0003 (2026-10-26). `SolicitarRecuperacaoSenhaUseCase` e
+`AlterarSenhaUseCase` passaram a usar evento também em 2026-10-26 (ver abaixo).
 
 ## 2026-10-21 — lock do login vai pro helper comum
 
@@ -232,3 +232,16 @@ conta no mesmo limite de 3 e-mails de confirmação por hora da troca de e-mail.
 cadastro simultâneo com o mesmo e-mail/CPF respondendo 500 (agora 409, `UsuarioService.salvarNovo`); limpeza de
 `tentativa_login` (TICKET-0032), com cada limpeza da rotina de retenção isolada das outras, como o javadoc já dizia
 e o código não fazia. Detalhe em `docs/features/TICKET-0047-paginas-web-nova-senha-e-confirmar-email.md`.
+
+## 2026-10-26 — decisões do tech lead sobre as pendências do módulo
+
+- **ADR-0002 aceito** (links `https` + páginas web) e **ADR-0003 criado** (eventos para reação, portas para
+  consulta), fechando as propostas "pendentes de ADR" da porta `ConsultaDadosUsuario` e do lugar dos eventos.
+- **`PapelUsuario.ADMIN` removido** (V15): administrador é ator próprio na tabela `administrador`. Papel fora do
+  enum responde 400; `PapelInvalidoException`/`PAPEL_INVALIDO` saíram.
+- **D10 aprovada** (V16): `verificacao_contato.destino_hash`. Vale também para a recuperação de senha. Tokens da
+  conta apagados no encerramento.
+- **IP real e limite por IP no login** (V17): `server.forward-headers-strategy=native` e
+  `auth.login.max-falhas-por-ip` (30/15 min, só IP público).
+- **E-mails de recuperação e de senha alterada em `AFTER_COMMIT`**, como os demais.
+- Aprovadas como estão as decisões "a validar" do TICKET-0032 e do TICKET-0048.

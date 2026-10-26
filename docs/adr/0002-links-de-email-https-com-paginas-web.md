@@ -1,6 +1,6 @@
 # ADR-0002 — Links de e-mail em `https`, abrindo páginas web servidas pela API
 
-- **Status:** aceita pelo time de desenvolvimento em 2026-10-26 (TICKET-0047). Falta a validação do tech lead.
+- **Status:** aceita pelo tech lead em 2026-10-26 (TICKET-0047).
 - **Substitui:** a decisão de 2026-10-16 ("custom URL scheme `limio://`, sem página web"), registrada em
   `modulos/auth/docs/features/PENDENCIA-universal-link-deeplink-app.md`. O arquivo foi removido e o histórico
   ficou em `modulos/auth/docs/history/CHANGELOG.md`.

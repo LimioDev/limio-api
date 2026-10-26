@@ -9,7 +9,7 @@ Decisão de arquitetura: [ADR-0002](../../../../../../../../../../docs/adr/0002-
 
 ## Status
 
-Implementado. Falta o design (Figma ainda não existe) e a validação do tech lead para o ADR-0002.
+Implementado. ADR-0002 aceito pelo tech lead em 2026-10-26. Falta só o design (Figma ainda não existe).
 
 ## User story
 
@@ -69,7 +69,7 @@ Token em branco: 400 `VALIDACAO_FALHOU`.
 
 ## Decisão técnica
 
-Pendência do tech lead ("como a API gera o HTML") resolvida pelo dev e registrada no ADR-0002, a validar:
+Pendência do tech lead ("como a API gera o HTML") resolvida e registrada no ADR-0002, aceito em 2026-10-26:
 
 - **HTML estático + JavaScript**, sem template engine. A página lê o token do fragmento, apaga o fragmento da barra de
   endereço e faz o POST JSON. Mensagens de erro vêm do `ErroResponse` da API.
@@ -95,7 +95,6 @@ Pendência do tech lead ("como a API gera o HTML") resolvida pelo dev e registra
 ## Fora de escopo / pendências
 
 - **Design**: desenho das duas páginas e textos finais (Figma ainda não existe). Hoje usam as cores do guia do app.
-- **Tech lead**: validar o ADR-0002.
 - **limio-app**: ligar o botão "Reenviar link" (`ConfirmarEmailView`, hoje só muda o estado da tela) a
   `POST /auth/reenviar-confirmacao-email`. A tela `nova-senha` do app deixa de ser aberta pelo e-mail.
 - **Deploy**: definir `APP_WEB_URL` (domínio `https` da API) e remover `APP_DEEPLINK_URL`/`APP_FRONTEND_URL` da Railway.

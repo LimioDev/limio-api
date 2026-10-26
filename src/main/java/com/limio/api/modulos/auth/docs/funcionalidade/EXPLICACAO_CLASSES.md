@@ -42,7 +42,8 @@ Controller recebe o usuário com `@AuthenticationPrincipal UsuarioAutenticado`.
 2. `AutenticarUsuarioUseCase.executar(email, senha, dispositivo, ip)`, em ordem:
    - `UsuarioService.buscarPorEmail` (ignora caixa). O contador do rate limit é o e-mail gravado na conta, se ela
      existe, ou o digitado.
-   - `TentativaLoginService.registrarSeLiberado` — com lock por e-mail, confere `LimiteTentativasLogin.estaBloqueado`
+   - `TentativaLoginService.registrarSeLiberado` — com lock por e-mail (e por IP, se o IP for público — `IpHelper`,
+     `LimiteTentativasLoginPorIp`), confere `LimiteTentativasLogin.estaBloqueado`
      e já grava a tentativa; bloqueado lança `LoginTemporariamenteBloqueadoException` sem conferir a senha.
    - Conta inexistente ou `Usuario.isEncerrada()` → `SenhaHasher.simularConferencia` (mesmo tempo de um BCrypt real)
      e `CredenciaisInvalidasException`; a tentativa fica gravada como falha.
@@ -170,8 +171,8 @@ o token e encerra todas as sessões.
 
 ## Porta de consulta `comum/portas/` (leitura síncrona entre módulos)
 
-> **Proposta pendente de ADR.** O ADR-0001 só prevê "evento de domínio ou fila" entre módulos. A porta abaixo é um
-> terceiro canal, adotado no TICKET-0048; a formalização no ADR aguarda o tech lead.
+> **Formalizado no ADR-0003** (`docs/adr/0003-comunicacao-entre-modulos-eventos-e-portas.md`, aceito em 2026-10-26):
+> eventos para reação, portas para consulta.
 
 - **O que é:** interface + record imutável em `comum/portas/` (hoje `ConsultaDadosUsuario` e `DadosUsuario`). O módulo
   dono do dado implementa em `actions/service/` (aqui, `ConsultaDadosUsuarioService`); o consumidor (`perfil`) injeta só

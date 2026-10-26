@@ -122,3 +122,10 @@ Pendência do TICKET-0034: quando o `perfil` existisse, ele precisaria reagir ao
 
 Cada parte roda isolada: uma falha é logada e não impede as outras nem volta para quem encerrou a conta. A tabela de
 dependências do doc do TICKET-0048 também foi atualizada (confirmação de e-mail e foto já existem).
+
+## 2026-10-26 — decisões do tech lead
+
+Aprovadas as decisões técnicas pendentes dos TICKET-0048 (rotas, porta, criação sob demanda, `+55` como contrato),
+TICKET-0054 (Nominatim público com cache; DER = V11; `DiaSemana`) e TICKET-0056 (envio multipart pela API, bucket
+privado com link temporário). Decimal em campo inteiro passa a ser recusado na API toda
+(`spring.jackson.deserialization.accept-float-as-int=false`): raio `10.7` responde 400 em vez de virar `10`.
