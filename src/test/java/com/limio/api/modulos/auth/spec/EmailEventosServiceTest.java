@@ -15,6 +15,8 @@ import com.limio.api.modulos.auth.actions.service.EmailEventosService;
 import com.limio.api.modulos.auth.actions.service.EmailService;
 import com.limio.api.modulos.auth.eventos.ConfirmacaoEmailSolicitadaEvent;
 import com.limio.api.modulos.auth.eventos.EmailContaAlteradoEvent;
+import com.limio.api.modulos.auth.eventos.RecuperacaoSenhaSolicitadaEvent;
+import com.limio.api.modulos.auth.eventos.SenhaAlteradaEvent;
 
 @ExtendWith(MockitoExtension.class)
 class EmailEventosServiceTest {
@@ -55,5 +57,21 @@ class EmailEventosServiceTest {
 
         assertThatCode(() -> service.aoAlterarEmail(new EmailContaAlteradoEvent("a@b.com", "c@d.com")))
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    void recuperacaoSolicitadaDeveEnviarOLink() {
+        service.aoSolicitarRecuperacao(new RecuperacaoSenhaSolicitadaEvent("maria@example.com", "https://api/x"));
+
+        verify(emailService).enviarRecuperacaoSenha("maria@example.com", "https://api/x");
+    }
+
+    @Test
+    void senhaAlteradaDeveAvisarEFalhaNaoPropaga() {
+        doThrow(new IllegalStateException("resend fora")).when(emailService).enviarSenhaAlterada(anyString());
+
+        assertThatCode(() -> service.aoAlterarSenha(new SenhaAlteradaEvent("maria@example.com")))
+                .doesNotThrowAnyException();
+        verify(emailService).enviarSenhaAlterada("maria@example.com");
     }
 }

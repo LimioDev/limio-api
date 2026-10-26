@@ -4,12 +4,13 @@ import java.time.Duration;
 import java.time.Instant;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.modulos.auth.actions.helper.LinkWeb;
 import com.limio.api.modulos.auth.actions.helper.TokenRecuperacaoHelper;
-import com.limio.api.modulos.auth.actions.service.EmailService;
+import com.limio.api.modulos.auth.eventos.RecuperacaoSenhaSolicitadaEvent;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
 import com.limio.api.modulos.auth.verificacaocontato.VerificacaoContato;
@@ -32,7 +33,7 @@ public class SolicitarRecuperacaoSenhaUseCase {
 
     private final UsuarioService usuarioService;
     private final VerificacaoContatoService verificacaoContatoService;
-    private final EmailService emailService;
+    private final ApplicationEventPublisher eventos;
     private final Duration validadeToken;
     private final int maxSolicitacoes;
     private final Duration janelaSolicitacoes;
@@ -40,14 +41,14 @@ public class SolicitarRecuperacaoSenhaUseCase {
 
     public SolicitarRecuperacaoSenhaUseCase(UsuarioService usuarioService,
             VerificacaoContatoService verificacaoContatoService,
-            EmailService emailService,
+            ApplicationEventPublisher eventos,
             LinkWeb linkWeb,
             @Value("${auth.recuperacao-senha.validade-token}") Duration validadeToken,
             @Value("${auth.recuperacao-senha.max-solicitacoes}") int maxSolicitacoes,
             @Value("${auth.recuperacao-senha.janela-solicitacoes}") Duration janelaSolicitacoes) {
         this.usuarioService = usuarioService;
         this.verificacaoContatoService = verificacaoContatoService;
-        this.emailService = emailService;
+        this.eventos = eventos;
         this.validadeToken = validadeToken;
         this.maxSolicitacoes = maxSolicitacoes;
         this.janelaSolicitacoes = janelaSolicitacoes;
@@ -80,6 +81,6 @@ public class SolicitarRecuperacaoSenhaUseCase {
                 .build();
         verificacaoContatoService.salvar(verificacao);
 
-        emailService.enviarRecuperacaoSenha(usuario.getEmail(), linkWeb.pagina("nova-senha", token));
+        eventos.publishEvent(new RecuperacaoSenhaSolicitadaEvent(usuario.getEmail(), linkWeb.pagina("nova-senha", token)));
     }
 }

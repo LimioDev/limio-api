@@ -3,13 +3,14 @@ package com.limio.api.modulos.auth.actions.usecase;
 import java.time.Instant;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.modulos.auth.actions.helper.RefreshTokenHelper;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
-import com.limio.api.modulos.auth.actions.service.EmailService;
 import com.limio.api.modulos.auth.actions.service.TokenService;
+import com.limio.api.modulos.auth.eventos.SenhaAlteradaEvent;
 import com.limio.api.modulos.auth.excecao.SenhaAtualIncorretaException;
 import com.limio.api.modulos.auth.excecao.SenhaIgualAnteriorException;
 import com.limio.api.modulos.auth.excecao.SessaoInvalidaException;
@@ -32,18 +33,18 @@ public class AlterarSenhaUseCase {
     private final SessaoService sessaoService;
     private final SenhaHasher senhaHasher;
     private final TokenService tokenService;
-    private final EmailService emailService;
+    private final ApplicationEventPublisher eventos;
 
     public AlterarSenhaUseCase(UsuarioService usuarioService,
             SessaoService sessaoService,
             SenhaHasher senhaHasher,
             TokenService tokenService,
-            EmailService emailService) {
+            ApplicationEventPublisher eventos) {
         this.usuarioService = usuarioService;
         this.sessaoService = sessaoService;
         this.senhaHasher = senhaHasher;
         this.tokenService = tokenService;
-        this.emailService = emailService;
+        this.eventos = eventos;
     }
 
     @Transactional
@@ -71,7 +72,7 @@ public class AlterarSenhaUseCase {
         sessaoService.salvar(sessaoAtual);
         sessaoService.revogarTodas(usuarioId, sessaoAtual.getId(), agora);
 
-        emailService.enviarSenhaAlterada(usuario.getEmail());
+        eventos.publishEvent(new SenhaAlteradaEvent(usuario.getEmail()));
         return tokens;
     }
 }
