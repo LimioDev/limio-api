@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -12,10 +13,12 @@ import static org.mockito.Mockito.when;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -70,6 +73,17 @@ class RedefinirSenhaUseCaseTest {
                 .build();
     }
 
+    private static final UUID USUARIO_ID = UUID.randomUUID();
+
+    /** Simula o caminho do consumo: dono do token, conta travada, token relido travado. */
+    private void tokenEncontrado(Usuario usuario, VerificacaoContato verificacao) {
+        when(verificacaoContatoService.buscarUsuarioIdPorTokenHash(HASH, FinalidadeVerificacao.RECUPERACAO_SENHA))
+                .thenReturn(Optional.of(USUARIO_ID));
+        when(usuarioService.buscarParaAtualizarOuFalhar(USUARIO_ID)).thenReturn(usuario);
+        when(verificacaoContatoService.buscarParaConsumir(HASH, FinalidadeVerificacao.RECUPERACAO_SENHA))
+                .thenReturn(Optional.of(verificacao));
+    }
+
     private Usuario usuario() {
         return Usuario.builder()
                 .email("maria@example.com")
@@ -83,8 +97,7 @@ class RedefinirSenhaUseCaseTest {
     void deveRedefinirSenhaConsumirTokenEEncerrarTodasAsSessoes() {
         Usuario usuario = usuario();
         VerificacaoContato verificacao = verificacaoValida(usuario);
-        when(verificacaoContatoService.buscarPorTokenHashEFinalidade(HASH, FinalidadeVerificacao.RECUPERACAO_SENHA))
-                .thenReturn(Optional.of(verificacao));
+        tokenEncontrado(verificacao.getUsuario(), verificacao);
         when(senhaHasher.confere(NOVA_SENHA, "hash-antigo")).thenReturn(false);
         when(senhaHasher.hash(NOVA_SENHA)).thenReturn("hash-novo");
 
@@ -97,8 +110,35 @@ class RedefinirSenhaUseCaseTest {
     }
 
     @Test
+    void deveTravarAContaAntesDeLerOToken() {
+        Usuario usuario = usuario();
+        VerificacaoContato verificacao = verificacaoValida(usuario);
+        tokenEncontrado(usuario, verificacao);
+        when(senhaHasher.confere(NOVA_SENHA, "hash-antigo")).thenReturn(false);
+        when(senhaHasher.hash(NOVA_SENHA)).thenReturn("hash-novo");
+
+        useCase.executar(TOKEN, NOVA_SENHA);
+
+        InOrder ordem = inOrder(usuarioService, verificacaoContatoService);
+        ordem.verify(usuarioService).buscarParaAtualizarOuFalhar(USUARIO_ID);
+        ordem.verify(verificacaoContatoService).buscarParaConsumir(HASH, FinalidadeVerificacao.RECUPERACAO_SENHA);
+    }
+
+    @Test
+    void deveRecusarTokenDeContaEncerrada() {
+        Usuario encerrada = usuario();
+        encerrada.setAnonimizadoEm(Instant.now());
+        tokenEncontrado(encerrada, verificacaoValida(encerrada));
+
+        assertThatThrownBy(() -> useCase.executar(TOKEN, NOVA_SENHA))
+                .isInstanceOf(TokenRecuperacaoInvalidoException.class);
+
+        verify(usuarioService, never()).salvar(any());
+    }
+
+    @Test
     void deveRecusarTokenInexistente() {
-        when(verificacaoContatoService.buscarPorTokenHashEFinalidade(HASH, FinalidadeVerificacao.RECUPERACAO_SENHA))
+        when(verificacaoContatoService.buscarUsuarioIdPorTokenHash(HASH, FinalidadeVerificacao.RECUPERACAO_SENHA))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.executar(TOKEN, NOVA_SENHA))
@@ -111,8 +151,7 @@ class RedefinirSenhaUseCaseTest {
     void deveRecusarTokenJaConsumido() {
         VerificacaoContato consumido = verificacaoValida(usuario());
         consumido.consumir(Instant.now());
-        when(verificacaoContatoService.buscarPorTokenHashEFinalidade(HASH, FinalidadeVerificacao.RECUPERACAO_SENHA))
-                .thenReturn(Optional.of(consumido));
+        tokenEncontrado(consumido.getUsuario(), consumido);
 
         assertThatThrownBy(() -> useCase.executar(TOKEN, NOVA_SENHA))
                 .isInstanceOf(TokenRecuperacaoInvalidoException.class);
@@ -127,8 +166,7 @@ class RedefinirSenhaUseCaseTest {
                 .tokenHash(HASH)
                 .expiraEm(Instant.now().minusSeconds(1))
                 .build();
-        when(verificacaoContatoService.buscarPorTokenHashEFinalidade(HASH, FinalidadeVerificacao.RECUPERACAO_SENHA))
-                .thenReturn(Optional.of(expirado));
+        tokenEncontrado(expirado.getUsuario(), expirado);
 
         assertThatThrownBy(() -> useCase.executar(TOKEN, NOVA_SENHA))
                 .isInstanceOf(TokenRecuperacaoInvalidoException.class);
@@ -138,8 +176,7 @@ class RedefinirSenhaUseCaseTest {
     void deveRecusarNovaSenhaIgualAAtual() {
         Usuario usuario = usuario();
         VerificacaoContato verificacao = verificacaoValida(usuario);
-        when(verificacaoContatoService.buscarPorTokenHashEFinalidade(HASH, FinalidadeVerificacao.RECUPERACAO_SENHA))
-                .thenReturn(Optional.of(verificacao));
+        tokenEncontrado(verificacao.getUsuario(), verificacao);
         when(senhaHasher.confere(NOVA_SENHA, "hash-antigo")).thenReturn(true);
 
         assertThatThrownBy(() -> useCase.executar(TOKEN, NOVA_SENHA))

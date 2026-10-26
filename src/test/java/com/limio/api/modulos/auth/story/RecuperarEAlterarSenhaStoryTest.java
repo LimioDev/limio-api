@@ -9,7 +9,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -273,5 +275,25 @@ class RecuperarEAlterarSenhaStoryTest {
                                 Map.of("senhaAtual", SENHA, "novaSenha", NOVA_SENHA, "refreshToken", "qualquer"))))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.codigo", is("NAO_AUTENTICADO")));
+    }
+
+    /** Consumo atômico do link (TICKET-0047): dois envios simultâneos do mesmo token, só um redefine. */
+    @Test
+    void dadoDoisEnviosSimultaneosDoMesmoLink_entaoSoUmRedefineASenha() throws Exception {
+        Usuario usuario = cadastrar();
+        String token = gerarTokenRecuperacao(usuario, Instant.now().plusSeconds(3600));
+
+        CompletableFuture<Integer> primeiro = CompletableFuture.supplyAsync(() -> statusDe(token, "senhaUm111"));
+        CompletableFuture<Integer> segundo = CompletableFuture.supplyAsync(() -> statusDe(token, "senhaDois22"));
+
+        assertThat(List.of(primeiro.get(), segundo.get())).containsExactlyInAnyOrder(200, 401);
+    }
+
+    private int statusDe(String token, String novaSenha) {
+        try {
+            return redefinirSenha(token, novaSenha).andReturn().getResponse().getStatus();
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

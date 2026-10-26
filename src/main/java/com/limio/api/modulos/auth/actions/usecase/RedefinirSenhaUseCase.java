@@ -21,9 +21,15 @@ import com.limio.api.modulos.auth.verificacaocontato.enums.FinalidadeVerificacao
  * senha"): valida o token de uso único, grava a nova senha, consome o token
  * e encerra todas as sessões do usuário — ninguém continua logado com a
  * senha antiga em nenhum aparelho.
+ *
+ * Consumo atômico: trava a conta e depois o token (ver
+ * {@link VerificacaoContatoService#buscarParaConsumir}); dois envios
+ * simultâneos do mesmo link não redefinem a senha duas vezes.
  */
 @Service
 public class RedefinirSenhaUseCase {
+
+    private static final FinalidadeVerificacao FINALIDADE = FinalidadeVerificacao.RECUPERACAO_SENHA;
 
     private final UsuarioService usuarioService;
     private final VerificacaoContatoService verificacaoContatoService;
@@ -43,12 +49,17 @@ public class RedefinirSenhaUseCase {
     @Transactional
     public void executar(String token, String novaSenha) {
         Instant agora = Instant.now();
-        VerificacaoContato verificacao = verificacaoContatoService
-                .buscarPorTokenHashEFinalidade(TokenRecuperacaoHelper.hash(token), FinalidadeVerificacao.RECUPERACAO_SENHA)
+        String hash = TokenRecuperacaoHelper.hash(token);
+        Usuario usuario = verificacaoContatoService.buscarUsuarioIdPorTokenHash(hash, FINALIDADE)
+                .map(usuarioService::buscarParaAtualizarOuFalhar)
+                .orElseThrow(TokenRecuperacaoInvalidoException::new);
+        VerificacaoContato verificacao = verificacaoContatoService.buscarParaConsumir(hash, FINALIDADE)
                 .filter(encontrada -> encontrada.isValido(agora))
                 .orElseThrow(TokenRecuperacaoInvalidoException::new);
+        if (usuario.isEncerrada()) {
+            throw new TokenRecuperacaoInvalidoException();
+        }
 
-        Usuario usuario = verificacao.getUsuario();
         if (senhaHasher.confere(novaSenha, usuario.getSenhaHash())) {
             throw new SenhaIgualAnteriorException();
         }
