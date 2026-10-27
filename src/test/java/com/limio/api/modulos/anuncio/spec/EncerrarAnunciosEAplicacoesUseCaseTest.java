@@ -314,7 +314,7 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
         UUID outroAnuncioId = UUID.randomUUID();
         Anuncio anuncioQuebrado = anuncio(StatusAnuncio.PUBLICADO, Instant.now().plus(Duration.ofDays(10)));
         Anuncio anuncioOk = Anuncio.builder()
-                .titulo("Faxina")
+                .titulo("Jardinagem")
                 .contratanteId(CONTRATANTE_ID)
                 .descricao("Jardinagem")
                 .dataHoraPretendida(Instant.now().plus(Duration.ofDays(10)))

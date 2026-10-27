@@ -63,6 +63,7 @@ class ConsultarPainelEmpregadorUseCaseTest {
     private Anuncio anuncio() {
         Anuncio anuncio = Anuncio.builder()
                 .contratanteId(CONTRATANTE_ID)
+                .titulo("Faxina")
                 .descricao("Faxina")
                 .dataHoraPretendida(Instant.now().plus(Duration.ofDays(3)))
                 .status(StatusAnuncio.PUBLICADO)
