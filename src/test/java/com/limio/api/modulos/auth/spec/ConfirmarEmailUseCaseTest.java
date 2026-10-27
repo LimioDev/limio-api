@@ -22,12 +22,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
-import com.limio.api.modulos.auth.actions.helper.TokenRecuperacaoHelper;
+import com.limio.api.modulos.auth.actions.helper.TokenVerificacaoHelper;
 import com.limio.api.modulos.auth.actions.usecase.ConfirmarEmailUseCase;
 import com.limio.api.modulos.auth.excecao.LinkConfirmacaoEmailInvalidoException;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
 import com.limio.api.modulos.auth.usuario.enums.StatusConta;
+import com.limio.api.modulos.auth.verificacaocontato.ConsumoTokenVerificacao;
 import com.limio.api.modulos.auth.verificacaocontato.VerificacaoContato;
 import com.limio.api.modulos.auth.verificacaocontato.VerificacaoContatoService;
 import com.limio.api.modulos.auth.verificacaocontato.enums.CanalVerificacao;
@@ -37,7 +38,7 @@ import com.limio.api.modulos.auth.verificacaocontato.enums.FinalidadeVerificacao
 class ConfirmarEmailUseCaseTest {
 
     private static final String TOKEN = "token-de-confirmacao";
-    private static final String HASH = TokenRecuperacaoHelper.hash(TOKEN);
+    private static final String HASH = TokenVerificacaoHelper.hash(TOKEN);
     private static final UUID USUARIO_ID = UUID.randomUUID();
     private static final FinalidadeVerificacao FINALIDADE = FinalidadeVerificacao.CONFIRMACAO_EMAIL;
 
@@ -51,7 +52,9 @@ class ConfirmarEmailUseCaseTest {
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new ConfirmarEmailUseCase(usuarioService, verificacaoContatoService);
+        ConsumoTokenVerificacao consumoTokenVerificacao = new ConsumoTokenVerificacao(usuarioService,
+                verificacaoContatoService);
+        useCase = new ConfirmarEmailUseCase(usuarioService, verificacaoContatoService, consumoTokenVerificacao);
     }
 
     private Usuario usuario() {
@@ -145,7 +148,7 @@ class ConfirmarEmailUseCaseTest {
     void tokenEmitidoParaOutroEmailDeveSerRecusado() {
         Usuario usuario = usuario();
         VerificacaoContato paraOutro = tokenValido(usuario);
-        paraOutro.setDestinoHash(TokenRecuperacaoHelper.hashDestino("antigo@example.com"));
+        paraOutro.setDestinoHash(TokenVerificacaoHelper.hashDestino("antigo@example.com"));
         tokenEncontrado(usuario, paraOutro);
 
         assertThatThrownBy(() -> useCase.executar(TOKEN)).isInstanceOf(LinkConfirmacaoEmailInvalidoException.class);
@@ -157,7 +160,7 @@ class ConfirmarEmailUseCaseTest {
     void tokenDoMesmoEmailComOutraCaixaDeveValer() {
         Usuario usuario = usuario();
         VerificacaoContato verificacao = tokenValido(usuario);
-        verificacao.setDestinoHash(TokenRecuperacaoHelper.hashDestino("Maria@Example.com"));
+        verificacao.setDestinoHash(TokenVerificacaoHelper.hashDestino("Maria@Example.com"));
         tokenEncontrado(usuario, verificacao);
 
         useCase.executar(TOKEN);

@@ -42,7 +42,7 @@ O card diz que validade e uso único "continuam nos usecases do ETI-30". Mas o E
 cadastro: nenhum código emitia link no cadastro nem consumia o token `CONFIRMACAO_EMAIL`. Para a página ter o que
 chamar, entraram:
 
-- **Cadastro emite o link de confirmação** (`CadastrarUsuarioUseCase` → `EmitirConfirmacaoEmailUseCase`). O e-mail sai
+- **Cadastro emite o link de confirmação** (`CadastrarUsuarioUseCase` → `EmissorConfirmacaoEmail`). O e-mail sai
   depois do commit. O login continua sem esperar a confirmação (`StatusConta` não muda).
 - **`POST /auth/confirmar-email`** (UC05), público. Segue o contrato que o TICKET-0048 deixou para a UC05: trava a
   conta, relê o token travado, recusa conta encerrada e consome sob o lock. Token inexistente, expirado, já usado ou de
@@ -102,7 +102,7 @@ Pendência do tech lead ("como a API gera o HTML") resolvida e registrada no ADR
 
 ## Testes
 
-- `spec/`: `ConfirmarEmailUseCaseTest`, `EmitirConfirmacaoEmailUseCaseTest`, `ReenviarConfirmacaoEmailUseCaseTest`,
+- `spec/`: `ConfirmarEmailUseCaseTest`, `EmissorConfirmacaoEmailTest`, `ReenviarConfirmacaoEmailUseCaseTest`,
   `LinkWebTest`, e os ajustes de `RedefinirSenhaUseCaseTest`, `CadastrarUsuarioUseCaseTest`, `TrocarEmailUseCaseTest`.
 - `story/`: `ConfirmarEmailStoryTest` (cadastro → link → confirmação, reuso, expiração, finalidade trocada, cliques
   simultâneos, reenvio e limite, páginas públicas com CSP) e um caso novo em `RecuperarEAlterarSenhaStoryTest`

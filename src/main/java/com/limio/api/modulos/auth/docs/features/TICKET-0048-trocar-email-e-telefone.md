@@ -95,7 +95,7 @@ mensagem sempre genérica) e `TROCA_CONTATO_LIMITE_EXCEDIDO` (429).
 > O item 4 continua dependendo da D10.
 
 O token foi desenhado para ser consumível por uma UC05: só o SHA-256 (64 caracteres) é gravado, a finalidade
-`CONFIRMACAO_EMAIL` é filtrada por `buscarPorTokenHashEFinalidade` (token de recuperação de senha não confirma e-mail e
+`CONFIRMACAO_EMAIL` é filtrada por `buscarParaConsumir` (token de recuperação de senha não confirma e-mail e
 vice-versa; testado), há `expiraEm` (`isValido`) e `consumidoEm` (`consumir`). Um token antigo não deve confirmar um
 endereço novo; hoje isso é garantido **só pela invalidação dos pendentes a cada troca ou reemissão**. A UC05 precisa:
 

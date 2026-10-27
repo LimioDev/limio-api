@@ -21,6 +21,9 @@ public class LimiteTentativasLoginPorIp {
     public LimiteTentativasLoginPorIp(@Value("${auth.login.max-falhas-por-ip}") int maxFalhas,
             @Value("${auth.login.janela-falhas}") Duration janela,
             @Value("${auth.login.bloqueio}") Duration bloqueio) {
+        if (maxFalhas < 1) {
+            throw new IllegalArgumentException("auth.login.max-falhas-por-ip precisa ser ao menos 1");
+        }
         this.regra = new LimiteTentativasLogin(maxFalhas, janela, bloqueio);
     }
 

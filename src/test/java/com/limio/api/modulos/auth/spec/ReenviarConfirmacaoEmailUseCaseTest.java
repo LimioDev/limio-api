@@ -18,10 +18,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import com.limio.api.modulos.auth.actions.usecase.EmitirConfirmacaoEmailUseCase;
 import com.limio.api.modulos.auth.actions.usecase.ReenviarConfirmacaoEmailUseCase;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
+import com.limio.api.modulos.auth.verificacaocontato.EmissorConfirmacaoEmail;
 
 @ExtendWith(MockitoExtension.class)
 class ReenviarConfirmacaoEmailUseCaseTest {
@@ -33,13 +33,13 @@ class ReenviarConfirmacaoEmailUseCaseTest {
     private UsuarioService usuarioService;
 
     @Mock
-    private EmitirConfirmacaoEmailUseCase emitirConfirmacaoEmail;
+    private EmissorConfirmacaoEmail emissorConfirmacaoEmail;
 
     private ReenviarConfirmacaoEmailUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new ReenviarConfirmacaoEmailUseCase(usuarioService, emitirConfirmacaoEmail);
+        useCase = new ReenviarConfirmacaoEmailUseCase(usuarioService, emissorConfirmacaoEmail);
     }
 
     private Usuario contaTravada() {
@@ -47,7 +47,7 @@ class ReenviarConfirmacaoEmailUseCaseTest {
         ReflectionTestUtils.setField(usuario, "id", USUARIO_ID);
         when(usuarioService.buscarIdPorEmail(EMAIL)).thenReturn(Optional.of(USUARIO_ID));
         when(usuarioService.buscarParaAtualizarOuFalhar(USUARIO_ID)).thenReturn(usuario);
-        lenient().when(emitirConfirmacaoEmail.limiteAtingido(eq(USUARIO_ID), any())).thenReturn(false);
+        lenient().when(emissorConfirmacaoEmail.limiteAtingido(eq(USUARIO_ID), any())).thenReturn(false);
         return usuario;
     }
 
@@ -57,7 +57,7 @@ class ReenviarConfirmacaoEmailUseCaseTest {
 
         useCase.executar(EMAIL);
 
-        verify(emitirConfirmacaoEmail).emitir(eq(usuario), any(Instant.class));
+        verify(emissorConfirmacaoEmail).emitir(eq(usuario), any(Instant.class));
     }
 
     @Test
@@ -66,7 +66,7 @@ class ReenviarConfirmacaoEmailUseCaseTest {
 
         useCase.executar(EMAIL);
 
-        verify(emitirConfirmacaoEmail, never()).emitir(any(), any());
+        verify(emissorConfirmacaoEmail, never()).emitir(any(), any());
     }
 
     @Test
@@ -75,7 +75,7 @@ class ReenviarConfirmacaoEmailUseCaseTest {
 
         useCase.executar(EMAIL);
 
-        verify(emitirConfirmacaoEmail, never()).emitir(any(), any());
+        verify(emissorConfirmacaoEmail, never()).emitir(any(), any());
     }
 
     @Test
@@ -84,17 +84,17 @@ class ReenviarConfirmacaoEmailUseCaseTest {
 
         useCase.executar(EMAIL);
 
-        verify(emitirConfirmacaoEmail, never()).emitir(any(), any());
+        verify(emissorConfirmacaoEmail, never()).emitir(any(), any());
     }
 
     @Test
     void limiteBatidoNaoRecebeLinkNemRevelaNada() {
         contaTravada();
-        when(emitirConfirmacaoEmail.limiteAtingido(eq(USUARIO_ID), any())).thenReturn(true);
+        when(emissorConfirmacaoEmail.limiteAtingido(eq(USUARIO_ID), any())).thenReturn(true);
 
         useCase.executar(EMAIL);
 
-        verify(emitirConfirmacaoEmail, never()).emitir(any(), any());
+        verify(emissorConfirmacaoEmail, never()).emitir(any(), any());
     }
 
     /** Troca de e-mail concorrente: depois do lock a conta já tem outro endereço. */
@@ -104,6 +104,6 @@ class ReenviarConfirmacaoEmailUseCaseTest {
 
         useCase.executar(EMAIL);
 
-        verify(emitirConfirmacaoEmail, never()).emitir(any(), any());
+        verify(emissorConfirmacaoEmail, never()).emitir(any(), any());
     }
 }

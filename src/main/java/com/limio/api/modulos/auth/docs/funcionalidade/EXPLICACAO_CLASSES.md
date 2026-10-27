@@ -20,7 +20,7 @@
    - Se passou em tudo: `SenhaHasher.hash` (BCrypt via `PasswordEncoder` de `comum/config/SecurityConfig`) e
      `UsuarioService.salvarNovo`, que traduz a violação de `uk_usuario_email`/`uk_usuario_cpf` (cadastro simultâneo)
      na mesma `CadastroIndisponivelException`.
-   - `EmitirConfirmacaoEmailUseCase.emitir` grava o token `CONFIRMACAO_EMAIL` e publica o evento do link, enviado
+   - `EmissorConfirmacaoEmail.emitir` grava o token `CONFIRMACAO_EMAIL` e publica o evento do link, enviado
      depois do commit (o usecase é `@Transactional`).
 5. `Controller` usa `UsuarioMapper.toResponse` pra converter o `Usuario` salvo em `UsuarioResponse` e devolve 201.
 6. Qualquer exceção de negócio lançada no caminho é interceptada por `GlobalExceptionHandler`
@@ -86,7 +86,7 @@ usuário pelo id do token, recusa conta encerrada/suspensa e grava `papelAtivo`.
    violação de `uk_usuario_email`).
 6. Consome os tokens `CONFIRMACAO_EMAIL` pendentes, cria o token novo (só o hash) e publica o evento do link
    (`ConfirmacaoEmailSolicitadaEvent`), enviado depois do commit por `EmailEventosService` — tudo via
-   `EmitirConfirmacaoEmailUseCase`. O link abre a página `/confirmar-email` (ver abaixo).
+   `EmissorConfirmacaoEmail`. O link abre a página `/confirmar-email` (ver abaixo).
 7. O controller devolve `ContatoResponse` via `UsuarioMapper.toContatoResponse`.
 
 ## `PATCH /auth/telefone` (TICKET-0048 — trocar telefone)
@@ -118,7 +118,7 @@ página lê e apaga o fragmento e chama um dos POSTs abaixo. A página não tem 
 
 `ReenviarConfirmacaoEmailUseCase`: busca só o id pelo e-mail (`UsuarioService.buscarIdPorEmail`), trava a conta e, se
 ela não está encerrada, o e-mail ainda não foi confirmado, é o mesmo e-mail pedido e o limite não bateu, chama
-`EmitirConfirmacaoEmailUseCase.emitir`. Em qualquer outro caso não faz nada. O controller sempre responde 200
+`EmissorConfirmacaoEmail.emitir`. Em qualquer outro caso não faz nada. O controller sempre responde 200
 (anti-enumeração).
 
 ## `POST /auth/redefinir-senha` (UC06)
@@ -137,8 +137,8 @@ o token e encerra todas as sessões.
 | `RenovarSessaoUseCase` | Renovação do token de acesso com rotação do refresh token |
 | `EncerrarSessaoUseCase` | Logout do aparelho (UC08) |
 | `TrocarPapelAtivoUseCase` | Troca de papel ativo (UC09) |
-| `TrocarEmailUseCase` | Troca de e-mail (TICKET-0048): lock, unicidade, limite, emite link (via `EmitirConfirmacaoEmailUseCase`) e avisa o e-mail antigo após o commit |
-| `EmitirConfirmacaoEmailUseCase` | Emissão do link de confirmação, usada pelo cadastro, troca de e-mail e reenvio: consome os pendentes, grava o novo, publica o evento; `limiteAtingido` (3/h por conta) |
+| `TrocarEmailUseCase` | Troca de e-mail (TICKET-0048): lock, unicidade, limite, emite link (via `EmissorConfirmacaoEmail`) e avisa o e-mail antigo após o commit |
+| `EmissorConfirmacaoEmail` | Emissão do link de confirmação, usada pelo cadastro, troca de e-mail e reenvio: consome os pendentes, grava o novo, publica o evento; `limiteAtingido` (3/h por conta) |
 | `ConfirmarEmailUseCase` | UC05 (TICKET-0047): consome o token `CONFIRMACAO_EMAIL` sob lock e preenche `emailConfirmadoEm` |
 | `ReenviarConfirmacaoEmailUseCase` | "Reenviar link" (TICKET-0047): público, anti-enumeração |
 | `RedefinirSenhaUseCase` | UC06: consome o token `RECUPERACAO_SENHA` sob lock, grava a senha, encerra todas as sessões |

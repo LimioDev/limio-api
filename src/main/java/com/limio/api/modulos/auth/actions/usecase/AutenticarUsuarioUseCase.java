@@ -113,9 +113,9 @@ public class AutenticarUsuarioUseCase {
         RegraBloqueio porEmail = new RegraBloqueio(limiteTentativasLogin.maxFalhas(),
                 falhas -> limiteTentativasLogin.estaBloqueado(falhas, agora));
         // IP interno = o IP real não chegou (ver IpHelper); limitar por ele bloquearia todo mundo
-        RegraBloqueio porIp = IpHelper.ehPublico(ip)
-                ? new RegraBloqueio(limitePorIp.maxFalhas(), falhas -> limitePorIp.estaBloqueado(falhas, agora))
-                : null;
+        Optional<RegraBloqueio> porIp = IpHelper.ehPublico(ip)
+                ? Optional.of(new RegraBloqueio(limitePorIp.maxFalhas(), falhas -> limitePorIp.estaBloqueado(falhas, agora)))
+                : Optional.empty();
         return tentativaLoginService.registrarSeLiberado(contador, ip, porEmail, porIp)
                 .orElseThrow(LoginTemporariamenteBloqueadoException::new);
     }

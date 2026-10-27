@@ -225,7 +225,7 @@ O e-mail "senha alterada" perdeu o link `limio://recuperar-senha` e passou a ori
 
 **UC05 que faltava no ETI-30.** O cadastro (`feature/30`) não emitia nem consumia o token de confirmação. Entraram:
 emissão no cadastro, `POST /auth/confirmar-email` e `POST /auth/reenviar-confirmacao-email`, com a emissão
-centralizada em `EmitirConfirmacaoEmailUseCase` (antes ficava dentro do `TrocarEmailUseCase`). O link do cadastro
+centralizada em `EmissorConfirmacaoEmail` (antes ficava dentro do `TrocarEmailUseCase`). O link do cadastro
 conta no mesmo limite de 3 e-mails de confirmação por hora da troca de e-mail.
 
 **Pendências antigas resolvidas junto:** consumo atômico do token no `RedefinirSenhaUseCase` (TICKET-0048, item 3);

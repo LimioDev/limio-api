@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
+import com.limio.api.modulos.auth.verificacaocontato.EmissorConfirmacaoEmail;
 
 /**
  * "Reenviar link" da tela de confirmação de e-mail do app (TICKET-0047). Rota pública: depois do
@@ -21,12 +22,12 @@ import com.limio.api.modulos.auth.usuario.UsuarioService;
 public class ReenviarConfirmacaoEmailUseCase {
 
     private final UsuarioService usuarioService;
-    private final EmitirConfirmacaoEmailUseCase emitirConfirmacaoEmail;
+    private final EmissorConfirmacaoEmail emissorConfirmacaoEmail;
 
     public ReenviarConfirmacaoEmailUseCase(UsuarioService usuarioService,
-            EmitirConfirmacaoEmailUseCase emitirConfirmacaoEmail) {
+            EmissorConfirmacaoEmail emissorConfirmacaoEmail) {
         this.usuarioService = usuarioService;
-        this.emitirConfirmacaoEmail = emitirConfirmacaoEmail;
+        this.emissorConfirmacaoEmail = emissorConfirmacaoEmail;
     }
 
     @Transactional
@@ -35,7 +36,7 @@ public class ReenviarConfirmacaoEmailUseCase {
         usuarioService.buscarIdPorEmail(email)
                 .map(usuarioService::buscarParaAtualizarOuFalhar)
                 .filter(usuario -> podeReceber(usuario, email, agora))
-                .ifPresent(usuario -> emitirConfirmacaoEmail.emitir(usuario, agora));
+                .ifPresent(usuario -> emissorConfirmacaoEmail.emitir(usuario, agora));
     }
 
     private boolean podeReceber(Usuario usuario, String email, Instant agora) {
@@ -43,6 +44,6 @@ public class ReenviarConfirmacaoEmailUseCase {
         return !usuario.isEncerrada()
                 && usuario.getEmailConfirmadoEm() == null
                 && email.equalsIgnoreCase(usuario.getEmail())
-                && !emitirConfirmacaoEmail.limiteAtingido(usuario.getId(), agora);
+                && !emissorConfirmacaoEmail.limiteAtingido(usuario.getId(), agora);
     }
 }

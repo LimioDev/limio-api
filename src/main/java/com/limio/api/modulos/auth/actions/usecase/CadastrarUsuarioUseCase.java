@@ -16,6 +16,7 @@ import com.limio.api.modulos.auth.excecao.CpfInvalidoException;
 import com.limio.api.modulos.auth.excecao.IdadeMinimaNaoAtingidaException;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
+import com.limio.api.modulos.auth.verificacaocontato.EmissorConfirmacaoEmail;
 
 /**
  * Regra de negócio do UC01 (cadastrar conta universal). Não conhece HTTP nem
@@ -33,16 +34,16 @@ public class CadastrarUsuarioUseCase {
     private final UsuarioService usuarioService;
     private final CpfBloqueadoService cpfBloqueadoService;
     private final SenhaHasher senhaHasher;
-    private final EmitirConfirmacaoEmailUseCase emitirConfirmacaoEmail;
+    private final EmissorConfirmacaoEmail emissorConfirmacaoEmail;
 
     public CadastrarUsuarioUseCase(UsuarioService usuarioService,
             CpfBloqueadoService cpfBloqueadoService,
             SenhaHasher senhaHasher,
-            EmitirConfirmacaoEmailUseCase emitirConfirmacaoEmail) {
+            EmissorConfirmacaoEmail emissorConfirmacaoEmail) {
         this.usuarioService = usuarioService;
         this.cpfBloqueadoService = cpfBloqueadoService;
         this.senhaHasher = senhaHasher;
-        this.emitirConfirmacaoEmail = emitirConfirmacaoEmail;
+        this.emissorConfirmacaoEmail = emissorConfirmacaoEmail;
     }
 
     @Transactional
@@ -54,7 +55,7 @@ public class CadastrarUsuarioUseCase {
 
         usuarioCandidato.setSenhaHash(senhaHasher.hash(senhaEmTexto));
         Usuario criado = usuarioService.salvarNovo(usuarioCandidato);
-        emitirConfirmacaoEmail.emitir(criado, Instant.now());
+        emissorConfirmacaoEmail.emitir(criado, Instant.now());
         return criado;
     }
 

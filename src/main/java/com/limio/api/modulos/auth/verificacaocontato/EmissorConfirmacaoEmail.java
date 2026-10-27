@@ -1,4 +1,4 @@
-package com.limio.api.modulos.auth.actions.usecase;
+package com.limio.api.modulos.auth.verificacaocontato;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -6,31 +6,32 @@ import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
+import com.limio.api.comum.config.PaginasWebConfig;
 import com.limio.api.modulos.auth.actions.helper.LinkWeb;
-import com.limio.api.modulos.auth.actions.helper.TokenRecuperacaoHelper;
+import com.limio.api.modulos.auth.actions.helper.TokenVerificacaoHelper;
 import com.limio.api.modulos.auth.eventos.ConfirmacaoEmailSolicitadaEvent;
 import com.limio.api.modulos.auth.usuario.Usuario;
-import com.limio.api.modulos.auth.verificacaocontato.VerificacaoContato;
-import com.limio.api.modulos.auth.verificacaocontato.VerificacaoContatoService;
 import com.limio.api.modulos.auth.verificacaocontato.enums.CanalVerificacao;
 import com.limio.api.modulos.auth.verificacaocontato.enums.FinalidadeVerificacao;
 
 /**
- * Emite o link de confirmação de e-mail (UC05). Usado pelo cadastro, pela troca de e-mail e pelo
- * "Reenviar link" — os três precisam da mesma regra: só um link pendente por conta (os anteriores são
- * consumidos) e no máximo {@code max-solicitacoes} emissões dentro da janela.
+ * Emite o link de confirmação de e-mail (UC05). Usado por {@code CadastrarUsuarioUseCase},
+ * {@code TrocarEmailUseCase} e {@code ReenviarConfirmacaoEmailUseCase} — os três precisam da mesma regra:
+ * só um link pendente por conta (os anteriores são consumidos) e no máximo {@code max-solicitacoes}
+ * emissões dentro da janela. Fica em {@code verificacaocontato/}, não em {@code actions/usecase/}: não é
+ * usecase (sem {@code executar}, não é chamado por controller) — é regra compartilhada entre usecases, que
+ * no fluxo do ADR-0001 (controller → usecase → (repository | service)) dependem dela como dependem de um
+ * service.
  *
  * Não abre transação própria e não trava a conta: quem chama já está numa transação e, se a conta já
  * existe, já carregou o usuário com {@code UsuarioService.buscarParaAtualizarOuFalhar}
  * (regra do TICKET-0048 pra todo emissor de {@code CONFIRMACAO_EMAIL}). O e-mail sai depois do commit
  * ({@code EmailEventosService}).
  */
-@Service
-public class EmitirConfirmacaoEmailUseCase {
-
-    static final String PAGINA = "confirmar-email";
+@Component
+public class EmissorConfirmacaoEmail {
 
     private final VerificacaoContatoService verificacaoContatoService;
     private final ApplicationEventPublisher eventos;
@@ -39,7 +40,7 @@ public class EmitirConfirmacaoEmailUseCase {
     private final int maxSolicitacoes;
     private final Duration janelaSolicitacoes;
 
-    public EmitirConfirmacaoEmailUseCase(VerificacaoContatoService verificacaoContatoService,
+    public EmissorConfirmacaoEmail(VerificacaoContatoService verificacaoContatoService,
             ApplicationEventPublisher eventos,
             LinkWeb linkWeb,
             @Value("${auth.confirmacao-email.validade-token}") Duration validadeToken,
@@ -67,16 +68,17 @@ public class EmitirConfirmacaoEmailUseCase {
             verificacaoContatoService.salvar(pendente);
         }
 
-        String token = TokenRecuperacaoHelper.gerar();
+        String token = TokenVerificacaoHelper.gerar();
         verificacaoContatoService.salvar(VerificacaoContato.builder()
                 .usuario(usuario)
                 .canal(CanalVerificacao.EMAIL)
                 .finalidade(FinalidadeVerificacao.CONFIRMACAO_EMAIL)
-                .tokenHash(TokenRecuperacaoHelper.hash(token))
-                .destinoHash(TokenRecuperacaoHelper.hashDestino(usuario.getEmail()))
+                .tokenHash(TokenVerificacaoHelper.hash(token))
+                .destinoHash(TokenVerificacaoHelper.hashDestino(usuario.getEmail()))
                 .expiraEm(agora.plus(validadeToken))
                 .build());
 
-        eventos.publishEvent(new ConfirmacaoEmailSolicitadaEvent(usuario.getEmail(), linkWeb.pagina(PAGINA, token)));
+        eventos.publishEvent(new ConfirmacaoEmailSolicitadaEvent(usuario.getEmail(),
+                linkWeb.pagina(PaginasWebConfig.CONFIRMAR_EMAIL, token)));
     }
 }

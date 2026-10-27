@@ -33,8 +33,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.auth.actions.helper.LinkWeb;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
-import com.limio.api.modulos.auth.actions.helper.TokenRecuperacaoHelper;
-import com.limio.api.modulos.auth.actions.usecase.EmitirConfirmacaoEmailUseCase;
+import com.limio.api.modulos.auth.actions.helper.TokenVerificacaoHelper;
 import com.limio.api.modulos.auth.actions.usecase.TrocarEmailUseCase;
 import com.limio.api.modulos.auth.eventos.ConfirmacaoEmailSolicitadaEvent;
 import com.limio.api.modulos.auth.eventos.EmailContaAlteradoEvent;
@@ -46,6 +45,7 @@ import com.limio.api.modulos.auth.excecao.TrocaContatoLimiteExcedidaException;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
 import com.limio.api.modulos.auth.usuario.enums.StatusConta;
+import com.limio.api.modulos.auth.verificacaocontato.EmissorConfirmacaoEmail;
 import com.limio.api.modulos.auth.verificacaocontato.VerificacaoContato;
 import com.limio.api.modulos.auth.verificacaocontato.VerificacaoContatoService;
 import com.limio.api.modulos.auth.verificacaocontato.enums.CanalVerificacao;
@@ -77,7 +77,7 @@ class TrocarEmailUseCaseTest {
 
     @BeforeEach
     void montarUseCase() {
-        EmitirConfirmacaoEmailUseCase emitir = new EmitirConfirmacaoEmailUseCase(verificacaoContatoService, eventos,
+        EmissorConfirmacaoEmail emitir = new EmissorConfirmacaoEmail(verificacaoContatoService, eventos,
                 new LinkWeb(FRONTEND_URL), Duration.ofHours(24), 3, Duration.ofHours(1));
         useCase = new TrocarEmailUseCase(usuarioService, senhaHasher, eventos, emitir);
     }
@@ -177,7 +177,7 @@ class TrocarEmailUseCaseTest {
         assertThat(evento.destinatario()).isEqualTo(EMAIL_NOVO);
         assertThat(evento.link()).startsWith(FRONTEND_URL + "/confirmar-email#token=");
         String token = evento.link().substring(evento.link().indexOf("token=") + "token=".length());
-        assertThat(TokenRecuperacaoHelper.hash(token)).isEqualTo(tokenSalvo().getTokenHash());
+        assertThat(TokenVerificacaoHelper.hash(token)).isEqualTo(tokenSalvo().getTokenHash());
     }
 
     @Test

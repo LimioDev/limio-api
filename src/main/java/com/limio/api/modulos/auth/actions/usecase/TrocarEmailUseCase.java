@@ -14,6 +14,7 @@ import com.limio.api.modulos.auth.excecao.SenhaAtualIncorretaException;
 import com.limio.api.modulos.auth.excecao.TrocaContatoLimiteExcedidaException;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
+import com.limio.api.modulos.auth.verificacaocontato.EmissorConfirmacaoEmail;
 
 @Service
 public class TrocarEmailUseCase {
@@ -21,16 +22,16 @@ public class TrocarEmailUseCase {
     private final UsuarioService usuarioService;
     private final SenhaHasher senhaHasher;
     private final ApplicationEventPublisher eventos;
-    private final EmitirConfirmacaoEmailUseCase emitirConfirmacaoEmail;
+    private final EmissorConfirmacaoEmail emissorConfirmacaoEmail;
 
     public TrocarEmailUseCase(UsuarioService usuarioService,
             SenhaHasher senhaHasher,
             ApplicationEventPublisher eventos,
-            EmitirConfirmacaoEmailUseCase emitirConfirmacaoEmail) {
+            EmissorConfirmacaoEmail emissorConfirmacaoEmail) {
         this.usuarioService = usuarioService;
         this.senhaHasher = senhaHasher;
         this.eventos = eventos;
-        this.emitirConfirmacaoEmail = emitirConfirmacaoEmail;
+        this.emissorConfirmacaoEmail = emissorConfirmacaoEmail;
     }
 
     @Transactional
@@ -49,7 +50,7 @@ public class TrocarEmailUseCase {
         if (!mesmoEmail) {
             validarDisponivel(usuarioId, novoEmail);
         }
-        if (emitirConfirmacaoEmail.limiteAtingido(usuarioId, agora)) {
+        if (emissorConfirmacaoEmail.limiteAtingido(usuarioId, agora)) {
             throw new TrocaContatoLimiteExcedidaException();
         }
 
@@ -60,7 +61,7 @@ public class TrocarEmailUseCase {
             usuarioService.salvarComEmailUnico(usuario);
         }
 
-        emitirConfirmacaoEmail.emitir(usuario, agora);
+        emissorConfirmacaoEmail.emitir(usuario, agora);
         if (!mesmoEmail) {
             eventos.publishEvent(new EmailContaAlteradoEvent(emailAntigo, novoEmail));
         }

@@ -21,7 +21,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
 import com.limio.api.modulos.auth.actions.usecase.CadastrarUsuarioUseCase;
-import com.limio.api.modulos.auth.actions.usecase.EmitirConfirmacaoEmailUseCase;
 import com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueadoService;
 import com.limio.api.modulos.auth.excecao.CadastroIndisponivelException;
 import com.limio.api.modulos.auth.excecao.CpfInvalidoException;
@@ -29,6 +28,7 @@ import com.limio.api.modulos.auth.excecao.IdadeMinimaNaoAtingidaException;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
 import com.limio.api.modulos.auth.usuario.enums.StatusConta;
+import com.limio.api.modulos.auth.verificacaocontato.EmissorConfirmacaoEmail;
 
 @ExtendWith(MockitoExtension.class)
 class CadastrarUsuarioUseCaseTest {
@@ -45,14 +45,14 @@ class CadastrarUsuarioUseCaseTest {
     private SenhaHasher senhaHasher;
 
     @Mock
-    private EmitirConfirmacaoEmailUseCase emitirConfirmacaoEmail;
+    private EmissorConfirmacaoEmail emissorConfirmacaoEmail;
 
     private CadastrarUsuarioUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
         useCase = new CadastrarUsuarioUseCase(usuarioService, cpfBloqueadoService, senhaHasher,
-                emitirConfirmacaoEmail);
+                emissorConfirmacaoEmail);
     }
 
     private Usuario candidatoMaiorDeIdade() {
@@ -152,7 +152,7 @@ class CadastrarUsuarioUseCaseTest {
 
         useCase.executar(candidato, "senha12345");
 
-        verify(emitirConfirmacaoEmail).emitir(eq(candidato), any(Instant.class));
+        verify(emissorConfirmacaoEmail).emitir(eq(candidato), any(Instant.class));
     }
 
     @Test
@@ -163,6 +163,6 @@ class CadastrarUsuarioUseCaseTest {
         assertThatThrownBy(() -> useCase.executar(candidato, "senha12345"))
                 .isInstanceOf(CadastroIndisponivelException.class);
 
-        verifyNoInteractions(emitirConfirmacaoEmail);
+        verifyNoInteractions(emissorConfirmacaoEmail);
     }
 }

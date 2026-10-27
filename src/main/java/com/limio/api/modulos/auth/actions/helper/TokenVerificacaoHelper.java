@@ -9,17 +9,16 @@ import java.util.HexFormat;
 import java.util.Locale;
 
 /**
- * Token de recuperação de senha, opaco: 256 bits aleatórios em base64url. No
- * banco vai só o SHA-256 — mesma lógica do {@link RefreshTokenHelper}, token
- * de outra família (por isso a classe própria, em vez de reaproveitar
- * aquela).
+ * Token de verificação de contato (recuperação de senha e confirmação de e-mail), opaco: 256 bits
+ * aleatórios em base64url. No banco vai só o SHA-256 — mesma lógica do {@link RefreshTokenHelper}, token
+ * de outra família (por isso a classe própria, em vez de reaproveitar aquela).
  */
-public final class TokenRecuperacaoHelper {
+public final class TokenVerificacaoHelper {
 
     private static final int TAMANHO_BYTES = 32;
     private static final SecureRandom ALEATORIO = new SecureRandom();
 
-    private TokenRecuperacaoHelper() {
+    private TokenVerificacaoHelper() {
     }
 
     public static String gerar() {

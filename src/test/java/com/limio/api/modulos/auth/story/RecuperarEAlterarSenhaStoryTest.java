@@ -27,7 +27,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import com.limio.api.TestcontainersConfiguration;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
-import com.limio.api.modulos.auth.actions.helper.TokenRecuperacaoHelper;
+import com.limio.api.modulos.auth.actions.helper.TokenVerificacaoHelper;
 import com.limio.api.modulos.auth.records.LoginRequest;
 import com.limio.api.modulos.auth.records.LoginResponse;
 import com.limio.api.modulos.auth.sessao.Sessao;
@@ -96,12 +96,12 @@ class RecuperarEAlterarSenhaStoryTest {
     }
 
     private String gerarTokenRecuperacao(Usuario usuario, Instant expiraEm) {
-        String token = TokenRecuperacaoHelper.gerar();
+        String token = TokenVerificacaoHelper.gerar();
         verificacaoContatoRepository.save(VerificacaoContato.builder()
                 .usuario(usuario)
                 .canal(CanalVerificacao.EMAIL)
                 .finalidade(FinalidadeVerificacao.RECUPERACAO_SENHA)
-                .tokenHash(TokenRecuperacaoHelper.hash(token))
+                .tokenHash(TokenVerificacaoHelper.hash(token))
                 .expiraEm(expiraEm)
                 .build());
         return token;

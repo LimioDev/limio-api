@@ -21,16 +21,16 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.limio.api.modulos.auth.actions.helper.LinkWeb;
-import com.limio.api.modulos.auth.actions.helper.TokenRecuperacaoHelper;
-import com.limio.api.modulos.auth.actions.usecase.EmitirConfirmacaoEmailUseCase;
+import com.limio.api.modulos.auth.actions.helper.TokenVerificacaoHelper;
 import com.limio.api.modulos.auth.eventos.ConfirmacaoEmailSolicitadaEvent;
 import com.limio.api.modulos.auth.usuario.Usuario;
+import com.limio.api.modulos.auth.verificacaocontato.EmissorConfirmacaoEmail;
 import com.limio.api.modulos.auth.verificacaocontato.VerificacaoContato;
 import com.limio.api.modulos.auth.verificacaocontato.VerificacaoContatoService;
 import com.limio.api.modulos.auth.verificacaocontato.enums.FinalidadeVerificacao;
 
 @ExtendWith(MockitoExtension.class)
-class EmitirConfirmacaoEmailUseCaseTest {
+class EmissorConfirmacaoEmailTest {
 
     private static final UUID USUARIO_ID = UUID.randomUUID();
     private static final String BASE = "https://api.limio.test";
@@ -43,11 +43,11 @@ class EmitirConfirmacaoEmailUseCaseTest {
     @Mock
     private ApplicationEventPublisher eventos;
 
-    private EmitirConfirmacaoEmailUseCase useCase;
+    private EmissorConfirmacaoEmail emissor;
 
     @BeforeEach
-    void montarUseCase() {
-        useCase = new EmitirConfirmacaoEmailUseCase(verificacaoContatoService, eventos, new LinkWeb(BASE),
+    void montarEmissor() {
+        emissor = new EmissorConfirmacaoEmail(verificacaoContatoService, eventos, new LinkWeb(BASE),
                 Duration.ofHours(24), 3, Duration.ofHours(1));
     }
 
@@ -61,7 +61,7 @@ class EmitirConfirmacaoEmailUseCaseTest {
     void linkDoEmailApontaParaAPaginaWebComOTokenNoFragmento() {
         when(verificacaoContatoService.pendentesDoUsuario(USUARIO_ID, FINALIDADE)).thenReturn(List.of());
 
-        useCase.emitir(usuario(), AGORA);
+        emissor.emitir(usuario(), AGORA);
 
         ArgumentCaptor<ConfirmacaoEmailSolicitadaEvent> evento =
                 ArgumentCaptor.forClass(ConfirmacaoEmailSolicitadaEvent.class);
@@ -72,9 +72,9 @@ class EmitirConfirmacaoEmailUseCaseTest {
         ArgumentCaptor<VerificacaoContato> salvo = ArgumentCaptor.forClass(VerificacaoContato.class);
         verify(verificacaoContatoService).salvar(salvo.capture());
         String token = evento.getValue().link().substring(evento.getValue().link().indexOf("#token=") + 7);
-        assertThat(salvo.getValue().getTokenHash()).isEqualTo(TokenRecuperacaoHelper.hash(token));
+        assertThat(salvo.getValue().getTokenHash()).isEqualTo(TokenVerificacaoHelper.hash(token));
         assertThat(salvo.getValue().getExpiraEm()).isEqualTo(AGORA.plus(Duration.ofHours(24)));
-        assertThat(salvo.getValue().getDestinoHash()).isEqualTo(TokenRecuperacaoHelper.hashDestino("maria@example.com"));
+        assertThat(salvo.getValue().getDestinoHash()).isEqualTo(TokenVerificacaoHelper.hashDestino("maria@example.com"));
     }
 
     @Test
@@ -82,7 +82,7 @@ class EmitirConfirmacaoEmailUseCaseTest {
         VerificacaoContato antigo = VerificacaoContato.builder().finalidade(FINALIDADE).build();
         when(verificacaoContatoService.pendentesDoUsuario(USUARIO_ID, FINALIDADE)).thenReturn(List.of(antigo));
 
-        useCase.emitir(usuario(), AGORA);
+        emissor.emitir(usuario(), AGORA);
 
         assertThat(antigo.getConsumidoEm()).isEqualTo(AGORA);
     }
@@ -91,8 +91,8 @@ class EmitirConfirmacaoEmailUseCaseTest {
     void limiteContaAsEmissoesDaJanela() {
         when(verificacaoContatoService.contarDesde(eq(USUARIO_ID), eq(FINALIDADE), any())).thenReturn(2L, 3L);
 
-        assertThat(useCase.limiteAtingido(USUARIO_ID, AGORA)).isFalse();
-        assertThat(useCase.limiteAtingido(USUARIO_ID, AGORA)).isTrue();
+        assertThat(emissor.limiteAtingido(USUARIO_ID, AGORA)).isFalse();
+        assertThat(emissor.limiteAtingido(USUARIO_ID, AGORA)).isTrue();
         verify(verificacaoContatoService, org.mockito.Mockito.times(2))
                 .contarDesde(USUARIO_ID, FINALIDADE, AGORA.minus(Duration.ofHours(1)));
     }

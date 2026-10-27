@@ -70,7 +70,7 @@ public class VerificacaoContato extends BaseEntity {
         return consumidoEm == null && agora.isBefore(expiraEm);
     }
 
-    /** Vale pro e-mail atual da conta? Quem chama passa o hash ({@code TokenRecuperacaoHelper.hashDestino}). */
+    /** Vale pro e-mail atual da conta? Quem chama passa o hash ({@code TokenVerificacaoHelper.hashDestino}). */
     public boolean valeParaDestino(String hashDestinoAtual) {
         return destinoHash == null || destinoHash.equals(hashDestinoAtual);
     }

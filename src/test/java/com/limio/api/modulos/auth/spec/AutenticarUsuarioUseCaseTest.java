@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -160,7 +159,7 @@ class AutenticarUsuarioUseCaseTest {
 
         verify(senhaHasher).simularConferencia(SENHA);
         verify(tentativaLoginService).registrarSeLiberado(eq(EMAIL), eq(IP), argThat(regra -> regra.quantidade() == 5),
-                argThat(regra -> regra.quantidade() == 30));
+                argThat(regra -> regra.orElseThrow().quantidade() == 30));
         verify(tentativaLoginService, never()).remover(any());
         verifyNoInteractions(tokenService, sessaoService);
     }
@@ -177,7 +176,7 @@ class AutenticarUsuarioUseCaseTest {
                 .isInstanceOf(CredenciaisInvalidasException.class);
 
         verify(tentativaLoginService).registrarSeLiberado(eq(EMAIL), eq(IP), argThat(regra -> regra.quantidade() == 5),
-                argThat(regra -> regra.quantidade() == 30));
+                argThat(regra -> regra.orElseThrow().quantidade() == 30));
     }
 
     @Test
@@ -239,6 +238,6 @@ class AutenticarUsuarioUseCaseTest {
         assertThatThrownBy(() -> useCase.executar(EMAIL, SENHA, DISPOSITIVO, "10.0.0.5"))
                 .isInstanceOf(CredenciaisInvalidasException.class);
 
-        verify(tentativaLoginService).registrarSeLiberado(eq(EMAIL), eq("10.0.0.5"), any(), isNull());
+        verify(tentativaLoginService).registrarSeLiberado(eq(EMAIL), eq("10.0.0.5"), any(), eq(Optional.empty()));
     }
 }

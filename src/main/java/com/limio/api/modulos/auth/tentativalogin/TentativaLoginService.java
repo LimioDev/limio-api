@@ -45,19 +45,19 @@ public class TentativaLoginService extends BaseService<TentativaLogin, UUID, Ten
      * inteira pela checagem antes de qualquer falha ser gravada. Trava sempre o
      * e-mail antes do IP.
      *
-     * @param porIp regra do limite por IP, ou {@code null} pra não limitar por IP
+     * @param porIp regra do limite por IP, ou vazio pra não limitar por IP
      * @return vazio se alguma regra disser que está bloqueado (nada é gravado)
      */
     @Transactional
     public Optional<TentativaLogin> registrarSeLiberado(String email, String ip, RegraBloqueio porEmail,
-            RegraBloqueio porIp) {
+            Optional<RegraBloqueio> porIp) {
         travaTransacional.travar(EscopoTrava.LOGIN, email);
         if (porEmail.bloqueado().test(ultimasFalhas(email, porEmail.quantidade()))) {
             return Optional.empty();
         }
-        if (porIp != null) {
+        if (porIp.isPresent()) {
             travaTransacional.travar(EscopoTrava.LOGIN_IP, ip);
-            if (porIp.bloqueado().test(ultimasFalhasDoIp(ip, porIp.quantidade()))) {
+            if (porIp.get().bloqueado().test(ultimasFalhasDoIp(ip, porIp.get().quantidade()))) {
                 return Optional.empty();
             }
         }

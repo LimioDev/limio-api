@@ -8,8 +8,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.limio.api.comum.config.PaginasWebConfig;
 import com.limio.api.modulos.auth.actions.helper.LinkWeb;
-import com.limio.api.modulos.auth.actions.helper.TokenRecuperacaoHelper;
+import com.limio.api.modulos.auth.actions.helper.TokenVerificacaoHelper;
 import com.limio.api.modulos.auth.eventos.RecuperacaoSenhaSolicitadaEvent;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
@@ -70,17 +71,18 @@ public class SolicitarRecuperacaoSenhaUseCase {
             return;
         }
 
-        String token = TokenRecuperacaoHelper.gerar();
+        String token = TokenVerificacaoHelper.gerar();
         VerificacaoContato verificacao = VerificacaoContato.builder()
                 .usuario(usuario)
                 .canal(CanalVerificacao.EMAIL)
                 .finalidade(FinalidadeVerificacao.RECUPERACAO_SENHA)
-                .tokenHash(TokenRecuperacaoHelper.hash(token))
-                .destinoHash(TokenRecuperacaoHelper.hashDestino(usuario.getEmail()))
+                .tokenHash(TokenVerificacaoHelper.hash(token))
+                .destinoHash(TokenVerificacaoHelper.hashDestino(usuario.getEmail()))
                 .expiraEm(agora.plus(validadeToken))
                 .build();
         verificacaoContatoService.salvar(verificacao);
 
-        eventos.publishEvent(new RecuperacaoSenhaSolicitadaEvent(usuario.getEmail(), linkWeb.pagina("nova-senha", token)));
+        eventos.publishEvent(
+                new RecuperacaoSenhaSolicitadaEvent(usuario.getEmail(), linkWeb.pagina(PaginasWebConfig.NOVA_SENHA, token)));
     }
 }

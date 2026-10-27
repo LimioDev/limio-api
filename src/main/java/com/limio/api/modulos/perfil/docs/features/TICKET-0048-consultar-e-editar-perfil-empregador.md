@@ -222,7 +222,7 @@ Nenhuma das decisões abaixo foi aprovada; todas dependem de confirmação do te
 
 ### 4. Reuso do mecanismo de verificação — Proposto
 
-Reaproveitar `VerificacaoContato`, `FinalidadeVerificacao.CONFIRMACAO_EMAIL`, `TokenRecuperacaoHelper` e
+Reaproveitar `VerificacaoContato`, `FinalidadeVerificacao.CONFIRMACAO_EMAIL`, `TokenVerificacaoHelper` e
 `EmailService` num componente de emissão de confirmação de e-mail que a UC05 também possa usar. Não há hoje
 nenhum fluxo de confirmação de e-mail a reutilizar: só a infraestrutura.
 

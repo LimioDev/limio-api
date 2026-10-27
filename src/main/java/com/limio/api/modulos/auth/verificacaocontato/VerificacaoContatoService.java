@@ -18,10 +18,6 @@ public class VerificacaoContatoService extends BaseService<VerificacaoContato, U
         super(repository);
     }
 
-    public Optional<VerificacaoContato> buscarPorTokenHashEFinalidade(String tokenHash, FinalidadeVerificacao finalidade) {
-        return repository.findByTokenHashAndFinalidade(tokenHash, finalidade);
-    }
-
     /** Dono do token, sem carregar o token. Primeiro passo de quem consome: ver {@link #buscarParaConsumir}. */
     public Optional<UUID> buscarUsuarioIdPorTokenHash(String tokenHash, FinalidadeVerificacao finalidade) {
         return repository.findUsuarioIdByTokenHashAndFinalidade(tokenHash, finalidade);

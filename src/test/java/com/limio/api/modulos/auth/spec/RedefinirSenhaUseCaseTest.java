@@ -24,7 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
-import com.limio.api.modulos.auth.actions.helper.TokenRecuperacaoHelper;
+import com.limio.api.modulos.auth.actions.helper.TokenVerificacaoHelper;
 import com.limio.api.modulos.auth.actions.usecase.RedefinirSenhaUseCase;
 import com.limio.api.modulos.auth.excecao.SenhaIgualAnteriorException;
 import com.limio.api.modulos.auth.excecao.TokenRecuperacaoInvalidoException;
@@ -32,6 +32,7 @@ import com.limio.api.modulos.auth.sessao.SessaoService;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
 import com.limio.api.modulos.auth.usuario.enums.StatusConta;
+import com.limio.api.modulos.auth.verificacaocontato.ConsumoTokenVerificacao;
 import com.limio.api.modulos.auth.verificacaocontato.VerificacaoContato;
 import com.limio.api.modulos.auth.verificacaocontato.VerificacaoContatoService;
 import com.limio.api.modulos.auth.verificacaocontato.enums.CanalVerificacao;
@@ -41,7 +42,7 @@ import com.limio.api.modulos.auth.verificacaocontato.enums.FinalidadeVerificacao
 class RedefinirSenhaUseCaseTest {
 
     private static final String TOKEN = "token-de-recuperacao";
-    private static final String HASH = TokenRecuperacaoHelper.hash(TOKEN);
+    private static final String HASH = TokenVerificacaoHelper.hash(TOKEN);
     private static final String NOVA_SENHA = "senhaNova123";
 
     @Mock
@@ -60,7 +61,10 @@ class RedefinirSenhaUseCaseTest {
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new RedefinirSenhaUseCase(usuarioService, verificacaoContatoService, sessaoService, senhaHasher);
+        ConsumoTokenVerificacao consumoTokenVerificacao = new ConsumoTokenVerificacao(usuarioService,
+                verificacaoContatoService);
+        useCase = new RedefinirSenhaUseCase(usuarioService, verificacaoContatoService, consumoTokenVerificacao,
+                sessaoService, senhaHasher);
     }
 
     private VerificacaoContato verificacaoValida(Usuario usuario) {
@@ -128,7 +132,7 @@ class RedefinirSenhaUseCaseTest {
     void deveRecusarLinkEnviadoParaUmEmailQueAContaNaoTemMais() {
         Usuario usuario = usuario();
         VerificacaoContato verificacao = verificacaoValida(usuario);
-        verificacao.setDestinoHash(TokenRecuperacaoHelper.hashDestino("antigo@example.com"));
+        verificacao.setDestinoHash(TokenVerificacaoHelper.hashDestino("antigo@example.com"));
         tokenEncontrado(usuario, verificacao);
 
         assertThatThrownBy(() -> useCase.executar(TOKEN, NOVA_SENHA))
