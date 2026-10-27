@@ -15,6 +15,7 @@ import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 public record MeuAnuncioResponse(
         UUID id,
         StatusAnuncio status,
+        String titulo,
         String descricao,
         CategoriaAnuncioResponse categoria,
         Instant dataHoraPretendida,

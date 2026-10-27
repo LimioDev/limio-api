@@ -26,6 +26,7 @@ public class AnuncioMapper {
     public Anuncio toEntity(CriarAnuncioRequest request) {
         return Anuncio.builder()
                 .categoriaId(request.categoriaId())
+                .titulo(request.titulo())
                 .descricao(request.descricao())
                 .dataHoraPretendida(request.dataHoraPretendida())
                 .tamanhoLocal(request.tamanhoLocal())
@@ -57,6 +58,7 @@ public class AnuncioMapper {
         return new MeuAnuncioResponse(
                 anuncio.getId(),
                 anuncio.getStatus(),
+                anuncio.getTitulo(),
                 anuncio.getDescricao(),
                 new CategoriaAnuncioResponse(meuAnuncio.categoria().id(), meuAnuncio.categoria().nome(),
                         meuAnuncio.categoria().grupo()),

@@ -100,7 +100,7 @@ candidatos" = candidaturas `ENVIADA`, foto do anúncio `null` até existir o car
 Primeiro card que cria anúncio pela API: `POST /anuncios`, `POST /anuncios/{id}/fotos` e `GET /anuncios/{id}`.
 Categoria, endereço salvo e geocodificação do endereço avulso vêm de `perfil` pelas portas novas
 `ConsultaCategoria`/`ConsultaEndereco`; a mídia subiu pra `comum/midia` (ver o CHANGELOG de `perfil`). Migrations
-`V20` (categoria e endereço salvo no anúncio, `anuncio_id` na mídia) e `V21` (retrato da UF). O título fica pra quando a PR #17 (V18) entrar.
+`V20` (categoria e endereço salvo no anúncio, `anuncio_id` na mídia) e `V21` (retrato da UF). O título (5 a 80) usa a coluna da V18 (PR #17).
 `StatusAplicacao.isEscolhida()` virou a fonte única de "prestador escolhido" (`Aplicacao.isEscolhida()` delega). Contrato alinhado ao front-end par (limio-app#17): `enderecoAvulso`, fotos
 respondidas como lista, `categoria.grupo` e `uf` na consulta. Detalhe
 em `docs/features/TICKET-0059-criar-e-publicar-anuncio-com-fotos.md`.

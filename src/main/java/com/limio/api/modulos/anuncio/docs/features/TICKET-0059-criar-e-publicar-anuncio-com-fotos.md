@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementado, exceto o **título** (espera a PR #17, que cria a coluna na V18).
+Implementado. O título usa a coluna criada pela PR #17 (V18).
 
 ## Link do card
 
@@ -26,6 +26,7 @@ menos `primeirosCandidatos`, que segue o card (iniciais; ver pendências).
 ```json
 {
   "categoriaId": "…",
+  "titulo": "Faxina do apartamento",
   "descricao": "Faxina completa do apartamento",
   "dataHoraPretendida": "2026-11-03T13:00:00Z",
   "enderecoSalvoId": "…",
@@ -50,7 +51,7 @@ Resposta `201` com `Location: /anuncios/{id}` e `{ "id": "…", "status": "PUBLI
 
 ```json
 {
-  "id": "…", "status": "PUBLICADO", "descricao": "…",
+  "id": "…", "status": "PUBLICADO", "titulo": "…", "descricao": "…",
   "categoria": { "id": "…", "nome": "Faxina", "grupo": "Limpeza" },
   "dataHoraPretendida": "…", "bairroRegiao": "Bela Vista", "uf": "SP",
   "enderecoCompleto": "Avenida Paulista, 1000 - Sala 5, Bela Vista, São Paulo - SP",
@@ -85,7 +86,7 @@ vai precisar de rota própria quando o card dele vier.
 | Critério do card | Implementação |
 |---|---|
 | Categoria obrigatória, uma, entre as ativas (inclui "Outros") | `categoriaId` `@NotNull`; `PublicarAnuncioUseCase` confere `ativa` pela porta `ConsultaCategoria` |
-| Título 5–80 | **Pendente** (PR #17) |
+| Título 5–80, sem espaços nas pontas | `@NotBlank` + `@Size(min = 5, max = 80)` depois do `strip()`; coluna `VARCHAR(100)` da V18 (PR #17) |
 | Descrição obrigatória, até 600 | `@NotBlank` + `@Size(max = 600)`, depois de tirar os espaços das pontas |
 | `dataHoraPretendida` obrigatória e no futuro | `@NotNull`; "no futuro" no usecase (`DATA_NO_PASSADO`) |
 | Endereço salvo ou avulso | `EnderecoDoAnuncio.Salvo`/`Avulso`; avulso com os limites do `EnderecoSalvoRequest` |
@@ -121,7 +122,7 @@ vai precisar de rota própria quando o card dele vier.
 
 ## Banco (Flyway)
 
-`V20__adicionar_categoria_ao_anuncio_e_fotos_de_anuncio.sql` (V15–V17 são da #16, V18 da #17, V19 da #14):
+`V20__adicionar_categoria_ao_anuncio_e_fotos_de_anuncio.sql` (V15–V17 são da #16, V18 da #17, com o título, V19 da #14):
 - `anuncio.categoria_id UUID NOT NULL` (linha antiga vai pra "Outros") e `anuncio.endereco_salvo_id UUID`, sem FK
   (tabelas de `perfil`, ADR-0001 §1.6).
 - `midia.anuncio_id UUID`, `CHECK` "só `FOTO_ANUNCIO` tem anúncio" e índice parcial das fotos ativas por anúncio.
@@ -136,8 +137,6 @@ banco do Railway. Linha antiga tira a UF do fim do `endereco_completo_snapshot`.
 - **Grupo: candidatos na tela 16.** O card fala em "iniciais/fotos dos primeiros"; o front (limio-app#17) mostra até 4
   com nome abreviado ("Rafael S."). A API devolve 3 com `iniciais` até o grupo decidir.
 
-- **Título** (5–80, sem espaços nas pontas, só espaços recusado): entra depois da PR #17. A #17 cria
-  `VARCHAR(100)`; o limite de 80 fica no record.
 - **PO: fotos** — formato, tamanho e quantidade ainda não decididos. Hoje: JPG/PNG, 5MB cada, até 5 por anúncio
   (`anuncio.foto.*`, configurável).
 - **Lacunas do card** (não decididas aqui, pra discussão): limite de `observacoes` (usado 600, como a descrição);
@@ -153,4 +152,5 @@ banco do Railway. Linha antiga tira a UF do fim do `endereco_completo_snapshot`.
 - `story/CriarEPublicarAnuncioStoryTest` (17): criar com endereço salvo e com avulso, data no passado, sem contatos
   confirmados, papel Prestador, os dois endereços / nenhum, descrição > 600, endereço salvo de outro, categoria
   inativa, fotos válidas (sem EXIF), foto inválida, foto com candidatura `ESCOLHIDA`, fotos em anúncio de outro,
-  limite de 5, consulta do dono e de outra pessoa. Os casos de título do card ficam pra depois da #17.
+  limite de 5, consulta do dono e de outra pessoa. Título vazio, nulo, só com espaços, com menos de 5 ou
+  mais de 80 caracteres (parametrizado).

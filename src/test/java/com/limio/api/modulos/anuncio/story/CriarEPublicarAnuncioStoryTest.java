@@ -31,6 +31,9 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -229,6 +232,20 @@ class CriarEPublicarAnuncioStoryTest {
                 .andExpect(jsonPath("$.codigo", is("VALIDACAO_FALHOU")));
     }
 
+    /** Card: sem título, com menos de 5 ou mais de 80 (sem contar os espaços das pontas) é recusado. */
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = { "      ", "abcd", "  abcd  ", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" })
+    void dadoTituloInvalido_quandoCria_entao400(String titulo) throws Exception {
+        String token = empregadorConfirmado(MARIA);
+        Map<String, Object> campos = new HashMap<>(Map.of("enderecoAvulso", ENDERECO_AVULSO));
+        campos.put("titulo", titulo);
+
+        criar(token, corpo(campos))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo", is("VALIDACAO_FALHOU")));
+    }
+
     @Test
     void dadoDescricaoAcimaDe600Caracteres_quandoCria_entao400() throws Exception {
         String token = empregadorConfirmado(MARIA);
@@ -354,6 +371,7 @@ class CriarEPublicarAnuncioStoryTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(anuncioId)))
                 .andExpect(jsonPath("$.status", is("PUBLICADO")))
+                .andExpect(jsonPath("$.titulo", is("Faxina do apartamento")))
                 .andExpect(jsonPath("$.descricao", is("Faxina completa do apartamento")))
                 .andExpect(jsonPath("$.categoria.id", is(categoriaAtiva().toString())))
                 .andExpect(jsonPath("$.categoria.grupo", notNullValue()))
@@ -384,6 +402,7 @@ class CriarEPublicarAnuncioStoryTest {
     private String corpo(Map<String, Object> extras) throws Exception {
         Map<String, Object> campos = new HashMap<>();
         campos.put("categoriaId", categoriaAtiva().toString());
+        campos.put("titulo", "  Faxina do apartamento  ");
         campos.put("descricao", "Faxina completa do apartamento");
         campos.put("dataHoraPretendida", Instant.now().plus(Duration.ofDays(3)).toString());
         campos.put("tamanhoLocal", "72 m²");
