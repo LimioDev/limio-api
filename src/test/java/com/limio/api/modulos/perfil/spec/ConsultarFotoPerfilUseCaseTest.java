@@ -14,11 +14,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.limio.api.modulos.perfil.actions.service.ArmazenamentoService;
+import com.limio.api.comum.midia.ArmazenamentoService;
+import com.limio.api.comum.midia.LinkTemporario;
+import com.limio.api.comum.midia.Midia;
+import com.limio.api.comum.midia.MidiaService;
 import com.limio.api.modulos.perfil.actions.usecase.ConsultarFotoPerfilUseCase;
-import com.limio.api.modulos.perfil.midia.LinkTemporario;
-import com.limio.api.modulos.perfil.midia.Midia;
-import com.limio.api.modulos.perfil.midia.MidiaService;
 
 @ExtendWith(MockitoExtension.class)
 class ConsultarFotoPerfilUseCaseTest {

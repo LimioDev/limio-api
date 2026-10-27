@@ -27,15 +27,16 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.util.unit.DataSize;
 
 import com.limio.api.comum.excecao.enums.CodigoErro;
-import com.limio.api.modulos.perfil.actions.service.ArmazenamentoService;
+import com.limio.api.comum.midia.ArmazenamentoService;
+import com.limio.api.comum.midia.ImagensDeTeste;
+import com.limio.api.comum.midia.LinkTemporario;
+import com.limio.api.comum.midia.Midia;
+import com.limio.api.comum.midia.MidiaService;
+import com.limio.api.comum.midia.enums.TipoMidia;
+import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
+import com.limio.api.comum.midia.excecao.FotoInvalidaException;
 import com.limio.api.modulos.perfil.actions.usecase.TrocarFotoPerfilUseCase;
 import com.limio.api.modulos.perfil.eventos.FotoPerfilTrocadaEvent;
-import com.limio.api.modulos.perfil.excecao.ArmazenamentoIndisponivelException;
-import com.limio.api.modulos.perfil.excecao.FotoInvalidaException;
-import com.limio.api.modulos.perfil.midia.LinkTemporario;
-import com.limio.api.modulos.perfil.midia.Midia;
-import com.limio.api.modulos.perfil.midia.MidiaService;
-import com.limio.api.modulos.perfil.midia.enums.TipoMidia;
 
 @ExtendWith(MockitoExtension.class)
 class TrocarFotoPerfilUseCaseTest {

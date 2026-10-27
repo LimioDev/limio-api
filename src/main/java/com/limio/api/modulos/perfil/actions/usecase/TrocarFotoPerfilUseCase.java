@@ -10,14 +10,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.unit.DataSize;
 
-import com.limio.api.modulos.perfil.actions.helper.ImagemHelper;
-import com.limio.api.modulos.perfil.actions.helper.ImagemHelper.ImagemProcessada;
-import com.limio.api.modulos.perfil.actions.service.ArmazenamentoService;
+import com.limio.api.comum.midia.ArmazenamentoService;
+import com.limio.api.comum.midia.ImagemHelper.ImagemProcessada;
+import com.limio.api.comum.midia.ImagemHelper;
+import com.limio.api.comum.midia.LinkTemporario;
+import com.limio.api.comum.midia.Midia;
+import com.limio.api.comum.midia.MidiaService;
+import com.limio.api.comum.midia.excecao.FotoInvalidaException;
 import com.limio.api.modulos.perfil.eventos.FotoPerfilTrocadaEvent;
-import com.limio.api.modulos.perfil.excecao.FotoInvalidaException;
-import com.limio.api.modulos.perfil.midia.LinkTemporario;
-import com.limio.api.modulos.perfil.midia.Midia;
-import com.limio.api.modulos.perfil.midia.MidiaService;
 
 /**
  * Envia a primeira foto de perfil ou troca a atual. A foto é do usuário (vale para os dois papéis),

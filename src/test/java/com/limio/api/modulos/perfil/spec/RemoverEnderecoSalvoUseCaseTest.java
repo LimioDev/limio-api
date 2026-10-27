@@ -19,12 +19,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.modulos.perfil.actions.usecase.RemoverEnderecoSalvoUseCase;
 import com.limio.api.modulos.perfil.empregador.PerfilEmpregador;
 import com.limio.api.modulos.perfil.empregador.PerfilEmpregadorService;
 import com.limio.api.modulos.perfil.endereco.EnderecoSalvo;
 import com.limio.api.modulos.perfil.endereco.EnderecoSalvoService;
-import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.excecao.EnderecoSalvoNaoEncontradoException;
 
 @ExtendWith(MockitoExtension.class)

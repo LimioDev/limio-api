@@ -27,4 +27,19 @@ class NomeHelperTest {
     void dadoNomeDeUmaPalavra_quandoAbrevia_entaoSaiComoEsta() {
         assertThat(NomeHelper.abreviar("Rafael")).isEqualTo("Rafael");
     }
+
+    @Test
+    void dadoVariosSobrenomes_quandoTiraIniciais_entaoPrimeiroNomeEUltimoSobrenome() {
+        assertThat(NomeHelper.iniciais("Rafael da Silva Souza")).isEqualTo("RS");
+    }
+
+    @Test
+    void dadoMinusculasEEspacosSobrando_quandoTiraIniciais_entaoMaiusculas() {
+        assertThat(NomeHelper.iniciais("  rafael   souza ")).isEqualTo("RS");
+    }
+
+    @Test
+    void dadoNomeDeUmaPalavra_quandoTiraIniciais_entaoUmaLetra() {
+        assertThat(NomeHelper.iniciais("Rafael")).isEqualTo("R");
+    }
 }

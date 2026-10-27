@@ -22,6 +22,16 @@ public interface EnderecoSalvoRepository extends BaseRepository<EnderecoSalvo, U
 
     Optional<EnderecoSalvo> findByIdAndPerfilEmpregadorIdAndRemovidoEmIsNull(UUID id, UUID perfilEmpregadorId);
 
+    /** Mesma busca pelo id do usuário dono do perfil, pra quem só conhece o usuário logado (porta do anúncio). */
+    @Query("""
+            select e from EnderecoSalvo e, PerfilEmpregador p
+             where e.id = :id
+               and e.perfilEmpregadorId = p.id
+               and p.usuarioId = :usuarioId
+               and e.removidoEm is null
+            """)
+    Optional<EnderecoSalvo> findAtivoDoUsuario(@Param("id") UUID id, @Param("usuarioId") UUID usuarioId);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
             update EnderecoSalvo e

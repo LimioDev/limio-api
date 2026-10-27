@@ -123,6 +123,7 @@ class ConsultarPainelEmpregadorStoryTest {
     private Anuncio anuncio(UUID contratanteId, String descricao, StatusAnuncio status, Duration daquiA) {
         return anuncioRepository.save(Anuncio.builder()
                 .contratanteId(contratanteId)
+                .categoriaId(UUID.randomUUID()) // sem FK pra categoria (ADR-0001 §1.6): qualquer id serve aqui
                 .descricao(descricao)
                 .dataHoraPretendida(Instant.now().plus(daquiA))
                 .bairroRegiaoSnapshot("Pinheiros")

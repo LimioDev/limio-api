@@ -1,7 +1,7 @@
 package com.limio.api.modulos.perfil.records;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.limio.api.modulos.perfil.enums.Uf;
+import com.limio.api.comum.localizacao.enums.Uf;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

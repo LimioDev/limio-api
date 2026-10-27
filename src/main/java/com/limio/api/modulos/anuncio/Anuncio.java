@@ -5,6 +5,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 import com.limio.api.comum.base.BaseEntity;
+import com.limio.api.comum.localizacao.enums.Uf;
+import com.limio.api.comum.portas.EnderecoLocalizado;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 
 import jakarta.persistence.Column;
@@ -20,8 +22,10 @@ import lombok.Setter;
 
 /**
  * Agregado raiz do módulo: pedido de serviço publicado por um empregador.
- * {@code contratanteId} e {@code anuncioOrigemId} são colunas cruas (nunca
- * relação JPA pro {@code Usuario} de {@code modulos.auth} nem self-join —
+ * {@code contratanteId}, {@code anuncioOrigemId}, {@code categoriaId} e
+ * {@code enderecoSalvoId} são colunas cruas (nunca relação JPA pro
+ * {@code Usuario} de {@code modulos.auth}, pra {@code Categoria} ou
+ * {@code EnderecoSalvo} de {@code modulos.perfil}, nem self-join —
  * ADR-0001 §1.6).
  */
 @Entity
@@ -39,6 +43,13 @@ public class Anuncio extends BaseEntity {
     @Column(name = "anuncio_origem_id")
     private UUID anuncioOrigemId;
 
+    @Column(name = "categoria_id", nullable = false)
+    private UUID categoriaId;
+
+    /** Endereço salvo escolhido na criação; {@code null} com endereço avulso. O que vale é o retrato (*Snapshot).*/
+    @Column(name = "endereco_salvo_id")
+    private UUID enderecoSalvoId;
+
     @Column(name = "descricao", nullable = false)
     private String descricao;
 
@@ -51,6 +62,10 @@ public class Anuncio extends BaseEntity {
 
     @Column(name = "bairro_regiao_snapshot")
     private String bairroRegiaoSnapshot;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "uf_snapshot", length = 2)
+    private Uf ufSnapshot;
 
     @Column(name = "endereco_completo_snapshot")
     private String enderecoCompletoSnapshot;
@@ -88,6 +103,35 @@ public class Anuncio extends BaseEntity {
     /** Status ainda "vivo" — ainda não chegou num estado final (TICKET-0049: candidato a encerramento). */
     public boolean isAberto() {
         return status.isAberto();
+    }
+
+    /**
+     * UC "Criar anúncio de serviço" (ETI-59): grava o retrato do endereço no momento da criação e nasce
+     * {@code PUBLICADO}, aguardando candidatos. Mudar o endereço salvo depois não muda o anúncio.
+     */
+    public void publicar(UUID contratanteId, UUID enderecoSalvoId, EnderecoLocalizado endereco,
+            int prazoValidacaoHoras) {
+        this.contratanteId = contratanteId;
+        this.enderecoSalvoId = enderecoSalvoId;
+        this.bairroRegiaoSnapshot = endereco.bairroRegiao();
+        this.ufSnapshot = endereco.uf();
+        this.enderecoCompletoSnapshot = endereco.enderecoCompleto();
+        this.latitudeSnapshot = endereco.latitude();
+        this.longitudeSnapshot = endereco.longitude();
+        this.prazoValidacaoHoras = prazoValidacaoHoras;
+        this.status = StatusAnuncio.PUBLICADO;
+    }
+
+    public boolean pertenceA(UUID usuarioId) {
+        return contratanteId.equals(usuarioId);
+    }
+
+    /** UC "Anexar fotos ao anúncio": só enquanto está publicado e ninguém foi escolhido. */
+    public boolean aceitaFotos(boolean temCandidaturaEscolhida) {
+        return switch (status) {
+            case PUBLICADO -> !temCandidaturaEscolhida;
+            case EM_ANDAMENTO, AGUARDANDO_VALIDACAO, CONCLUIDO, ENCERRADO -> false;
+        };
     }
 
     /** UC16 (encerrar conta do contratante): tira do mural, não conclui. */

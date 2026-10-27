@@ -154,3 +154,17 @@ Contrato, falhas e pendências em `docs/features/TICKET-0050-enderecos-salvos-do
 - Scanner de EXIF para em segmento com tamanho < 2 e em IFD0 fora do APP1. Os dois casos já davam "sem rotação" por
   acaso; a regra ficou explícita.
 - `ArmazenamentoService`: sai o `contentLength` manual, o `RequestBody.fromBytes` já define.
+
+## 2026-10-27 — ETI-59: mídia e `Uf` sobem pra `comum/`, portas de categoria e endereço
+
+O `anuncio` passou a gravar fotos (ETI-59), então a mídia bateu o critério do ADR-0001 ("2+ módulos usando hoje"):
+`Midia`, `MidiaRepository`, `MidiaService`, `LinkTemporario`, `TipoMidia`, `ArmazenamentoService`, `ImagemHelper`,
+`FotoInvalidaException` e `ArmazenamentoIndisponivelException` saíram de `perfil` pra `comum/midia/`. Mesma coisa com
+`Uf` (`comum/localizacao/enums/`), que o endereço avulso do anúncio usa. Só mudou o pacote; o comportamento da foto de
+perfil é o mesmo. A propriedade `perfil.foto.validade-link` virou `midia.validade-link` e continua lendo
+`PERFIL_FOTO_VALIDADE_LINK` se `MIDIA_VALIDADE_LINK` não existir (deploy não precisa mudar).
+
+`perfil` implementa duas portas novas de `comum/portas/` (ADR-0003), usadas na criação do anúncio:
+`ConsultaCategoria` (categoria por id) e `ConsultaEndereco` (endereço salvo do usuário, ou avulso geocodificado, com o
+texto de uma linha que o anúncio guarda como retrato). `EnderecoSalvoRepository.findAtivoDoUsuario` busca o endereço
+pelo id do usuário (join com `perfil_empregador`), sem criar perfil.

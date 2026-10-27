@@ -3,7 +3,7 @@ package com.limio.api.modulos.perfil.records;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.limio.api.modulos.perfil.enums.Uf;
+import com.limio.api.comum.localizacao.enums.Uf;
 
 public record EnderecoSalvoResponse(
         UUID id,

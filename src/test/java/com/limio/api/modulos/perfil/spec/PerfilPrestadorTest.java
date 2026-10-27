@@ -10,8 +10,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.modulos.perfil.categoria.Categoria;
-import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.geo.Coordenadas;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestador;
 import com.limio.api.modulos.perfil.perfilprestador.janelaatendimento.JanelaAtendimento;

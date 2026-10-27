@@ -56,7 +56,7 @@ Em todas as rotas o dono vem só do token (`usuario.id()`), nunca da URL ou do c
 | Classe | Papel |
 |---|---|
 | `endereco/EnderecoSalvo`, `EnderecoSalvoRepository`, `EnderecoSalvoService` | entity (com `remover` e `substituirDadosPor`), finders sempre com `RemovidoEmIsNull` e service (busca ou 404, desmarcar padrão, rede de segurança do índice) |
-| `enums/Uf` | as 27 siglas com nome por extenso (usado no `state` do Nominatim), valor fechado do domínio |
+| `comum/localizacao/enums/Uf` | as 27 siglas com nome por extenso (usado no `state` do Nominatim); em `comum/` desde o ETI-59 (o anúncio também usa) |
 | `actions/service/Geocodificador`, `NominatimGeocodificador` | porta de geocodificação (município e endereço) e sua implementação no Nominatim; `endereco/EnderecoParaGeocodificar` é o record de entrada |
 | `actions/usecase/ListarEnderecosSalvosUseCase`, `CriarEnderecoSalvoUseCase`, `EditarEnderecoSalvoUseCase`, `RemoverEnderecoSalvoUseCase`, `MarcarEnderecoSalvoPadraoUseCase` | regra de negócio de cada rota |
 | `actions/mapper/EnderecoSalvoMapper` | request/entity/response (só o controller chama) |
@@ -137,6 +137,18 @@ o controller recebe com `@AuthenticationPrincipal`. Sem token válido, 401 `NAO_
 regra e mesmo 404 do `GET /conta/perfil-empregador`) + link temporário da foto ativa. Se o storage não gerar o link,
 o resumo sai sem foto em vez de 503 — a foto não derruba o painel.
 
+## Portas `ConsultaCategoria` e `ConsultaEndereco` (ETI-59, criar anúncio em `anuncio`)
+
+1. `ConsultaCategoriaService.buscarPorId` → `CategoriaService.buscarPorId` → `ResumoCategoria(id, nome, ativa)`.
+   Quem cria anúncio confere `ativa`.
+2. `ConsultaEnderecoService.buscarSalvo(usuarioId, enderecoSalvoId)` →
+   `EnderecoSalvoService.buscarEnderecoAtivoDoUsuarioOuFalhar` (join com `perfil_empregador` pelo `usuario_id`;
+   removido ou de outro usuário → 404 `ENDERECO_NAO_ENCONTRADO`). Coordenadas são as do próprio endereço salvo.
+3. `ConsultaEnderecoService.localizar(avulso)` → `Geocodificador.localizarEndereco` (sem transação). Não achado →
+   422 `ENDERECO_NAO_LOCALIZADO`; provedor fora → 503 `GEOCODIFICACAO_INDISPONIVEL`.
+4. Os dois devolvem `EnderecoLocalizado` com `"Rua, número - complemento, bairro, cidade - UF"` (cabe nos 255 do
+   `anuncio.endereco_completo_snapshot`).
+
 ## Classes envolvidas
 
 | Classe | Papel |
@@ -164,19 +176,21 @@ o resumo sai sem foto em vez de 503 — a foto não derruba o painel.
 | `PerfilPrestadorService` | Extends `comum/base/BaseService` — `buscarPorUsuario`, `buscarCoordenadasConhecidas`, `travarPorUsuario` |
 | `CategoriaService` | Extends `comum/base/BaseService` — `listarAtivas`, `buscarAtivasPorIds` |
 | `PerfilPrestadorRepository` / `CategoriaRepository` | Extends `comum/base/BaseRepository` — porta de persistência JPA |
-| `Uf`, `DiaSemana` | Enums de domínio (27 UFs com nome por extenso; dias da semana, segunda primeiro) |
+| `DiaSemana` | Enum de domínio (dias da semana, segunda primeiro). `Uf` está em `comum/localizacao/enums` |
 | `CategoriaInvalidaException`, `CategoriaProtegidaException`, `MunicipioNaoEncontradoException`, `GeocodificacaoIndisponivelException` | Exceções de negócio do TICKET-0054 |
-| `midia/Midia`, `MidiaRepository`, `MidiaService`, `enums/TipoMidia` | entity do arquivo guardado (`fotoPerfil`, `expurgar`), persistência, foto ativa e lock por usuário |
-| `midia/LinkTemporario` | tipo de domínio: URL assinada + `expiraEm` |
-| `actions/helper/ImagemHelper` | validação do conteúdo, orientação EXIF, redução e regravação sem metadados (sem Spring) |
-| `actions/service/ArmazenamentoService` | integração com o bucket S3 (`enviar`, `gerarLink`, `remover`); 503 sem storage configurado |
+| `comum/midia/Midia`, `MidiaRepository`, `MidiaService`, `enums/TipoMidia` | entity do arquivo guardado (`fotoPerfil`, `fotoAnuncio`, `expurgar`), persistência, foto ativa e lock por usuário. Em `comum/` desde o ETI-59 (o anúncio também grava mídia) |
+| `comum/midia/LinkTemporario` | tipo de domínio: URL assinada + `expiraEm` |
+| `comum/midia/ImagemHelper` | validação do conteúdo, orientação EXIF, redução e regravação sem metadados (sem Spring) |
+| `comum/midia/ArmazenamentoService` | integração com o bucket S3 (`enviar`, `gerarLink`, `remover`); 503 sem storage configurado |
 | `actions/service/FotoPerfilEventosService` | apaga do bucket o objeto anterior (commit) ou o novo (rollback) |
 | `eventos/FotoPerfilTrocadaEvent` | evento interno da troca: chave nova + chave anterior |
 | `actions/usecase/TrocarFotoPerfilUseCase`, `ConsultarFotoPerfilUseCase` | regra de negócio da foto |
 | `actions/mapper/FotoPerfilMapper`, `actions/controller/FotoPerfilController`, `records/FotoPerfilResponse` | contrato HTTP da foto |
-| `excecao/FotoInvalidaException`, `ArmazenamentoIndisponivelException` | 422 e 503 da foto |
+| `comum/midia/excecao/FotoInvalidaException`, `ArmazenamentoIndisponivelException` | 422 e 503 da foto |
 | `comum/persistencia/TravaTransacional`, `EscopoTrava` | Advisory lock do Postgres por escopo + chave (usado aqui e no login) |
 | `comum/portas/ConsultaPerfilEmpregador`, `ResumoPerfilEmpregador` | porta de leitura de nome de exibição + foto, pra outros módulos |
 | `actions/service/ConsultaPerfilEmpregadorService` | implementação da porta (TICKET-0052) |
+| `actions/service/ConsultaCategoriaService` | implementa `comum/portas/ConsultaCategoria` (ETI-59): categoria por id, ativa ou não |
+| `actions/service/ConsultaEnderecoService` | implementa `comum/portas/ConsultaEndereco` (ETI-59): endereço salvo do usuário ou avulso geocodificado, sempre com o texto de uma linha do retrato do anúncio |
 
 Atualize esta página sempre que uma classe mudar de responsabilidade.

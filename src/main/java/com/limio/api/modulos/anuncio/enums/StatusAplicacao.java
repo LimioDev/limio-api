@@ -12,5 +12,13 @@ public enum StatusAplicacao {
     RECUSADA,
     AGUARDANDO_VALIDACAO,
     CONCLUIDA,
-    ENCERRADA
+    ENCERRADA;
+
+    /** Prestador já escolhido pelo contratante. Fonte única pra {@code Aplicacao.isEscolhida()} e pros finders. */
+    public boolean isEscolhida() {
+        return switch (this) {
+            case ESCOLHIDA, AGUARDANDO_VALIDACAO -> true;
+            case ENVIADA, RECUSADA, CONCLUIDA, ENCERRADA -> false;
+        };
+    }
 }

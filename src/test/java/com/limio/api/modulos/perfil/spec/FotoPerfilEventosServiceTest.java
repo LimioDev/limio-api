@@ -9,7 +9,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.limio.api.modulos.perfil.actions.service.ArmazenamentoService;
+import com.limio.api.comum.midia.ArmazenamentoService;
 import com.limio.api.modulos.perfil.actions.service.FotoPerfilEventosService;
 import com.limio.api.modulos.perfil.eventos.FotoPerfilTrocadaEvent;
 

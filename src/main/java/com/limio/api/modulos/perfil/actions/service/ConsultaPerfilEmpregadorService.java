@@ -7,13 +7,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import com.limio.api.comum.midia.ArmazenamentoService;
+import com.limio.api.comum.midia.LinkTemporario;
+import com.limio.api.comum.midia.Midia;
+import com.limio.api.comum.midia.MidiaService;
+import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
 import com.limio.api.comum.portas.ConsultaPerfilEmpregador;
 import com.limio.api.comum.portas.ResumoPerfilEmpregador;
 import com.limio.api.modulos.perfil.empregador.PerfilEmpregadorService;
-import com.limio.api.modulos.perfil.excecao.ArmazenamentoIndisponivelException;
-import com.limio.api.modulos.perfil.midia.LinkTemporario;
-import com.limio.api.modulos.perfil.midia.Midia;
-import com.limio.api.modulos.perfil.midia.MidiaService;
 
 /** Implementa {@link ConsultaPerfilEmpregador} para o painel do Empregador ({@code modulos.anuncio}, TICKET-0052). */
 @Component

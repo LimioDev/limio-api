@@ -24,11 +24,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionOperations;
 
+import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.modulos.perfil.actions.service.Geocodificador;
 import com.limio.api.modulos.perfil.actions.usecase.SalvarPerfilAtuacaoUseCase;
 import com.limio.api.modulos.perfil.categoria.Categoria;
 import com.limio.api.modulos.perfil.categoria.CategoriaService;
-import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.excecao.CategoriaInvalidaException;
 import com.limio.api.modulos.perfil.excecao.MunicipioNaoEncontradoException;
 import com.limio.api.modulos.perfil.geo.Coordenadas;

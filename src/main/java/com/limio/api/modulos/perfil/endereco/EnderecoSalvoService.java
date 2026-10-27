@@ -31,6 +31,11 @@ public class EnderecoSalvoService extends BaseService<EnderecoSalvo, UUID, Ender
                 .orElseThrow(EnderecoSalvoNaoEncontradoException::new);
     }
 
+    public EnderecoSalvo buscarEnderecoAtivoDoUsuarioOuFalhar(UUID id, UUID usuarioId) {
+        return repository.findAtivoDoUsuario(id, usuarioId)
+                .orElseThrow(EnderecoSalvoNaoEncontradoException::new);
+    }
+
     public void desmarcarEnderecoPadrao(UUID perfilEmpregadorId) {
         repository.desmarcarPadrao(perfilEmpregadorId, Instant.now());
     }

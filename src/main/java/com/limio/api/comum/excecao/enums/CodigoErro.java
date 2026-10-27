@@ -36,6 +36,10 @@ public enum CodigoErro {
     FOTO_INVALIDA("Envie uma foto JPG ou PNG."),
     ARQUIVO_GRANDE_DEMAIS("O arquivo é maior que o permitido."),
     ARMAZENAMENTO_INDISPONIVEL("Não foi possível guardar o arquivo agora. Tente novamente em instantes."),
+    CONTATOS_NAO_CONFIRMADOS("Confirme seu e-mail e seu telefone para publicar um anúncio."),
+    DATA_NO_PASSADO("A data e a hora do serviço precisam estar no futuro."),
+    ANUNCIO_NAO_ENCONTRADO("Anúncio não encontrado."),
+    ANUNCIO_ESTADO_INVALIDO("O anúncio não permite esta ação no estado atual."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;
