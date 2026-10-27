@@ -17,10 +17,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
-import com.limio.api.modulos.auth.actions.helper.LinkApp;
-import com.limio.api.modulos.auth.actions.service.EmailService;
+import com.limio.api.modulos.auth.actions.helper.LinkWeb;
+import com.limio.api.modulos.auth.eventos.RecuperacaoSenhaSolicitadaEvent;
 import com.limio.api.modulos.auth.actions.usecase.SolicitarRecuperacaoSenhaUseCase;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
@@ -42,14 +43,14 @@ class SolicitarRecuperacaoSenhaUseCaseTest {
     private VerificacaoContatoService verificacaoContatoService;
 
     @Mock
-    private EmailService emailService;
+    private ApplicationEventPublisher eventos;
 
     private SolicitarRecuperacaoSenhaUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new SolicitarRecuperacaoSenhaUseCase(usuarioService, verificacaoContatoService, emailService,
-                new LinkApp(FRONTEND_URL), Duration.ofHours(1), 3, Duration.ofHours(1));
+        useCase = new SolicitarRecuperacaoSenhaUseCase(usuarioService, verificacaoContatoService, eventos,
+                new LinkWeb(FRONTEND_URL), Duration.ofHours(1), 3, Duration.ofHours(1));
     }
 
     private Usuario usuario(StatusConta status) {
@@ -71,7 +72,7 @@ class SolicitarRecuperacaoSenhaUseCaseTest {
         useCase.executar(EMAIL);
 
         verify(verificacaoContatoService).salvar(any(VerificacaoContato.class));
-        verify(emailService).enviarRecuperacaoSenha(eq(EMAIL), anyString());
+        verify(eventos).publishEvent(any(RecuperacaoSenhaSolicitadaEvent.class));
     }
 
     @Test
@@ -80,7 +81,7 @@ class SolicitarRecuperacaoSenhaUseCaseTest {
 
         useCase.executar(EMAIL);
 
-        verifyNoInteractions(verificacaoContatoService, emailService);
+        verifyNoInteractions(verificacaoContatoService, eventos);
     }
 
     @Test
@@ -91,7 +92,7 @@ class SolicitarRecuperacaoSenhaUseCaseTest {
 
         useCase.executar(EMAIL);
 
-        verifyNoInteractions(verificacaoContatoService, emailService);
+        verifyNoInteractions(verificacaoContatoService, eventos);
     }
 
     @Test
@@ -104,6 +105,6 @@ class SolicitarRecuperacaoSenhaUseCaseTest {
         useCase.executar(EMAIL);
 
         verify(verificacaoContatoService, never()).salvar(any());
-        verifyNoInteractions(emailService);
+        verifyNoInteractions(eventos);
     }
 }

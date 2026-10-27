@@ -9,6 +9,9 @@ public enum EscopoTrava {
     /** Tentativas de login por e-mail (TICKET-0032). */
     LOGIN,
 
+    /** Tentativas de login por IP. Sempre travado depois de {@link #LOGIN}, nunca antes (sem deadlock). */
+    LOGIN_IP,
+
     /** Salvamento do perfil de atuação por usuário (TICKET-0054). */
     PERFIL_PRESTADOR,
 

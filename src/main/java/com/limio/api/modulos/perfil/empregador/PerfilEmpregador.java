@@ -38,6 +38,13 @@ public class PerfilEmpregador extends BaseEntity {
     @Builder.Default
     private int qtdAvaliacoes = 0;
 
+    /** Conta encerrada (UC10): o nome de exibição deixa de identificar a pessoa. */
+    public static final String NOME_CONTA_ENCERRADA = "Conta encerrada";
+
+    public void anonimizar() {
+        this.nomeExibicao = NOME_CONTA_ENCERRADA;
+    }
+
     public static String nomeExibicaoInicialDe(String nomeCompleto) {
         String nome = nomeCompleto.strip();
         return nome.length() <= NOME_EXIBICAO_MAX

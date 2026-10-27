@@ -44,6 +44,6 @@ Nenhuma regra de negócio nova. Esta ticket é puramente estrutural:
 - **`bloqueio_usuario` vai para `moderacao`, não fica em `auth`**: apesar de FK direto pra `usuario`
   (`bloqueador_id`/`bloqueado_id`), é bloqueio social entre usuários (ex.: silenciar contato), não suspensão de
   conta — não é regra de autenticação.
-- **Pendência não resolvida nesta ticket**: `PapelUsuario.ADMIN` (enum em `Usuario`) e a tabela `administrador`
-  (login próprio: nome/email/senha_hash) coexistem no DER sem explicar a relação entre os dois. Não alteramos o
-  enum aqui — fica registrado em `docs/history/` e na ADR como decisão em aberto.
+- ~~**Pendência não resolvida nesta ticket**: `PapelUsuario.ADMIN` × tabela `administrador`.~~ **Decisão do tech lead (2026-10-26)**:
+  administrador é ator próprio, com login na tabela `administrador`; `PapelUsuario.ADMIN` foi removido
+  (migration V15).

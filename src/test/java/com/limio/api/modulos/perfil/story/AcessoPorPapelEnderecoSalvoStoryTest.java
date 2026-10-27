@@ -105,11 +105,4 @@ class AcessoPorPapelEnderecoSalvoStoryTest {
         assertThat(total("perfil_empregador")).isEqualTo(perfisAntes);
         assertThat(total("endereco_salvo")).isEqualTo(enderecosAntes);
     }
-
-    @Test
-    void dadoPapelAdmin_quandoListaEnderecos_entaoDevolve403() throws Exception {
-        chamar(get(ROTA), PapelUsuario.ADMIN)
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.codigo", is("ACESSO_NEGADO")));
-    }
 }

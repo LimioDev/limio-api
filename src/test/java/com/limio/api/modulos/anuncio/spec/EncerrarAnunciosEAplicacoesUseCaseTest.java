@@ -75,6 +75,7 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
 
     private Anuncio anuncio(StatusAnuncio status, Instant dataHoraPretendida) {
         Anuncio anuncio = Anuncio.builder()
+                .titulo("Faxina")
                 .contratanteId(CONTRATANTE_ID)
                 .descricao("Faxina")
                 .dataHoraPretendida(dataHoraPretendida)
@@ -313,6 +314,7 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
         UUID outroAnuncioId = UUID.randomUUID();
         Anuncio anuncioQuebrado = anuncio(StatusAnuncio.PUBLICADO, Instant.now().plus(Duration.ofDays(10)));
         Anuncio anuncioOk = Anuncio.builder()
+                .titulo("Jardinagem")
                 .contratanteId(CONTRATANTE_ID)
                 .descricao("Jardinagem")
                 .dataHoraPretendida(Instant.now().plus(Duration.ofDays(10)))

@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -108,7 +109,19 @@ class CriarEPublicarAnuncioStoryTest {
     private ArmazenamentoService armazenamentoService;
 
     @BeforeEach
-    void limparBase() {
+    void prepararBase() {
+        limparBase();
+        when(geocodificador.localizarEndereco(any())).thenReturn(Optional.of(PAULISTA));
+        when(armazenamentoService.gerarLink(anyString())).thenReturn(LINK);
+    }
+
+    /** Desde a confirmação de e-mail (TICKET-0047), o cadastro grava token em verificacao_contato. */
+    @AfterEach
+    void naoDeixarNadaPraTras() {
+        limparBase();
+    }
+
+    private void limparBase() {
         jdbc.execute("delete from midia");
         jdbc.execute("delete from aplicacao");
         jdbc.execute("delete from anuncio");
@@ -118,8 +131,6 @@ class CriarEPublicarAnuncioStoryTest {
         jdbc.execute("delete from sessao");
         jdbc.execute("delete from tentativa_login");
         jdbc.execute("delete from usuario");
-        when(geocodificador.localizarEndereco(any())).thenReturn(Optional.of(PAULISTA));
-        when(armazenamentoService.gerarLink(anyString())).thenReturn(LINK);
     }
 
     // ---------- criar ----------

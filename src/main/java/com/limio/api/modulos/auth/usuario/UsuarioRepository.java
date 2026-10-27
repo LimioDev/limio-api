@@ -17,6 +17,10 @@ public interface UsuarioRepository extends BaseRepository<Usuario, UUID> {
 
     boolean existsByEmailIgnoreCase(String email);
 
+    /** Só o id: quem vai travar a conta não pode deixá-la carregada (e possivelmente desatualizada) antes do lock. */
+    @Query("select u.id from Usuario u where upper(u.email) = upper(:email)")
+    Optional<UUID> findIdByEmailIgnoreCase(@Param("email") String email);
+
     boolean existsByCpf(String cpf);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

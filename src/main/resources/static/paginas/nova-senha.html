@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Nova senha · Limio</title>
+  <link rel="stylesheet" href="/paginas/limio.css">
+</head>
+<body>
+<main>
+  <p class="marca">Limio</p>
+
+  <section id="formulario" data-etapa hidden>
+    <h1>Crie uma nova senha</h1>
+    <p>Depois de salvar, você sai de todos os aparelhos e entra de novo com a nova senha.</p>
+
+    <form id="form-nova-senha" novalidate>
+      <label for="nova-senha">Nova senha</label>
+      <input id="nova-senha" name="novaSenha" type="password" autocomplete="new-password"
+             maxlength="72" required aria-describedby="requisitos">
+      <ul id="requisitos" class="requisitos" aria-live="polite">
+        <li id="req-tamanho">De 8 a 72 caracteres</li>
+        <li id="req-letra">Pelo menos 1 letra</li>
+        <li id="req-numero">Pelo menos 1 número</li>
+      </ul>
+
+      <label for="confirmacao">Confirme a nova senha</label>
+      <input id="confirmacao" name="confirmacao" type="password" autocomplete="new-password"
+             maxlength="72" required aria-describedby="erro-confirmacao">
+      <p id="erro-confirmacao" class="erro-campo" hidden>As senhas não são iguais.</p>
+
+      <p id="erro-envio" class="aviso perigo" role="alert" hidden></p>
+
+      <button id="botao-salvar" class="botao" type="submit">Salvar nova senha</button>
+    </form>
+  </section>
+
+  <section id="sucesso" data-etapa hidden>
+    <h1>Senha alterada</h1>
+    <p>Sua senha foi redefinida e você saiu de todos os aparelhos.</p>
+    <p>Abra o app Limio e entre com o seu e-mail e a nova senha.</p>
+    <a class="botao" href="limio://login">Abrir o app</a>
+  </section>
+
+  <section id="recusado" data-etapa hidden>
+    <h1>Este link não vale mais</h1>
+    <p>O link de redefinição é inválido, expirou ou já foi usado.</p>
+    <p>Para receber outro, abra o app Limio e toque em <strong>Esqueci minha senha</strong> na tela de entrada.</p>
+    <a class="botao" href="limio://recuperar-senha">Abrir o app</a>
+  </section>
+</main>
+<script src="/paginas/comum.js"></script>
+<script src="/paginas/nova-senha.js"></script>
+</body>
+</html>

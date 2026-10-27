@@ -17,13 +17,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
-import com.limio.api.modulos.auth.actions.helper.LinkApp;
 import com.limio.api.modulos.auth.actions.helper.RefreshTokenHelper;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
-import com.limio.api.modulos.auth.actions.service.EmailService;
+import com.limio.api.modulos.auth.eventos.SenhaAlteradaEvent;
 import com.limio.api.modulos.auth.actions.service.TokenService;
 import com.limio.api.modulos.auth.actions.usecase.AlterarSenhaUseCase;
 import com.limio.api.modulos.auth.excecao.SenhaAtualIncorretaException;
@@ -43,7 +43,6 @@ class AlterarSenhaUseCaseTest {
     private static final String SENHA_ATUAL = "senhaAtual123";
     private static final String NOVA_SENHA = "senhaNova123";
     private static final String REFRESH_TOKEN = "refresh-token-do-celular";
-    private static final String FRONTEND_URL = "https://app.limio.test";
 
     @Mock
     private UsuarioService usuarioService;
@@ -58,14 +57,13 @@ class AlterarSenhaUseCaseTest {
     private TokenService tokenService;
 
     @Mock
-    private EmailService emailService;
+    private ApplicationEventPublisher eventos;
 
     private AlterarSenhaUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new AlterarSenhaUseCase(usuarioService, sessaoService, senhaHasher, tokenService, emailService,
-                new LinkApp(FRONTEND_URL));
+        useCase = new AlterarSenhaUseCase(usuarioService, sessaoService, senhaHasher, tokenService, eventos);
     }
 
     private Usuario usuario() {
@@ -105,7 +103,7 @@ class AlterarSenhaUseCaseTest {
         assertThat(usuario.getSenhaHash()).isEqualTo("hash-novo");
         verify(sessaoService).salvar(sessaoAtual);
         verify(sessaoService).revogarTodas(eq(USUARIO_ID), eq(sessaoAtual.getId()), any(Instant.class));
-        verify(emailService).enviarSenhaAlterada(eq("maria@example.com"), any());
+        verify(eventos).publishEvent(new SenhaAlteradaEvent("maria@example.com"));
     }
 
     @Test
@@ -118,7 +116,7 @@ class AlterarSenhaUseCaseTest {
                 .isInstanceOf(SenhaAtualIncorretaException.class);
 
         verify(sessaoService, never()).salvar(any());
-        verify(emailService, never()).enviarSenhaAlterada(any(), any());
+        verify(eventos, never()).publishEvent(any());
     }
 
     @Test

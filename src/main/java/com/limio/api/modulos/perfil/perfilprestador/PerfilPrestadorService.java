@@ -45,6 +45,11 @@ public class PerfilPrestadorService extends BaseService<PerfilPrestador, UUID, P
                 .map(PerfilPrestador::getCoordenadasBase);
     }
 
+    /** Apaga o perfil de atuação (especialidades, janelas e localização) do usuário, se existir. */
+    public void apagarDoUsuario(UUID usuarioId) {
+        repository.findByUsuarioId(usuarioId).ifPresent(repository::delete);
+    }
+
     /**
      * Serializa os salvamentos do mesmo usuário até o fim da transação de quem chama. Sem isso, dois
      * salvamentos simultâneos do primeiro perfil (ex.: toque duplo em "Salvar") tentavam os dois criar o

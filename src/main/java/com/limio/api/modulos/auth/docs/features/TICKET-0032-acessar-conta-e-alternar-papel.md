@@ -58,7 +58,8 @@ Pro app:
 
 ## Decisão técnica e alternativas descartadas
 
-Pendências do card resolvidas aqui (escolhidas com o dev, a validar com o tech lead):
+Pendências do card resolvidas aqui. **Decisão do tech lead (2026-10-26)**: aprovadas como estão (tabela `tentativa_login`, refresh de 30 dias com
+rotação, `POST /auth/refresh` público, `dispositivo` opcional com User-Agent).
 
 - **Onde contar as tentativas**: tabela nova `tentativa_login` (e-mail, ip, criado_em), uma linha por falha, chaveada
   pelo e-mail digitado. Descartado: colunas em `usuario` (não cobre e-mail inexistente, e o bloqueio só existir pra
@@ -111,12 +112,15 @@ Demais decisões:
 ## Fora de escopo / pendências
 
 - Checagem de perfil de Prestador completo na troca de papel (ver acima).
-- Recuperação de senha (UC06): quando existir, a rota entra na lista pública do `SecurityConfig`.
-- IP real atrás do proxy do Railway: hoje é `request.getRemoteAddr()` (o IP do proxy). Precisa de
-  `server.forward-headers-strategy` — decisão de infra, não deste card.
-- Limpeza periódica de `tentativa_login` antigas.
-- Rate limit é só por e-mail: não há limite por IP (um atacante pode testar uma senha em muitos e-mails), e qualquer um
-  consegue bloquear o login de um e-mail alheio por 15 min errando a senha de propósito. Mitigação fica pra infra
-  (limite por IP no proxy) ou CAPTCHA.
+- ~~Recuperação de senha (UC06): quando existir, a rota entra na lista pública do `SecurityConfig`.~~ Resolvido no
+  TICKET-0033 (`/auth/recuperar-senha`, `/auth/redefinir-senha`).
+- ~~IP real atrás do proxy do Railway~~: resolvido (tech lead, 2026-10-26) com
+  `server.forward-headers-strategy=native`; `getRemoteAddr()` passa a ser o IP do cliente.
+- ~~Limpeza periódica de `tentativa_login` antigas.~~ Resolvido no TICKET-0047: `LimparRetencaoUseCase` apaga falhas
+  com mais de `auth.retencao.tentativa-login.validade` (30 dias).
+- ~~Rate limit só por e-mail~~: resolvido (tech lead, 2026-10-26) com limite também por IP público
+  (`auth.login.max-falhas-por-ip`, 30 falhas em 15 min, `LimiteTentativasLoginPorIp`). Risco aceito que continua:
+  qualquer um consegue bloquear o login de um e-mail alheio por 15 min errando a senha de propósito; CAPTCHA só se
+  isso aparecer em produção.
 - `JWT_SECRET` e `CPF_HMAC_SECRET` não têm mais default: a aplicação não sobe sem as duas envs (inclusive dev local
   via `mvn spring-boot:run`). Testes e `TestLimioApiApplication` usam `src/test/resources/config/application.properties`.
