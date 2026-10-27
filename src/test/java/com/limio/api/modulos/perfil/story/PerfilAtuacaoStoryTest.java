@@ -238,6 +238,24 @@ class PerfilAtuacaoStoryTest {
         assertThat(perfilPrestadorRepository.count()).isZero();
     }
 
+    /** JSON estrito (decisão do tech lead): decimal em campo inteiro é recusado, não truncado. */
+    @Test
+    void dadoRaioDecimal_quandoSalva_entaoRecusaComValidacaoFalhouSemGravar() throws Exception {
+        String corpo = objectMapper.writeValueAsString(
+                new PerfilAtuacaoRequest(List.of(categoria("Pintura")), 10, "Campinas", Uf.SP, List.of()))
+                .replace("\"raioAtendimentoKm\":10", "\"raioAtendimentoKm\":10.7");
+        assertThat(corpo).contains("10.7");
+
+        mockMvc.perform(put(ROTA)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token(UUID.randomUUID(), PapelUsuario.PRESTADOR))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(corpo))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo", is("VALIDACAO_FALHOU")));
+
+        assertThat(perfilPrestadorRepository.count()).isZero();
+    }
+
     @Test
     void dadoJanelaComInicioDepoisDoFim_quandoSalva_entaoRecusaComValidacaoFalhouSemGravar() throws Exception {
         salvar(UUID.randomUUID(), new PerfilAtuacaoRequest(List.of(categoria("Pintura")), 10, "Campinas", Uf.SP,

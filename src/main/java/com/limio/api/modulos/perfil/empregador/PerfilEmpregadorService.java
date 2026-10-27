@@ -1,5 +1,6 @@
 package com.limio.api.modulos.perfil.empregador;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Component;
@@ -26,6 +27,11 @@ public class PerfilEmpregadorService extends BaseService<PerfilEmpregador, UUID,
         PerfilEmpregador perfil = buscarOuCriar(usuarioId,
                 PerfilEmpregador.nomeExibicaoInicialDe(dados.nomeCompleto()));
         return new MeuPerfilEmpregador(perfil, dados);
+    }
+
+    /** Sem criar: vazio é o usuário que nunca abriu o perfil de empregador. */
+    public Optional<PerfilEmpregador> buscarPorUsuario(UUID usuarioId) {
+        return repository.findByUsuarioId(usuarioId);
     }
 
     private PerfilEmpregador buscarOuCriar(UUID usuarioId, String nomeInicial) {

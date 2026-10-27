@@ -108,3 +108,24 @@ Formatos (JPEG/PNG) e tamanho (5 MB) são provisórios até o PO decidir. Detalh
 - Scanner de EXIF para em segmento com tamanho < 2 e em IFD0 fora do APP1. Os dois casos já davam "sem rotação" por
   acaso; a regra ficou explícita.
 - `ArmazenamentoService`: sai o `contentLength` manual, o `RequestBody.fromBytes` já define.
+
+## 2026-10-26 — TICKET-0047: reação ao encerramento de conta
+
+Pendência do TICKET-0034: quando o `perfil` existisse, ele precisaria reagir ao `ContaEncerradaEvent`. Agora reage
+(`AnonimizarPerfilDaContaEncerradaUseCase`, `AFTER_COMMIT` + `REQUIRES_NEW`, como o listener de `anuncio`):
+
+- `PerfilEmpregador`: nome de exibição vira "Conta encerrada". A linha fica, porque guarda média e quantidade de
+  avaliações.
+- `PerfilPrestador`: apagado com especialidades e janelas. As colunas de localização são `NOT NULL`, então "apagar
+  localização" é apagar o perfil. Sem o usuário, ele não tem mais uso.
+- Foto de perfil: expurgada (`expurgo_em`), e o objeto sai do bucket depois do commit (`FotoPerfilRemovidaEvent`).
+
+Cada parte roda isolada: uma falha é logada e não impede as outras nem volta para quem encerrou a conta. A tabela de
+dependências do doc do TICKET-0048 também foi atualizada (confirmação de e-mail e foto já existem).
+
+## 2026-10-26 — decisões do tech lead
+
+Aprovadas as decisões técnicas pendentes dos TICKET-0048 (rotas, porta, criação sob demanda, `+55` como contrato),
+TICKET-0054 (Nominatim público com cache; DER = V11; `DiaSemana`) e TICKET-0056 (envio multipart pela API, bucket
+privado com link temporário). Decimal em campo inteiro passa a ser recusado na API toda
+(`spring.jackson.deserialization.accept-float-as-int=false`): raio `10.7` responde 400 em vez de virar `10`.

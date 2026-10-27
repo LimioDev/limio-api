@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import com.limio.api.modulos.perfil.eventos.FotoPerfilRemovidaEvent;
 import com.limio.api.modulos.perfil.eventos.FotoPerfilTrocadaEvent;
 
 /**
@@ -30,5 +31,11 @@ public class FotoPerfilEventosService {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
     public void aoDesfazerTroca(FotoPerfilTrocadaEvent evento) {
         armazenamentoService.remover(evento.chaveNova());
+    }
+
+    /** Foto removida (conta encerrada) e gravada: o objeto sai do bucket. */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void aoRemoverFoto(FotoPerfilRemovidaEvent evento) {
+        armazenamentoService.remover(evento.chave());
     }
 }

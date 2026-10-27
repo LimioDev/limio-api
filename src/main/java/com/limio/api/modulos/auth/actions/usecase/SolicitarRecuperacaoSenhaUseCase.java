@@ -4,12 +4,14 @@ import java.time.Duration;
 import java.time.Instant;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.limio.api.modulos.auth.actions.helper.LinkApp;
-import com.limio.api.modulos.auth.actions.helper.TokenRecuperacaoHelper;
-import com.limio.api.modulos.auth.actions.service.EmailService;
+import com.limio.api.comum.config.PaginasWebConfig;
+import com.limio.api.modulos.auth.actions.helper.LinkWeb;
+import com.limio.api.modulos.auth.actions.helper.TokenVerificacaoHelper;
+import com.limio.api.modulos.auth.eventos.RecuperacaoSenhaSolicitadaEvent;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
 import com.limio.api.modulos.auth.verificacaocontato.VerificacaoContato;
@@ -32,26 +34,26 @@ public class SolicitarRecuperacaoSenhaUseCase {
 
     private final UsuarioService usuarioService;
     private final VerificacaoContatoService verificacaoContatoService;
-    private final EmailService emailService;
+    private final ApplicationEventPublisher eventos;
     private final Duration validadeToken;
     private final int maxSolicitacoes;
     private final Duration janelaSolicitacoes;
-    private final LinkApp linkApp;
+    private final LinkWeb linkWeb;
 
     public SolicitarRecuperacaoSenhaUseCase(UsuarioService usuarioService,
             VerificacaoContatoService verificacaoContatoService,
-            EmailService emailService,
-            LinkApp linkApp,
+            ApplicationEventPublisher eventos,
+            LinkWeb linkWeb,
             @Value("${auth.recuperacao-senha.validade-token}") Duration validadeToken,
             @Value("${auth.recuperacao-senha.max-solicitacoes}") int maxSolicitacoes,
             @Value("${auth.recuperacao-senha.janela-solicitacoes}") Duration janelaSolicitacoes) {
         this.usuarioService = usuarioService;
         this.verificacaoContatoService = verificacaoContatoService;
-        this.emailService = emailService;
+        this.eventos = eventos;
         this.validadeToken = validadeToken;
         this.maxSolicitacoes = maxSolicitacoes;
         this.janelaSolicitacoes = janelaSolicitacoes;
-        this.linkApp = linkApp;
+        this.linkWeb = linkWeb;
     }
 
     @Transactional
@@ -69,16 +71,18 @@ public class SolicitarRecuperacaoSenhaUseCase {
             return;
         }
 
-        String token = TokenRecuperacaoHelper.gerar();
+        String token = TokenVerificacaoHelper.gerar();
         VerificacaoContato verificacao = VerificacaoContato.builder()
                 .usuario(usuario)
                 .canal(CanalVerificacao.EMAIL)
                 .finalidade(FinalidadeVerificacao.RECUPERACAO_SENHA)
-                .tokenHash(TokenRecuperacaoHelper.hash(token))
+                .tokenHash(TokenVerificacaoHelper.hash(token))
+                .destinoHash(TokenVerificacaoHelper.hashDestino(usuario.getEmail()))
                 .expiraEm(agora.plus(validadeToken))
                 .build();
         verificacaoContatoService.salvar(verificacao);
 
-        emailService.enviarRecuperacaoSenha(usuario.getEmail(), linkApp.linkApp("nova-senha?token=" + token));
+        eventos.publishEvent(
+                new RecuperacaoSenhaSolicitadaEvent(usuario.getEmail(), linkWeb.pagina(PaginasWebConfig.NOVA_SENHA, token)));
     }
 }

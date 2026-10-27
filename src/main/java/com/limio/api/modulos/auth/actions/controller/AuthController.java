@@ -16,9 +16,11 @@ import com.limio.api.modulos.auth.actions.mapper.UsuarioMapper;
 import com.limio.api.modulos.auth.actions.usecase.AlterarSenhaUseCase;
 import com.limio.api.modulos.auth.actions.usecase.AutenticarUsuarioUseCase;
 import com.limio.api.modulos.auth.actions.usecase.CadastrarUsuarioUseCase;
+import com.limio.api.modulos.auth.actions.usecase.ConfirmarEmailUseCase;
 import com.limio.api.modulos.auth.actions.usecase.EncerrarContaUseCase;
 import com.limio.api.modulos.auth.actions.usecase.EncerrarSessaoUseCase;
 import com.limio.api.modulos.auth.actions.usecase.RedefinirSenhaUseCase;
+import com.limio.api.modulos.auth.actions.usecase.ReenviarConfirmacaoEmailUseCase;
 import com.limio.api.modulos.auth.actions.usecase.RenovarSessaoUseCase;
 import com.limio.api.modulos.auth.actions.usecase.SolicitarRecuperacaoSenhaUseCase;
 import com.limio.api.modulos.auth.actions.usecase.TrocarEmailUseCase;
@@ -26,12 +28,14 @@ import com.limio.api.modulos.auth.actions.usecase.TrocarPapelAtivoUseCase;
 import com.limio.api.modulos.auth.actions.usecase.TrocarTelefoneUseCase;
 import com.limio.api.modulos.auth.records.AlterarSenhaRequest;
 import com.limio.api.modulos.auth.records.CadastroRequest;
+import com.limio.api.modulos.auth.records.ConfirmarEmailRequest;
 import com.limio.api.modulos.auth.records.ContatoResponse;
 import com.limio.api.modulos.auth.records.EncerrarContaRequest;
 import com.limio.api.modulos.auth.records.LoginRequest;
 import com.limio.api.modulos.auth.records.LoginResponse;
 import com.limio.api.modulos.auth.records.PapelAtivoResponse;
 import com.limio.api.modulos.auth.records.RedefinirSenhaRequest;
+import com.limio.api.modulos.auth.records.ReenviarConfirmacaoEmailRequest;
 import com.limio.api.modulos.auth.records.RefreshTokenRequest;
 import com.limio.api.modulos.auth.records.SolicitarRecuperacaoSenhaRequest;
 import com.limio.api.modulos.auth.records.TrocarEmailRequest;
@@ -59,6 +63,8 @@ public class AuthController {
     private final EncerrarContaUseCase encerrarContaUseCase;
     private final TrocarEmailUseCase trocarEmailUseCase;
     private final TrocarTelefoneUseCase trocarTelefoneUseCase;
+    private final ConfirmarEmailUseCase confirmarEmailUseCase;
+    private final ReenviarConfirmacaoEmailUseCase reenviarConfirmacaoEmailUseCase;
     private final UsuarioMapper usuarioMapper;
     private final SessaoMapper sessaoMapper;
 
@@ -73,6 +79,8 @@ public class AuthController {
             EncerrarContaUseCase encerrarContaUseCase,
             TrocarEmailUseCase trocarEmailUseCase,
             TrocarTelefoneUseCase trocarTelefoneUseCase,
+            ConfirmarEmailUseCase confirmarEmailUseCase,
+            ReenviarConfirmacaoEmailUseCase reenviarConfirmacaoEmailUseCase,
             UsuarioMapper usuarioMapper,
             SessaoMapper sessaoMapper) {
         this.cadastrarUsuarioUseCase = cadastrarUsuarioUseCase;
@@ -86,6 +94,8 @@ public class AuthController {
         this.encerrarContaUseCase = encerrarContaUseCase;
         this.trocarEmailUseCase = trocarEmailUseCase;
         this.trocarTelefoneUseCase = trocarTelefoneUseCase;
+        this.confirmarEmailUseCase = confirmarEmailUseCase;
+        this.reenviarConfirmacaoEmailUseCase = reenviarConfirmacaoEmailUseCase;
         this.usuarioMapper = usuarioMapper;
         this.sessaoMapper = sessaoMapper;
     }
@@ -134,6 +144,20 @@ public class AuthController {
     @PostMapping("/redefinir-senha")
     public ResponseEntity<Void> redefinirSenha(@Valid @RequestBody RedefinirSenhaRequest request) {
         redefinirSenhaUseCase.executar(request.token(), request.novaSenha());
+        return ResponseEntity.ok().build();
+    }
+
+    /** UC05: chamado pela página {@code /confirmar-email} com o token do link. */
+    @PostMapping("/confirmar-email")
+    public ResponseEntity<Void> confirmarEmail(@Valid @RequestBody ConfirmarEmailRequest request) {
+        confirmarEmailUseCase.executar(request.token());
+        return ResponseEntity.ok().build();
+    }
+
+    /** "Reenviar link" do app. Resposta sempre genérica (anti-enumeração), como em {@code /recuperar-senha}. */
+    @PostMapping("/reenviar-confirmacao-email")
+    public ResponseEntity<Void> reenviarConfirmacaoEmail(@Valid @RequestBody ReenviarConfirmacaoEmailRequest request) {
+        reenviarConfirmacaoEmailUseCase.executar(request.email());
         return ResponseEntity.ok().build();
     }
 

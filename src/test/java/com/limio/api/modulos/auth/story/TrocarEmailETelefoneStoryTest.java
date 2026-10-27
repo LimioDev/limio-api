@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
@@ -16,6 +17,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,10 +47,9 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import com.limio.api.TestcontainersConfiguration;
 import com.limio.api.comum.excecao.enums.CodigoErro;
-import com.limio.api.modulos.auth.actions.helper.TokenRecuperacaoHelper;
+import com.limio.api.modulos.auth.actions.helper.TokenVerificacaoHelper;
 import com.limio.api.modulos.auth.actions.service.EmailService;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
-import com.limio.api.modulos.auth.verificacaocontato.VerificacaoContatoService;
 import com.limio.api.modulos.auth.verificacaocontato.enums.FinalidadeVerificacao;
 
 import tools.jackson.databind.ObjectMapper;
@@ -57,7 +58,10 @@ import tools.jackson.databind.ObjectMapper;
  * BDD ponta a ponta (controller -> banco real) das trocas de e-mail e de telefone
  * (TICKET-0048). Caixa-preta via HTTP; SQL só pra limpar e pré-popular. O envio de
  * e-mail é espiado ({@link EmailService} real, que só loga com {@code email.enviar=false}).
- * Não há UC05 nem UC04: nenhum teste aqui confirma e-mail ou telefone.
+ * Nenhum teste aqui confirma e-mail ou telefone (UC05 tem story própria, {@code ConfirmarEmailStoryTest}).
+ *
+ * O cadastro já emite um link de confirmação (TICKET-0047); {@link #cadastrarELogar} o descarta, pra cada
+ * teste partir de uma conta sem link pendente nem e-mail enviado — aqui só interessa a troca.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -67,7 +71,7 @@ class TrocarEmailETelefoneStoryTest {
     private static final String SENHA = "senhaForte123";
     private static final Conta MARIA = new Conta("Maria da Silva", "maria@example.com", "11999998888", "52998224725");
     private static final Conta JOAO = new Conta("João Pereira", "joao@example.com", "21988887777", "11144477735");
-    private static final String PREFIXO_LINK = "limio://confirmar-email?token=";
+    private static final String PREFIXO_LINK = "http://localhost:8080/confirmar-email#token=";
 
     private record Conta(String nome, String email, String telefone, String cpf) {
     }
@@ -80,9 +84,6 @@ class TrocarEmailETelefoneStoryTest {
 
     @Autowired
     private JdbcTemplate jdbc;
-
-    @Autowired
-    private VerificacaoContatoService verificacaoContatoService;
 
     @MockitoSpyBean
     private EmailService emailService;
@@ -109,6 +110,9 @@ class TrocarEmailETelefoneStoryTest {
                         "senha", SENHA, "cpf", conta.cpf(), "dataNascimento", "1990-01-01",
                         "cidadeUf", "São Paulo/SP"))))
                 .andExpect(status().isCreated());
+        jdbc.update("delete from verificacao_contato where usuario_id = (select id from usuario where email = ?)",
+                conta.email());
+        clearInvocations(emailService);
         return logar(conta.email()).andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString().transform(this::tokenDe);
     }
@@ -246,7 +250,7 @@ class TrocarEmailETelefoneStoryTest {
         String tokenDoLink = tokenDoLink(linksEnviadosPara("novo@example.com", 1).get(0));
         String hashNoBanco = jdbc.queryForObject("select token_hash from verificacao_contato where usuario_id = ?",
                 String.class, id);
-        assertThat(hashNoBanco).isEqualTo(TokenRecuperacaoHelper.hash(tokenDoLink)).isNotEqualTo(tokenDoLink);
+        assertThat(hashNoBanco).isEqualTo(TokenVerificacaoHelper.hash(tokenDoLink)).isNotEqualTo(tokenDoLink);
         mockMvc.perform(post("/auth/redefinir-senha")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(Map.of("token", tokenDoLink, "novaSenha", "senhaNova456"))))
@@ -266,12 +270,18 @@ class TrocarEmailETelefoneStoryTest {
         assertThat(tokensPendentes(id)).isEqualTo(1);
         String tokenAntigo = tokenDoLink(linksEnviadosPara("um@example.com", 1).get(0));
         String tokenAtual = tokenDoLink(linksEnviadosPara("dois@example.com", 1).get(0));
-        // formato gravado é consumível por uma UC05 futura (aqui só se confere o dado, sem implementá-la)
-        Instant agora = Instant.now();
-        assertThat(verificacaoContatoService.buscarPorTokenHashEFinalidade(TokenRecuperacaoHelper.hash(tokenAntigo),
-                FinalidadeVerificacao.CONFIRMACAO_EMAIL).orElseThrow().isValido(agora)).isFalse();
-        assertThat(verificacaoContatoService.buscarPorTokenHashEFinalidade(TokenRecuperacaoHelper.hash(tokenAtual),
-                FinalidadeVerificacao.CONFIRMACAO_EMAIL).orElseThrow().isValido(agora)).isTrue();
+        // formato gravado é consumível pela UC05 (ver ConfirmarEmailStoryTest); aqui só se confere o dado
+        assertThat(tokenValido(tokenAntigo)).isFalse();
+        assertThat(tokenValido(tokenAtual)).isTrue();
+    }
+
+    /** {@code VerificacaoContato.isValido}, sem o lock de {@code buscarParaConsumir}: fora de transação aqui. */
+    private boolean tokenValido(String token) {
+        Map<String, Object> linha = jdbc.queryForMap(
+                "select consumido_em, expira_em from verificacao_contato where token_hash = ? and finalidade = ?",
+                TokenVerificacaoHelper.hash(token), FinalidadeVerificacao.CONFIRMACAO_EMAIL.name());
+        return linha.get("consumido_em") == null
+                && ((Timestamp) linha.get("expira_em")).toInstant().isAfter(Instant.now());
     }
 
     @Test
@@ -331,7 +341,7 @@ class TrocarEmailETelefoneStoryTest {
         String token = cadastrarELogar(MARIA);
         AtomicBoolean tokenVisivelNoEnvio = new AtomicBoolean();
         doAnswer(invocacao -> {
-            String hash = TokenRecuperacaoHelper.hash(tokenDoLink(invocacao.getArgument(1)));
+            String hash = TokenVerificacaoHelper.hash(tokenDoLink(invocacao.getArgument(1)));
             // JdbcTemplate usa outra conexão: só enxerga o que já foi comitado
             tokenVisivelNoEnvio.set(jdbc.queryForObject(
                     "select count(*) from verificacao_contato where token_hash = ?", Integer.class, hash) == 1);
@@ -359,7 +369,7 @@ class TrocarEmailETelefoneStoryTest {
         List<String> links = linksEnviadosPara(MARIA.email(), 2);
         assertThat(tokenDoLink(links.get(1))).isNotEqualTo(primeiro);
         assertThat(jdbc.queryForObject("select consumido_em is not null from verificacao_contato where token_hash = ?",
-                Boolean.class, TokenRecuperacaoHelper.hash(primeiro))).isTrue();
+                Boolean.class, TokenVerificacaoHelper.hash(primeiro))).isTrue();
     }
 
     @Test

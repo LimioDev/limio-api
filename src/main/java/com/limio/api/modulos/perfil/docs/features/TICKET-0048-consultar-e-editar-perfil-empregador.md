@@ -10,12 +10,19 @@ Relacionados: UC01 (ETI-30, cadastro), UC04 (confirmar telefone por OTP), UC05 (
 
 ## Status
 
-Em implementação por partes. **Implementado** (aguardando confirmação do tech lead nos pontos marcados): tabela
+> **Decisão do tech lead (2026-10-26)**: aprovadas as decisões técnicas deste doc — rotas (`PATCH /auth/email|telefone`, `/conta/perfil-empregador`),
+> troca de contato como usecase do `auth`, porta `ConsultaDadosUsuario` (formalizada no ADR-0003), criação do perfil
+> sob demanda, `+55` como contrato da API (banco com dígitos nacionais), `statusConta` sem voltar para
+> `PENDENTE_VERIFICACAO` e o endpoint sem exigir papel `EMPREGADOR`. Seguem com o PO só as perguntas de produto
+> (contadores de "Atividade", e-mail de contato = e-mail de login, nome por papel, tamanho do nome, telefone fixo no
+> cadastro). A confirmação de e-mail entrou no TICKET-0047.
+
+Em implementação por partes. **Implementado**: tabela
 `perfil_empregador`, `GET /conta/perfil-empregador`, `PATCH /conta/perfil-empregador/nome-exibicao` (Parte 1) e a
 leitura dos dados do usuário pela porta de `comum/`, com criação do perfil no primeiro acesso (Parte 2), e a troca de
 e-mail e de telefone (Parte 3, módulo `auth` — ver `auth/docs/features/TICKET-0048-trocar-email-e-telefone.md`).
-**Não implementado**: confirmação de e-mail (UC05) e de telefone (UC04/SMS) — o link de confirmação enviado na troca de
-e-mail **não permite concluir a confirmação** —, foto, endereços (dependências abaixo).
+**Não implementado**: confirmação de telefone (UC04/SMS) e endereços (dependências abaixo). A confirmação de e-mail
+(UC05) entrou no TICKET-0047 e a foto no TICKET-0056.
 
 Legenda usada neste documento:
 
@@ -215,7 +222,7 @@ Nenhuma das decisões abaixo foi aprovada; todas dependem de confirmação do te
 
 ### 4. Reuso do mecanismo de verificação — Proposto
 
-Reaproveitar `VerificacaoContato`, `FinalidadeVerificacao.CONFIRMACAO_EMAIL`, `TokenRecuperacaoHelper` e
+Reaproveitar `VerificacaoContato`, `FinalidadeVerificacao.CONFIRMACAO_EMAIL`, `TokenVerificacaoHelper` e
 `EmailService` num componente de emissão de confirmação de e-mail que a UC05 também possa usar. Não há hoje
 nenhum fluxo de confirmação de e-mail a reutilizar: só a infraestrutura.
 
@@ -248,10 +255,10 @@ candidatura é feito por `*ConfirmadoEm` nulo. Pergunta do card, **aberta**.
 
 | Item | Situação hoje | Resolvido por |
 |---|---|---|
-| Confirmação de e-mail | Não existe fluxo. Só `FinalidadeVerificacao.CONFIRMACAO_EMAIL` e a tabela `verificacao_contato` existem; nenhum usecase emite. O link enviado nesta feature fica inerte até haver endpoint que o consuma. | UC05 + card [auth] "Confirmar e-mail" |
+| Confirmação de e-mail | **Resolvido (TICKET-0047).** O cadastro e a troca enviam o link; `POST /auth/confirmar-email` preenche `emailConfirmadoEm`, que o `GET` já devolve pela porta. | — |
 | SMS / OTP | Não existe `SmsService` nem gateway. `CanalVerificacao.SMS` existe, sem uso. `verificacao_contato.token_hash` (`UNIQUE`, 64 caracteres) não comporta código curto sem novo desenho. | UC04 + escolha de gateway |
-| Cadastro sem verificação | O UC01 implementado (ETI-30) declara "Sem OTP" e "Fora de escopo: OTP/SMS e confirmação de e-mail". Por isso `emailConfirmadoEm` e `telefoneConfirmadoEm` são `null` para todas as contas hoje, e "as mesmas regras do cadastro (ETI-30)" não existem no código. | UC04, UC05 |
-| Foto | Tabela `midia` não existe (prevista no módulo `anuncio`). | módulo `anuncio` |
+| Cadastro sem verificação | E-mail: resolvido no TICKET-0047 (o cadastro envia o link). Telefone: segue sem OTP, `telefoneConfirmadoEm` é `null` para todas as contas. | UC04 |
+| Foto | **Resolvido (TICKET-0056).** Tabela `midia` no módulo `perfil`, `PUT/GET /conta/foto-perfil`. | — |
 | Avaliações | Não existe módulo de avaliação. | UC45–UC47 |
 | Endereços salvos | `endereco_salvo` não existe (prevista no módulo `perfil`). | card próprio de endereços |
 | Funcionalidades de anúncio | Bloqueio de publicar/candidatar, snapshot de anúncio Combinado, "anúncios futuros usam os dados novos" e contadores de "Atividade" (serviços publicados e concluídos). | módulo `anuncio` |

@@ -54,12 +54,15 @@ class EncerrarContaUseCaseTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private com.limio.api.modulos.auth.verificacaocontato.VerificacaoContatoService verificacaoContatoService;
+
     private EncerrarContaUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
         useCase = new EncerrarContaUseCase(usuarioService, cpfBloqueadoService, sessaoService, logAuditoriaService,
-                eventPublisher);
+                eventPublisher, verificacaoContatoService);
     }
 
     private Usuario usuarioAtivo() {
@@ -89,6 +92,7 @@ class EncerrarContaUseCaseTest {
         assertThat(usuario.getEmail()).contains(USUARIO_ID.toString());
         verify(usuarioService).salvar(usuario);
         verify(sessaoService).revogarTodas(eq(USUARIO_ID), isNull(), any(Instant.class));
+        verify(verificacaoContatoService).apagarDoUsuario(USUARIO_ID);
         verify(logAuditoriaService).registrar(eq("Usuario"), eq(USUARIO_ID), eq(TipoAcaoAuditoria.CONTA_ENCERRADA),
                 any(), eq(IP));
 
@@ -116,7 +120,8 @@ class EncerrarContaUseCaseTest {
 
         useCase.executar(USUARIO_ID, IP);
 
-        verifyNoInteractions(cpfBloqueadoService, sessaoService, logAuditoriaService, eventPublisher);
+        verifyNoInteractions(cpfBloqueadoService, sessaoService, logAuditoriaService, eventPublisher,
+                verificacaoContatoService);
         verify(usuarioService, never()).salvar(any());
     }
 }

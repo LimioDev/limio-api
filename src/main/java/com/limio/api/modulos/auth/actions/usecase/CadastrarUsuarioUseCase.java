@@ -6,6 +6,7 @@ import java.time.Period;
 import java.time.ZoneOffset;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.modulos.auth.actions.helper.CpfValidator;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
@@ -15,11 +16,15 @@ import com.limio.api.modulos.auth.excecao.CpfInvalidoException;
 import com.limio.api.modulos.auth.excecao.IdadeMinimaNaoAtingidaException;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
+import com.limio.api.modulos.auth.verificacaocontato.EmissorConfirmacaoEmail;
 
 /**
  * Regra de negócio do UC01 (cadastrar conta universal). Não conhece HTTP nem
  * record de entrada/saída, nem repository diretamente — orquestra decisão de
  * negócio e delegada persistência aos services do módulo.
+ *
+ * Conta criada já recebe o link de confirmação de e-mail (UC05, TICKET-0047);
+ * o e-mail só sai depois do commit. Login não espera a confirmação.
  */
 @Service
 public class CadastrarUsuarioUseCase {
@@ -29,15 +34,19 @@ public class CadastrarUsuarioUseCase {
     private final UsuarioService usuarioService;
     private final CpfBloqueadoService cpfBloqueadoService;
     private final SenhaHasher senhaHasher;
+    private final EmissorConfirmacaoEmail emissorConfirmacaoEmail;
 
     public CadastrarUsuarioUseCase(UsuarioService usuarioService,
             CpfBloqueadoService cpfBloqueadoService,
-            SenhaHasher senhaHasher) {
+            SenhaHasher senhaHasher,
+            EmissorConfirmacaoEmail emissorConfirmacaoEmail) {
         this.usuarioService = usuarioService;
         this.cpfBloqueadoService = cpfBloqueadoService;
         this.senhaHasher = senhaHasher;
+        this.emissorConfirmacaoEmail = emissorConfirmacaoEmail;
     }
 
+    @Transactional
     public Usuario executar(Usuario usuarioCandidato, String senhaEmTexto) {
         validarMaioridade(usuarioCandidato);
         validarCpf(usuarioCandidato);
@@ -45,7 +54,9 @@ public class CadastrarUsuarioUseCase {
         validarCpfNaoBloqueado(usuarioCandidato);
 
         usuarioCandidato.setSenhaHash(senhaHasher.hash(senhaEmTexto));
-        return usuarioService.salvar(usuarioCandidato);
+        Usuario criado = usuarioService.salvarNovo(usuarioCandidato);
+        emissorConfirmacaoEmail.emitir(criado, Instant.now());
+        return criado;
     }
 
     private void validarMaioridade(Usuario usuario) {

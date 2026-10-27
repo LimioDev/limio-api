@@ -28,4 +28,7 @@ public interface PreferenciaNotificacaoRepository extends BaseRepository<Prefere
     void upsert(@Param("usuarioId") UUID usuarioId, @Param("push") boolean push, @Param("email") boolean email,
             @Param("sms") boolean sms, @Param("whatsapp") boolean whatsapp);
 
+    @Modifying
+    @Query("delete from PreferenciaNotificacao p where p.usuarioId = :usuarioId")
+    int apagarDoUsuario(@Param("usuarioId") UUID usuarioId);
 }

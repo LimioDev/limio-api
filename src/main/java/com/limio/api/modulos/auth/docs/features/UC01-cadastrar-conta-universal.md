@@ -31,6 +31,7 @@ Visitante cria uma conta única (CPF + e-mail) via `POST /auth/cadastro`. Crité
 
 ## Fora de escopo (não implementado aqui)
 
-- Verificação de telefone por OTP/SMS e confirmação de e-mail (steps 5–7 do fluxo principal da planilha UC01).
-- Login/autenticação (`POST /auth/login`) e emissão de JWT — `comum/seguranca/` ainda não existe.
-- Caso de uso de exclusão de conta, que é quem populará `cpf_bloqueado` na prática.
+- Verificação de telefone por OTP/SMS (UC04, ainda pendente). A confirmação de e-mail entrou no TICKET-0047: o
+  cadastro envia o link e `POST /auth/confirmar-email` o consome.
+- Login/autenticação (`POST /auth/login`) e emissão de JWT — entrou no TICKET-0032.
+- Caso de uso de exclusão de conta, que é quem populará `cpf_bloqueado` na prática — entrou no TICKET-0034.

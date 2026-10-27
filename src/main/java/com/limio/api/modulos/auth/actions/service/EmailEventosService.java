@@ -8,9 +8,11 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.limio.api.modulos.auth.eventos.ConfirmacaoEmailSolicitadaEvent;
 import com.limio.api.modulos.auth.eventos.EmailContaAlteradoEvent;
+import com.limio.api.modulos.auth.eventos.RecuperacaoSenhaSolicitadaEvent;
+import com.limio.api.modulos.auth.eventos.SenhaAlteradaEvent;
 
 /**
- * Envia os e-mails da troca de contato só depois do commit. Sem
+ * Envia os e-mails transacionais do {@code auth} só depois do commit. Sem
  * {@code fallbackExecution}: fora de uma transação o evento é descartado, nunca
  * envia antes de persistir (os usecases que publicam são {@code @Transactional}).
  * Exceção de um envio é logada e não propaga: em AFTER_COMMIT ela subiria para
@@ -33,6 +35,24 @@ public class EmailEventosService {
             emailService.enviarConfirmacaoEmail(evento.destinatario(), evento.link());
         } catch (RuntimeException e) {
             log.error("falha ao enviar confirmação de e-mail pós-commit", e);
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void aoSolicitarRecuperacao(RecuperacaoSenhaSolicitadaEvent evento) {
+        try {
+            emailService.enviarRecuperacaoSenha(evento.destinatario(), evento.link());
+        } catch (RuntimeException e) {
+            log.error("falha ao enviar recuperação de senha pós-commit", e);
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void aoAlterarSenha(SenhaAlteradaEvent evento) {
+        try {
+            emailService.enviarSenhaAlterada(evento.destinatario());
+        } catch (RuntimeException e) {
+            log.error("falha ao avisar a alteração de senha pós-commit", e);
         }
     }
 

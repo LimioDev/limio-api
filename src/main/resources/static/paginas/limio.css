@@ -1,0 +1,140 @@
+/*
+ * Páginas web dos links de e-mail (TICKET-0047). Cores do guia do app (limio-app/tailwind.config.js).
+ * Sem CSS inline nem fonte externa: a Content-Security-Policy da API só aceita arquivos do próprio domínio.
+ */
+:root {
+  --marca-50: #e9eefb;
+  --marca-500: #2159cc;
+  --marca-600: #1d4098;
+  --marca-800: #0f1f4c;
+  --tinta: #0b1226;
+  --tinta-suave: #4a5675;
+  --tinta-fraco: #7b87a4;
+  --borda: #e3e8f3;
+  --borda-campo: #d3dbec;
+  --fundo: #f4f6fb;
+  --superficie: #ffffff;
+  --perigo: #8c2a20;
+  --perigo-fundo: #fbe6e4;
+  --sucesso: #1d5a3c;
+  --sucesso-fundo: #e0f0e7;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--fundo);
+  color: var(--tinta);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 15px;
+  line-height: 21px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px 16px;
+}
+
+main {
+  width: 100%;
+  max-width: 420px;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 16px;
+  padding: 28px 24px;
+}
+
+.marca {
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: -0.2px;
+  color: var(--marca-500);
+  margin: 0 0 24px;
+}
+
+h1 {
+  font-size: 26px;
+  line-height: 32px;
+  letter-spacing: -0.4px;
+  margin: 0 0 8px;
+}
+
+p { margin: 0 0 16px; color: var(--tinta-suave); }
+
+label {
+  display: block;
+  font-size: 12.5px;
+  line-height: 16px;
+  font-weight: 600;
+  margin: 16px 0 6px;
+}
+
+input[type="password"] {
+  width: 100%;
+  font: inherit;
+  padding: 12px 14px;
+  border: 1px solid var(--borda-campo);
+  border-radius: 10px;
+  background: var(--superficie);
+  color: var(--tinta);
+}
+
+input[type="password"]:focus {
+  outline: 2px solid var(--marca-500);
+  outline-offset: 1px;
+  border-color: var(--marca-500);
+}
+
+input[aria-invalid="true"] { border-color: var(--perigo); }
+
+.requisitos {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--tinta-fraco);
+}
+
+.requisitos li::before { content: "○ "; }
+.requisitos li.ok { color: var(--sucesso); }
+.requisitos li.ok::before { content: "✓ "; }
+
+.erro-campo {
+  font-size: 12.5px;
+  color: var(--perigo);
+  margin: 6px 0 0;
+}
+
+.botao {
+  display: block;
+  width: 100%;
+  margin-top: 24px;
+  padding: 13px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--marca-500);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.botao:hover { background: var(--marca-600); }
+.botao:disabled { opacity: 0.6; cursor: progress; }
+
+.aviso {
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 16px 0 0;
+}
+
+.aviso.perigo { background: var(--perigo-fundo); color: var(--perigo); }
+.aviso.sucesso { background: var(--sucesso-fundo); color: var(--sucesso); }
+
+.carregando { color: var(--tinta-fraco); }
+
+[hidden] { display: none !important; }

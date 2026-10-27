@@ -18,8 +18,24 @@ public class VerificacaoContatoService extends BaseService<VerificacaoContato, U
         super(repository);
     }
 
-    public Optional<VerificacaoContato> buscarPorTokenHashEFinalidade(String tokenHash, FinalidadeVerificacao finalidade) {
-        return repository.findByTokenHashAndFinalidade(tokenHash, finalidade);
+    /** Dono do token, sem carregar o token. Primeiro passo de quem consome: ver {@link #buscarParaConsumir}. */
+    public Optional<UUID> buscarUsuarioIdPorTokenHash(String tokenHash, FinalidadeVerificacao finalidade) {
+        return repository.findUsuarioIdByTokenHashAndFinalidade(tokenHash, finalidade);
+    }
+
+    /**
+     * Token com {@code SELECT ... FOR UPDATE}: dois consumos simultâneos do mesmo link se enfileiram e o
+     * segundo já vê {@code consumidoEm}. Quem chama trava a conta antes
+     * ({@code UsuarioService.buscarParaAtualizarOuFalhar}) — mesma ordem (conta, depois token) da troca de
+     * e-mail, senão as duas podem se travar mutuamente.
+     */
+    public Optional<VerificacaoContato> buscarParaConsumir(String tokenHash, FinalidadeVerificacao finalidade) {
+        return repository.findParaConsumir(tokenHash, finalidade);
+    }
+
+    /** Encerramento de conta (UC10): nenhum token da conta tem uso depois, e o {@code destino_hash} identifica o e-mail. */
+    public void apagarDoUsuario(UUID usuarioId) {
+        repository.apagarDoUsuario(usuarioId);
     }
 
     /** Quantos tokens desta finalidade foram emitidos pro usuário desde {@code desde} — base do rate limit. */

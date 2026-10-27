@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import com.limio.api.comum.base.BaseService;
 import com.limio.api.comum.excecao.EntidadeNaoEncontradaException;
+import com.limio.api.modulos.auth.excecao.CadastroIndisponivelException;
 import com.limio.api.modulos.auth.excecao.ContatoNaoPermitidoException;
 
 /** Camada técnica de persistência de {@link Usuario} — CRUD genérico (herdado) + finders da entity. */
@@ -16,6 +17,7 @@ import com.limio.api.modulos.auth.excecao.ContatoNaoPermitidoException;
 public class UsuarioService extends BaseService<Usuario, UUID, UsuarioRepository> {
 
     private static final String CONSTRAINT_EMAIL_UNICO = "uk_usuario_email";
+    private static final String CONSTRAINT_CPF_UNICO = "uk_usuario_cpf";
 
     public UsuarioService(UsuarioRepository repository) {
         super(repository);
@@ -33,17 +35,33 @@ public class UsuarioService extends BaseService<Usuario, UUID, UsuarioRepository
         try {
             return repository.saveAndFlush(usuario);
         } catch (DataIntegrityViolationException e) {
-            if (violaUnicidadeDeEmail(e)) {
+            if (violaUnicidade(e, CONSTRAINT_EMAIL_UNICO)) {
                 throw new ContatoNaoPermitidoException();
             }
             throw e;
         }
     }
 
-    private static boolean violaUnicidadeDeEmail(Throwable erro) {
+    /**
+     * Grava uma conta nova. A pré-checagem do cadastro não basta sob concorrência (dois cadastros
+     * simultâneos com o mesmo e-mail ou CPF): a violação de {@code uk_usuario_email}/{@code uk_usuario_cpf}
+     * vira a mesma {@link CadastroIndisponivelException} da pré-checagem, em vez de 500.
+     */
+    public Usuario salvarNovo(Usuario usuario) {
+        try {
+            return repository.saveAndFlush(usuario);
+        } catch (DataIntegrityViolationException e) {
+            if (violaUnicidade(e, CONSTRAINT_EMAIL_UNICO) || violaUnicidade(e, CONSTRAINT_CPF_UNICO)) {
+                throw new CadastroIndisponivelException();
+            }
+            throw e;
+        }
+    }
+
+    private static boolean violaUnicidade(Throwable erro, String constraint) {
         for (Throwable causa = erro; causa != null; causa = causa.getCause()) {
             if (causa instanceof ConstraintViolationException violacao
-                    && CONSTRAINT_EMAIL_UNICO.equalsIgnoreCase(violacao.getConstraintName())) {
+                    && constraint.equalsIgnoreCase(violacao.getConstraintName())) {
                 return true;
             }
         }
@@ -53,6 +71,10 @@ public class UsuarioService extends BaseService<Usuario, UUID, UsuarioRepository
     /** Vazio é fluxo normal no login (e-mail inexistente vira credencial inválida), por isso não lança. */
     public Optional<Usuario> buscarPorEmail(String email) {
         return repository.findByEmailIgnoreCase(email);
+    }
+
+    public Optional<UUID> buscarIdPorEmail(String email) {
+        return repository.findIdByEmailIgnoreCase(email);
     }
 
     public boolean existePorEmail(String email) {

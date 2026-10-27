@@ -77,6 +77,15 @@ src/test/java/com/limio/api/modulos/<entidade>/{spec,story}/
 - Valor fechado de domínio = `enum` com `@Enumerated(EnumType.STRING)`; `switch`
   sem `default` pra forçar tratamento de valor novo em tempo de compilação.
 
+### Outras decisões registradas (neste repo, `docs/adr/`)
+
+- **ADR-0002** — links de e-mail sempre `https`, abrindo páginas web estáticas servidas pela API
+  (`src/main/resources/static/paginas/`), com o token no fragmento (`#token=`). Nada de `limio://` em e-mail.
+  Ver `docs/adr/0002-links-de-email-https-com-paginas-web.md`.
+- **ADR-0003** — entre módulos: *eventos para reação* (`comum/eventos/`; internos em `modulos/<m>/eventos/`),
+  *portas para consulta* (`comum/portas/`, só leitura). Efeito externo (e-mail, storage) só em `AFTER_COMMIT`.
+  Ver `docs/adr/0003-comunicacao-entre-modulos-eventos-e-portas.md`.
+
 Detalhe completo (fluxo ponta a ponta, exemplos de código, glossário de pastas,
 checklist passo a passo pra criar módulo novo): ver
 `.claude/skills/limio-architecture/SKILL.md` neste repo.
