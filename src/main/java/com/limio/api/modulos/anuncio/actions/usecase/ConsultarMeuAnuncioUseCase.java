@@ -38,8 +38,8 @@ import com.limio.api.modulos.anuncio.excecao.AnuncioNaoEncontradoException;
 @Service
 public class ConsultarMeuAnuncioUseCase {
 
-    /** Quantos candidatos a tela mostra com iniciais/foto; os demais entram só no total. */
-    static final int PRIMEIROS_CANDIDATOS = 3;
+    /** Quantos candidatos a tela mostra com nome abreviado e foto; os demais entram só no total. */
+    static final int PRIMEIROS_CANDIDATOS = 4;
 
     private static final Logger log = LoggerFactory.getLogger(ConsultarMeuAnuncioUseCase.class);
 
@@ -90,7 +90,7 @@ public class ConsultarMeuAnuncioUseCase {
         UUID prestadorId = aplicacao.getPrestadorId();
         return consultaDadosUsuario.buscarPorId(prestadorId)
                 .map(DadosUsuario::nomeCompleto)
-                .map(nome -> new CandidatoResumido(NomeHelper.iniciais(nome), fotoDePerfil(prestadorId)));
+                .map(nome -> new CandidatoResumido(NomeHelper.abreviar(nome), fotoDePerfil(prestadorId)));
     }
 
     private LinkTemporario fotoDePerfil(UUID usuarioId) {

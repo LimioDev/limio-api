@@ -382,7 +382,7 @@ class CriarEPublicarAnuncioStoryTest {
                 .andExpect(jsonPath("$.numeroPessoas", is(2)))
                 .andExpect(jsonPath("$.fotos", hasSize(1)))
                 .andExpect(jsonPath("$.candidatos", is(1)))
-                .andExpect(jsonPath("$.primeirosCandidatos[0].iniciais", is("JP")))
+                .andExpect(jsonPath("$.primeirosCandidatos[0].nome", is("João P.")))
                 .andExpect(jsonPath("$.latitude").doesNotExist())
                 .andExpect(jsonPath("$.latitudeSnapshot").doesNotExist());
     }

@@ -118,25 +118,27 @@ class ConsultarMeuAnuncioUseCaseTest {
     }
 
     @Test
-    void dadoQuatroCandidatos_quandoConsulta_entaoContaTodosEResumeOsTresPrimeiros() {
+    void dadoCincoCandidatos_quandoConsulta_entaoContaTodosEResumeOsQuatroPrimeiros() {
         semFotosNemCandidatos();
         UUID ana = UUID.randomUUID();
         UUID bruno = UUID.randomUUID();
         UUID carla = UUID.randomUUID();
-        when(aplicacaoService.buscarEnviadasDoAnuncio(ANUNCIO_ID)).thenReturn(
-                List.of(enviada(ana), enviada(bruno), enviada(carla), enviada(UUID.randomUUID())));
+        UUID diego = UUID.randomUUID();
+        when(aplicacaoService.buscarEnviadasDoAnuncio(ANUNCIO_ID)).thenReturn(List.of(enviada(ana), enviada(bruno),
+                enviada(carla), enviada(diego), enviada(UUID.randomUUID())));
         prestador(ana, "Ana Lima");
-        prestador(bruno, "Bruno Costa");
+        prestador(bruno, "Bruno da Costa");
         prestador(carla, "Carla");
+        prestador(diego, "Diego Souza");
         when(midiaService.buscarFotoPerfilAtiva(ana)).thenReturn(
                 Optional.of(Midia.fotoPerfil(ana, "fotos-perfil/ana.jpg", "image/jpeg", 10, 10, 100)));
         when(armazenamentoService.gerarLink("fotos-perfil/ana.jpg")).thenReturn(LINK);
 
         MeuAnuncio meu = useCase.executar(DONO_ID, ANUNCIO_ID);
 
-        assertThat(meu.candidatos()).isEqualTo(4);
-        assertThat(meu.primeirosCandidatos()).extracting(candidato -> candidato.iniciais())
-                .containsExactly("AL", "BC", "C");
+        assertThat(meu.candidatos()).isEqualTo(5);
+        assertThat(meu.primeirosCandidatos()).extracting(candidato -> candidato.nome())
+                .containsExactly("Ana L.", "Bruno C.", "Carla", "Diego S.");
         assertThat(meu.primeirosCandidatos().get(0).foto()).isEqualTo(LINK);
         assertThat(meu.primeirosCandidatos().get(1).foto()).isNull();
     }

@@ -18,8 +18,7 @@ prestadores próximos o vejam no mural e se candidatem.
 
 ## Contrato da API
 
-O card deixou as rotas "a definir". O contrato segue o que o front-end par (limio-app#17, ETI-60) propôs,
-menos `primeirosCandidatos`, que segue o card (iniciais; ver pendências).
+O card deixou as rotas "a definir". O contrato segue o que o front-end par (limio-app#17, ETI-60) propôs.
 
 ### `POST /anuncios` — criar e publicar
 
@@ -58,7 +57,7 @@ Resposta `201` com `Location: /anuncios/{id}` e `{ "id": "…", "status": "PUBLI
   "tamanhoLocal": "72 m²", "numeroPessoas": 2, "observacoes": null,
   "fotos": [ { "id": "…", "url": "…", "expiraEm": "…" } ],
   "candidatos": 4,
-  "primeirosCandidatos": [ { "iniciais": "AL", "fotoUrl": "…", "fotoExpiraEm": "…" } ]
+  "primeirosCandidatos": [ { "nome": "Ana L.", "fotoUrl": "…", "fotoExpiraEm": "…" } ]
 }
 ```
 
@@ -102,7 +101,7 @@ vai precisar de rota própria quando o card dele vier.
 | Só o dono anexa e consulta; outra pessoa → 404 | `Anuncio.pertenceA` nos dois usecases |
 | Migração nova com `categoria_id` obrigatória, sem alterar a V13 | `V20` (ver Banco) |
 | `midia.anuncio_id` + `FOTO_ANUNCIO`; `Midia` sobe pra `comum/` | `V20` + `comum/midia` |
-| Consultar: dados, fotos, candidatos `ENVIADA` com iniciais/fotos dos primeiros | `ConsultarMeuAnuncioUseCase` (3 primeiros, mais antigos primeiro) |
+| Consultar: dados, fotos, candidatos `ENVIADA` com iniciais/fotos dos primeiros | `ConsultarMeuAnuncioUseCase`: os 4 mais antigos, com nome abreviado (`NomeHelper.abreviar`, decisão do grupo em 27/10, no lugar das iniciais do card) e foto |
 
 ## Decisões técnicas
 
@@ -134,22 +133,19 @@ banco do Railway. Linha antiga tira a UF do fim do `endereco_completo_snapshot`.
 
 ## Pendências
 
-- **Grupo: candidatos na tela 16.** O card fala em "iniciais/fotos dos primeiros"; o front (limio-app#17) mostra até 4
-  com nome abreviado ("Rafael S."). A API devolve 3 com `iniciais` até o grupo decidir.
 
 - **PO: fotos** — formato, tamanho e quantidade ainda não decididos. Hoje: JPG/PNG, 5MB cada, até 5 por anúncio
   (`anuncio.foto.*`, configurável).
 - **Lacunas do card** (não decididas aqui, pra discussão): limite de `observacoes` (usado 600, como a descrição);
-  quantos são "os primeiros" candidatos (usado 3); se o painel (TICKET-0052) passa a mostrar a primeira foto do
+  se o painel (TICKET-0052) passa a mostrar a primeira foto do
   anúncio (`fotoUrl` continua `null`, fora do escopo deste card).
 - **ETI-65**: escutar `AnuncioPublicadoEvent` em `AFTER_COMMIT`.
 
 ## Testes
 
 - `spec/PublicarAnuncioUseCaseTest` (9), `spec/AnexarFotosAnuncioUseCaseTest` (10),
-  `spec/ConsultarMeuAnuncioUseCaseTest` (5), `spec/NomeHelperTest` (+3, iniciais),
-  `perfil/spec/ConsultaEnderecoServiceTest` (4).
-- `story/CriarEPublicarAnuncioStoryTest` (17): criar com endereço salvo e com avulso, data no passado, sem contatos
+  `spec/ConsultarMeuAnuncioUseCaseTest` (5), `perfil/spec/ConsultaEnderecoServiceTest` (4).
+- `story/CriarEPublicarAnuncioStoryTest` (23): criar com endereço salvo e com avulso, data no passado, sem contatos
   confirmados, papel Prestador, os dois endereços / nenhum, descrição > 600, endereço salvo de outro, categoria
   inativa, fotos válidas (sem EXIF), foto inválida, foto com candidatura `ESCOLHIDA`, fotos em anúncio de outro,
   limite de 5, consulta do dono e de outra pessoa. Título vazio, nulo, só com espaços, com menos de 5 ou

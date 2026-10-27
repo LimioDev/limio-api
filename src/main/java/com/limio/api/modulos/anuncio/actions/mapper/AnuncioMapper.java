@@ -82,7 +82,7 @@ public class AnuncioMapper {
 
     private static CandidatoResumidoResponse toResponse(CandidatoResumido candidato) {
         LinkTemporario foto = candidato.foto();
-        return new CandidatoResumidoResponse(candidato.iniciais(), foto == null ? null : foto.url(),
+        return new CandidatoResumidoResponse(candidato.nome(), foto == null ? null : foto.url(),
                 foto == null ? null : foto.expiraEm());
     }
 }
