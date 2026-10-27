@@ -44,6 +44,15 @@ class EnderecoSalvoRequestTest {
     }
 
     @Test
+    void devePreservarPadraoNuloParaOEditarManterOValorAtual() {
+        var request = new EnderecoSalvoRequest("Casa", "01310100", "Avenida Paulista", "1000", null,
+                "Bela Vista", "São Paulo", Uf.SP, null);
+
+        assertThat(request.padrao()).isNull();
+        assertThat(validator.validate(request)).isEmpty();
+    }
+
+    @Test
     void deveNormalizarTextosCepEComplementoEmBranco() {
         var request = new EnderecoSalvoRequest("  Casa ", "01310-100", " Avenida Paulista ", " 1000 ", "   ",
                 " Bela Vista ", " São Paulo ", Uf.SP, false);

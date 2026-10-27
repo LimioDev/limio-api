@@ -32,7 +32,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import com.limio.api.TestcontainersConfiguration;
 import com.limio.api.modulos.perfil.actions.service.Geocodificador;
-import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
+import com.limio.api.modulos.perfil.geo.Coordenadas;
 
 import tools.jackson.databind.ObjectMapper;
 

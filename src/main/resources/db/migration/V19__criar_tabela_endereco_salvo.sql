@@ -2,17 +2,21 @@
 -- módulo (a proibição do ADR-0001 §1.6 é entre módulos). Soft delete por removido_em: a linha
 -- permanece (anúncio Combinado guarda snapshot, mas o histórico fica no banco). Só um padrão
 -- ativo por Empregador, garantido pelo índice único parcial — a aplicação serializa as escritas
--- com lock no perfil, mas o banco é a verdade final. Latitude/longitude vêm do cliente (NOT NULL).
+-- com lock no perfil, mas o banco é a verdade final. Latitude/longitude (NOT NULL) são obtidas no
+-- servidor pelo Geocodificador; o cliente não as envia.
+-- Tamanhos: o anúncio guarda o endereço numa linha só (anuncio.endereco_completo_snapshot, VARCHAR(255),
+-- V13). rua+numero+complemento+bairro+cidade+uf somam no máximo 232 caracteres, o que deixa folga pros
+-- separadores do texto montado — o snapshot nunca estoura nem trunca.
 CREATE TABLE endereco_salvo (
     id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     perfil_empregador_id UUID             NOT NULL,
     apelido              VARCHAR(60)      NOT NULL,
     cep                  VARCHAR(8)       NOT NULL,
-    rua                  VARCHAR(255)     NOT NULL,
-    numero               VARCHAR(20)      NOT NULL,
-    complemento          VARCHAR(100),
-    bairro_regiao        VARCHAR(100)     NOT NULL,
-    cidade               VARCHAR(100)     NOT NULL,
+    rua                  VARCHAR(80)      NOT NULL,
+    numero               VARCHAR(10)      NOT NULL,
+    complemento          VARCHAR(40),
+    bairro_regiao        VARCHAR(50)      NOT NULL,
+    cidade               VARCHAR(50)      NOT NULL,
     uf                   VARCHAR(2)       NOT NULL,
     latitude             DOUBLE PRECISION NOT NULL,
     longitude            DOUBLE PRECISION NOT NULL,

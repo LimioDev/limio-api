@@ -25,6 +25,6 @@ public class ListarEnderecosSalvosUseCase {
     @Transactional
     public List<EnderecoSalvo> executar(UUID usuarioId) {
         UUID perfilId = perfilEmpregadorService.garantirPerfil(usuarioId).perfil().getId();
-        return enderecoSalvoService.listarEnderecoAtivos(perfilId);
+        return enderecoSalvoService.listarEnderecosAtivos(perfilId);
     }
 }

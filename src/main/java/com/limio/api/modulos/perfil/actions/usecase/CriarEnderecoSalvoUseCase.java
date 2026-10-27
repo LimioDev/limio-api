@@ -11,7 +11,7 @@ import com.limio.api.modulos.perfil.empregador.PerfilEmpregadorService;
 import com.limio.api.modulos.perfil.endereco.EnderecoSalvo;
 import com.limio.api.modulos.perfil.endereco.EnderecoSalvoService;
 import com.limio.api.modulos.perfil.excecao.EnderecoNaoLocalizadoException;
-import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
+import com.limio.api.modulos.perfil.geo.Coordenadas;
 
 /**
  * As coordenadas são obtidas no geocodificador antes de abrir a transação: a chamada externa (até o timeout
@@ -44,7 +44,7 @@ public class CriarEnderecoSalvoUseCase {
             if (novo.isPadrao()) {
                 enderecoSalvoService.desmarcarEnderecoPadrao(perfil.getId());
             }
-            novo.setPerfilEmpregadorId(perfil.getId());
+            novo.pertencerA(perfil.getId());
             novo.definirCoordenadas(coordenadas);
             return enderecoSalvoService.salvar(novo);
         });

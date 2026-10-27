@@ -46,7 +46,7 @@ import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.perfil.actions.service.Geocodificador;
 import com.limio.api.modulos.perfil.categoria.CategoriaRepository;
 import com.limio.api.modulos.perfil.enums.Uf;
-import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
+import com.limio.api.modulos.perfil.geo.Coordenadas;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestador;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestadorRepository;
 import com.limio.api.modulos.perfil.perfilprestador.janelaatendimento.enums.DiaSemana;

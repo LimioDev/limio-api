@@ -43,7 +43,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import com.limio.api.TestcontainersConfiguration;
 import com.limio.api.modulos.perfil.actions.service.Geocodificador;
 import com.limio.api.modulos.perfil.excecao.GeocodificacaoIndisponivelException;
-import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
+import com.limio.api.modulos.perfil.geo.Coordenadas;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -396,6 +396,21 @@ class CriarListarEEditarEnderecoSalvoStoryTest {
     }
 
     @Test
+    void dadoEnderecoPadrao_quandoEditaSemEnviarIsPadrao_entaoContinuaPadrao() throws Exception {
+        String token = cadastrarELogar(MARIA);
+        String casa = idCriado(criar(token, corpo("Casa", true)));
+        Map<String, Object> corpo = corpo("Casa nova", false);
+        corpo.remove("isPadrao");
+
+        editar(token, casa, corpo)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.apelido", is("Casa nova")))
+                .andExpect(jsonPath("$.isPadrao", is(true)));
+
+        assertThat(padroesAtivos()).containsExactly(UUID.fromString(casa));
+    }
+
+    @Test
     void dadoEnderecoPadrao_quandoEditaSemPadrao_entaoEmpregadorFicaSemPadrao() throws Exception {
         String token = cadastrarELogar(MARIA);
         String casa = idCriado(criar(token, corpo("Casa", true)));
@@ -422,6 +437,17 @@ class CriarListarEEditarEnderecoSalvoStoryTest {
                 .isEqualTo("Casa da Maria");
         assertThat(padroesAtivos()).hasSize(2);
         assertThat(isPadraoNoBanco(deMaria)).isTrue();
+    }
+
+    @Test
+    void dadoUsuarioSemPerfil_quandoEdita_entaoDevolve404SemCriarPerfil() throws Exception {
+        String token = cadastrarELogar(MARIA);
+
+        editar(token, UUID.randomUUID().toString(), corpo("X", false))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.codigo", is("PERFIL_EMPREGADOR_NAO_ENCONTRADO")));
+
+        assertThat(jdbc.queryForObject("select count(*) from perfil_empregador", Integer.class)).isZero();
     }
 
     @Test

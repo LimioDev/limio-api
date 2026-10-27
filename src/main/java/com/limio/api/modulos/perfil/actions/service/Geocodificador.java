@@ -4,7 +4,7 @@ import java.util.Optional;
 
 import com.limio.api.modulos.perfil.endereco.EnderecoParaGeocodificar;
 import com.limio.api.modulos.perfil.enums.Uf;
-import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
+import com.limio.api.modulos.perfil.geo.Coordenadas;
 
 /**
  * Porta de geocodificação do módulo {@code perfil}: os use cases dependem desta interface, nunca do provedor

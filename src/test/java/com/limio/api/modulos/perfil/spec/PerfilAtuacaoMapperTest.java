@@ -15,7 +15,7 @@ import com.limio.api.modulos.perfil.actions.mapper.CategoriaMapper;
 import com.limio.api.modulos.perfil.actions.mapper.PerfilAtuacaoMapper;
 import com.limio.api.modulos.perfil.categoria.Categoria;
 import com.limio.api.modulos.perfil.enums.Uf;
-import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
+import com.limio.api.modulos.perfil.geo.Coordenadas;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestador;
 import com.limio.api.modulos.perfil.perfilprestador.janelaatendimento.JanelaAtendimento;
 import com.limio.api.modulos.perfil.perfilprestador.janelaatendimento.enums.DiaSemana;

@@ -1,5 +1,6 @@
 package com.limio.api.modulos.perfil.actions.usecase;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -23,15 +24,17 @@ public class MarcarEnderecoSalvoPadraoUseCase {
     }
 
     @Transactional
-    public EnderecoSalvo executar(UUID usuarioId, UUID enderecoId) {
+    public List<EnderecoSalvo> executar(UUID usuarioId, UUID enderecoId) {
         PerfilEmpregador perfil = perfilEmpregadorService.garantirPerfilParaAtualizar(usuarioId);
         EnderecoSalvo endereco = enderecoSalvoService.buscarEnderecoAtivoOuFalhar(enderecoId, perfil.getId());
         if (endereco.isPadrao()) {
-            return endereco;
+            return enderecoSalvoService.listarEnderecosAtivos(perfil.getId());
         }
         enderecoSalvoService.desmarcarEnderecoPadrao(perfil.getId());
+        // Busca de novo de propósito: o UPDATE em lote (clearAutomatically) desanexou o endereço lido acima.
         EnderecoSalvo atualizado = enderecoSalvoService.buscarEnderecoAtivoOuFalhar(enderecoId, perfil.getId());
-        atualizado.setPadrao(true);
-        return enderecoSalvoService.salvar(atualizado);
+        atualizado.marcarComoPadrao();
+        enderecoSalvoService.salvar(atualizado);
+        return enderecoSalvoService.listarEnderecosAtivos(perfil.getId());
     }
 }

@@ -31,7 +31,7 @@ import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.excecao.EnderecoNaoLocalizadoException;
 import com.limio.api.modulos.perfil.excecao.GeocodificacaoIndisponivelException;
 import com.limio.api.modulos.perfil.excecao.PerfilEmpregadorNaoEncontradoException;
-import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
+import com.limio.api.modulos.perfil.geo.Coordenadas;
 
 @ExtendWith(MockitoExtension.class)
 class CriarEnderecoSalvoUseCaseTest {

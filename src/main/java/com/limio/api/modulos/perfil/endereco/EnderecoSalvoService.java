@@ -21,7 +21,7 @@ public class EnderecoSalvoService extends BaseService<EnderecoSalvo, UUID, Ender
         super(repository);
     }
 
-    public List<EnderecoSalvo> listarEnderecoAtivos(UUID perfilEmpregadorId) {
+    public List<EnderecoSalvo> listarEnderecosAtivos(UUID perfilEmpregadorId) {
         return repository.findAllByPerfilEmpregadorIdAndRemovidoEmIsNullOrderByPadraoDescApelidoAsc(
                 perfilEmpregadorId);
     }

@@ -39,7 +39,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import com.limio.api.TestcontainersConfiguration;
 import com.limio.api.modulos.perfil.actions.service.Geocodificador;
-import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
+import com.limio.api.modulos.perfil.geo.Coordenadas;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -93,8 +93,11 @@ class MarcarEnderecoSalvoPadraoStoryTest {
 
         marcar(token, sitio)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", is(sitio)))
-                .andExpect(jsonPath("$.isPadrao", is(true)));
+                .andExpect(jsonPath("$.length()", is(2)))
+                .andExpect(jsonPath("$[0].id", is(sitio)))
+                .andExpect(jsonPath("$[0].isPadrao", is(true)))
+                .andExpect(jsonPath("$[1].id", is(casa)))
+                .andExpect(jsonPath("$[1].isPadrao", is(false)));
 
         assertThat(padroesAtivos()).containsExactly(UUID.fromString(sitio));
         mockMvc.perform(get(ROTA).header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
@@ -108,7 +111,7 @@ class MarcarEnderecoSalvoPadraoStoryTest {
         String token = cadastrarELogar("Maria da Silva", MARIA_EMAIL, "11999998888", "52998224725");
         String casa = idCriado(criar(token, corpo("Casa", false)));
 
-        marcar(token, casa).andExpect(status().isOk()).andExpect(jsonPath("$.isPadrao", is(true)));
+        marcar(token, casa).andExpect(status().isOk()).andExpect(jsonPath("$[0].isPadrao", is(true)));
 
         assertThat(padroesAtivos()).containsExactly(UUID.fromString(casa));
     }
@@ -118,8 +121,11 @@ class MarcarEnderecoSalvoPadraoStoryTest {
         String token = cadastrarELogar("Maria da Silva", MARIA_EMAIL, "11999998888", "52998224725");
         String casa = idCriado(criar(token, corpo("Casa", true)));
 
-        marcar(token, casa).andExpect(status().isOk()).andExpect(jsonPath("$.isPadrao", is(true)));
-        marcar(token, casa).andExpect(status().isOk()).andExpect(jsonPath("$.isPadrao", is(true)));
+        marcar(token, casa).andExpect(status().isOk()).andExpect(jsonPath("$[0].isPadrao", is(true)));
+        marcar(token, casa).andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()", is(1)))
+                .andExpect(jsonPath("$[0].id", is(casa)))
+                .andExpect(jsonPath("$[0].isPadrao", is(true)));
 
         assertThat(padroesAtivos()).containsExactly(UUID.fromString(casa));
     }

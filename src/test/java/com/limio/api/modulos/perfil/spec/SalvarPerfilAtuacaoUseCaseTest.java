@@ -31,7 +31,7 @@ import com.limio.api.modulos.perfil.categoria.CategoriaService;
 import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.excecao.CategoriaInvalidaException;
 import com.limio.api.modulos.perfil.excecao.MunicipioNaoEncontradoException;
-import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
+import com.limio.api.modulos.perfil.geo.Coordenadas;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestador;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestadorService;
 import com.limio.api.modulos.perfil.perfilprestador.janelaatendimento.JanelaAtendimento;

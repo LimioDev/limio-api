@@ -23,7 +23,6 @@ import org.springframework.transaction.support.TransactionOperations;
 
 import com.limio.api.modulos.perfil.actions.service.Geocodificador;
 import com.limio.api.modulos.perfil.actions.usecase.EditarEnderecoSalvoUseCase;
-import com.limio.api.modulos.perfil.empregador.MeuPerfilEmpregador;
 import com.limio.api.modulos.perfil.empregador.PerfilEmpregador;
 import com.limio.api.modulos.perfil.empregador.PerfilEmpregadorService;
 import com.limio.api.modulos.perfil.endereco.EnderecoSalvo;
@@ -32,7 +31,8 @@ import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.excecao.EnderecoNaoLocalizadoException;
 import com.limio.api.modulos.perfil.excecao.EnderecoSalvoNaoEncontradoException;
 import com.limio.api.modulos.perfil.excecao.GeocodificacaoIndisponivelException;
-import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
+import com.limio.api.modulos.perfil.excecao.PerfilEmpregadorNaoEncontradoException;
+import com.limio.api.modulos.perfil.geo.Coordenadas;
 
 @ExtendWith(MockitoExtension.class)
 class EditarEnderecoSalvoUseCaseTest {
@@ -61,13 +61,13 @@ class EditarEnderecoSalvoUseCaseTest {
     private void perfil() {
         PerfilEmpregador perfil = PerfilEmpregador.builder().usuarioId(USUARIO_ID).nomeExibicao("Maria").build();
         ReflectionTestUtils.setField(perfil, "id", PERFIL_ID);
-        when(perfilEmpregadorService.garantirPerfil(USUARIO_ID)).thenReturn(new MeuPerfilEmpregador(perfil, null));
+        when(perfilEmpregadorService.buscarPerfilExistente(USUARIO_ID)).thenReturn(perfil);
     }
 
     private void perfilTravado() {
         PerfilEmpregador perfil = PerfilEmpregador.builder().usuarioId(USUARIO_ID).nomeExibicao("Maria").build();
         ReflectionTestUtils.setField(perfil, "id", PERFIL_ID);
-        when(perfilEmpregadorService.garantirPerfilParaAtualizar(USUARIO_ID)).thenReturn(perfil);
+        when(perfilEmpregadorService.travarPerfilExistente(PERFIL_ID)).thenReturn(perfil);
     }
 
     private static EnderecoSalvo existente() {
@@ -101,7 +101,7 @@ class EditarEnderecoSalvoUseCaseTest {
         atualExistente(atual);
         when(geocodificador.localizarEndereco(any())).thenReturn(Optional.of(new Coordenadas(-22.9, -43.2)));
 
-        EnderecoSalvo editado = useCase.executar(USUARIO_ID, ENDERECO_ID, novosDados(false));
+        EnderecoSalvo editado = useCase.executar(USUARIO_ID, ENDERECO_ID, novosDados(false), false);
 
         assertThat(editado.getPerfilEmpregadorId()).isEqualTo(PERFIL_ID);
         assertThat(editado.getApelido()).isEqualTo("Trabalho");
@@ -121,7 +121,7 @@ class EditarEnderecoSalvoUseCaseTest {
         EnderecoSalvo atual = existente();
         atualExistente(atual);
 
-        EnderecoSalvo editado = useCase.executar(USUARIO_ID, ENDERECO_ID, mesmaLocalizacao(false));
+        EnderecoSalvo editado = useCase.executar(USUARIO_ID, ENDERECO_ID, mesmaLocalizacao(false), false);
 
         assertThat(editado.getApelido()).isEqualTo("Trabalho");
         assertThat(editado.getBairroRegiao()).isEqualTo("Gonzaga");
@@ -135,11 +135,11 @@ class EditarEnderecoSalvoUseCaseTest {
         EnderecoSalvo atual = existente();
         atualExistente(atual);
 
-        EnderecoSalvo editado = useCase.executar(USUARIO_ID, ENDERECO_ID, mesmaLocalizacao(true));
+        EnderecoSalvo editado = useCase.executar(USUARIO_ID, ENDERECO_ID, mesmaLocalizacao(true), true);
 
         assertThat(editado.isPadrao()).isTrue();
         InOrder ordem = inOrder(perfilEmpregadorService, enderecoSalvoService);
-        ordem.verify(perfilEmpregadorService).garantirPerfilParaAtualizar(USUARIO_ID);
+        ordem.verify(perfilEmpregadorService).travarPerfilExistente(PERFIL_ID);
         ordem.verify(enderecoSalvoService).desmarcarEnderecoPadrao(PERFIL_ID);
         ordem.verify(enderecoSalvoService).buscarEnderecoAtivoOuFalhar(ENDERECO_ID, PERFIL_ID);
         ordem.verify(enderecoSalvoService).salvar(atual);
@@ -148,10 +148,34 @@ class EditarEnderecoSalvoUseCaseTest {
     @Test
     void deveTirarOPadraoQuandoOsNovosDadosNaoForemPadrao() {
         EnderecoSalvo atual = existente();
-        atual.setPadrao(true);
+        atual.marcarComoPadrao();
         atualExistente(atual);
 
-        assertThat(useCase.executar(USUARIO_ID, ENDERECO_ID, mesmaLocalizacao(false)).isPadrao()).isFalse();
+        assertThat(useCase.executar(USUARIO_ID, ENDERECO_ID, mesmaLocalizacao(false), false).isPadrao()).isFalse();
+    }
+
+    @Test
+    void deveManterOPadraoQuandoOPadraoNaoForInformado() {
+        EnderecoSalvo atual = existente();
+        atual.marcarComoPadrao();
+        atualExistente(atual);
+
+        EnderecoSalvo editado = useCase.executar(USUARIO_ID, ENDERECO_ID, mesmaLocalizacao(false), null);
+
+        assertThat(editado.isPadrao()).isTrue();
+        verify(enderecoSalvoService, never()).desmarcarEnderecoPadrao(PERFIL_ID);
+    }
+
+    @Test
+    void naoDeveCriarPerfilNemGeocodificarQuandoOUsuarioNaoTemPerfil() {
+        when(perfilEmpregadorService.buscarPerfilExistente(USUARIO_ID))
+                .thenThrow(new PerfilEmpregadorNaoEncontradoException());
+
+        assertThatThrownBy(() -> useCase.executar(USUARIO_ID, ENDERECO_ID, novosDados(false), false))
+                .isInstanceOf(PerfilEmpregadorNaoEncontradoException.class);
+
+        verify(perfilEmpregadorService, never()).garantirPerfil(any());
+        verifyNoInteractions(enderecoSalvoService, geocodificador);
     }
 
     @Test
@@ -160,7 +184,7 @@ class EditarEnderecoSalvoUseCaseTest {
         when(enderecoSalvoService.buscarEnderecoAtivoOuFalhar(ENDERECO_ID, PERFIL_ID))
                 .thenThrow(new EnderecoSalvoNaoEncontradoException());
 
-        assertThatThrownBy(() -> useCase.executar(USUARIO_ID, ENDERECO_ID, novosDados(false)))
+        assertThatThrownBy(() -> useCase.executar(USUARIO_ID, ENDERECO_ID, novosDados(false), false))
                 .isInstanceOf(EnderecoSalvoNaoEncontradoException.class);
 
         verify(enderecoSalvoService, never()).salvar(any());
@@ -173,11 +197,11 @@ class EditarEnderecoSalvoUseCaseTest {
         when(enderecoSalvoService.buscarEnderecoAtivoOuFalhar(ENDERECO_ID, PERFIL_ID)).thenReturn(existente());
         when(geocodificador.localizarEndereco(any())).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> useCase.executar(USUARIO_ID, ENDERECO_ID, novosDados(false)))
+        assertThatThrownBy(() -> useCase.executar(USUARIO_ID, ENDERECO_ID, novosDados(false), false))
                 .isInstanceOf(EnderecoNaoLocalizadoException.class);
 
         verify(enderecoSalvoService, never()).salvar(any());
-        verify(perfilEmpregadorService, never()).garantirPerfilParaAtualizar(any());
+        verify(perfilEmpregadorService, never()).travarPerfilExistente(any());
     }
 
     @Test
@@ -186,7 +210,7 @@ class EditarEnderecoSalvoUseCaseTest {
         when(enderecoSalvoService.buscarEnderecoAtivoOuFalhar(ENDERECO_ID, PERFIL_ID)).thenReturn(existente());
         when(geocodificador.localizarEndereco(any())).thenThrow(new GeocodificacaoIndisponivelException());
 
-        assertThatThrownBy(() -> useCase.executar(USUARIO_ID, ENDERECO_ID, novosDados(false)))
+        assertThatThrownBy(() -> useCase.executar(USUARIO_ID, ENDERECO_ID, novosDados(false), false))
                 .isInstanceOf(GeocodificacaoIndisponivelException.class);
 
         verify(enderecoSalvoService, never()).salvar(any());

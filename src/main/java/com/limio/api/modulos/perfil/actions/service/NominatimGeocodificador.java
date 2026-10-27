@@ -4,9 +4,12 @@ import java.net.http.HttpClient;
 import java.text.Normalizer;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -19,7 +22,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.limio.api.modulos.perfil.endereco.EnderecoParaGeocodificar;
 import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.excecao.GeocodificacaoIndisponivelException;
-import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
+import com.limio.api.modulos.perfil.geo.Coordenadas;
 
 /**
  * Geocodificação do município-base (TICKET-0054) e do endereço salvo (TICKET-0050) via Nominatim
@@ -29,6 +32,12 @@ import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
  * atribuição ao OpenStreetMap. Por isso URL e User-Agent vêm de configuração (trocar de provedor ou subir
  * instância própria não exige versão nova) e o usecase só chama aqui pra município que nenhum perfil
  * resolveu ainda.
+ *
+ * <p>Endereço não tem cache (cada rua+número é quase único), então toda consulta passa por um limitador simples:
+ * as chamadas desta instância saem em fila, com no mínimo {@code geocodificacao.nominatim.intervalo-minimo}
+ * (padrão 1s) entre o início de uma e da seguinte. Quem não consegue a vez dentro do {@code timeout} desiste com
+ * {@link GeocodificacaoIndisponivelException} (503) em vez de bater no 429. Vale por instância da aplicação; com
+ * várias réplicas, ou com instância própria do Nominatim, ajuste ou zere o intervalo. Intervalo zero desliga.
  */
 @Component
 public class NominatimGeocodificador implements Geocodificador {
@@ -46,10 +55,26 @@ public class NominatimGeocodificador implements Geocodificador {
     private static final int RANK_MINIMO_RUA = 26;
 
     private final RestClient restClient;
+    private final Duration intervaloMinimo;
+    private final Duration esperaMaxima;
 
+    /** Fila das consultas (justa: quem chegou antes sai antes); {@code ultimaConsultaEm} só muda com ela travada. */
+    private final ReentrantLock fila = new ReentrantLock(true);
+    private long ultimaConsultaEm;
+    private boolean jaConsultou;
+
+    /** Sem limitador: para quem usa instância própria do Nominatim e nos testes do parser. */
+    public NominatimGeocodificador(String url, String userAgent, Duration timeout) {
+        this(url, userAgent, timeout, Duration.ZERO);
+    }
+
+    @Autowired
     public NominatimGeocodificador(@Value("${geocodificacao.nominatim.url}") String url,
             @Value("${geocodificacao.nominatim.user-agent}") String userAgent,
-            @Value("${geocodificacao.timeout}") Duration timeout) {
+            @Value("${geocodificacao.timeout}") Duration timeout,
+            @Value("${geocodificacao.nominatim.intervalo-minimo:1s}") Duration intervaloMinimo) {
+        this.intervaloMinimo = intervaloMinimo;
+        this.esperaMaxima = timeout;
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(
                 HttpClient.newBuilder().connectTimeout(timeout).build());
         requestFactory.setReadTimeout(timeout);
@@ -89,6 +114,10 @@ public class NominatimGeocodificador implements Geocodificador {
      * {@code state}. Só vale resultado de rua ou mais preciso ({@code place_rank >= 26}) e na UF pedida: sem
      * isso o Nominatim devolve o centro da cidade ou um homônimo de outro estado, e gravar isso como se fosse
      * o endereço enganaria o cálculo de distância.
+     *
+     * <p>Limite conhecido: {@code place_rank} 26 aceita a rua sem o número, e então o ponto é o centro da via —
+     * em rua longa pode estar a quilômetros da porta. Aceito por ora (o uso é distância aproximada); ver
+     * TICKET-0050.
      */
     @Override
     public Optional<Coordenadas> localizarEndereco(EnderecoParaGeocodificar endereco) {
@@ -111,7 +140,42 @@ public class NominatimGeocodificador implements Geocodificador {
         return Optional.of(coordenadasDe(resultado));
     }
 
+    /**
+     * Espera a vez e, se a última consulta foi há menos que o intervalo, o resto dele. Desiste (503) se a fila
+     * não andar dentro do {@code timeout} ou se a thread for interrompida.
+     */
+    private void aguardarVez() {
+        if (intervaloMinimo.isZero() || intervaloMinimo.isNegative()) {
+            return;
+        }
+        try {
+            if (!fila.tryLock(esperaMaxima.toNanos(), TimeUnit.NANOSECONDS)) {
+                log.warn("geocodificação: fila cheia, desistindo após {}", esperaMaxima);
+                throw new GeocodificacaoIndisponivelException();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new GeocodificacaoIndisponivelException();
+        }
+        try {
+            if (jaConsultou) {
+                long faltam = intervaloMinimo.toNanos() - (System.nanoTime() - ultimaConsultaEm);
+                if (faltam > 0) {
+                    TimeUnit.NANOSECONDS.sleep(faltam);
+                }
+            }
+            jaConsultou = true;
+            ultimaConsultaEm = System.nanoTime();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new GeocodificacaoIndisponivelException();
+        } finally {
+            fila.unlock();
+        }
+    }
+
     private ResultadoNominatim[] consultar(String uri, Object... variaveis) {
+        aguardarVez();
         try {
             return restClient.get().uri(uri, variaveis).retrieve().body(ResultadoNominatim[].class);
         } catch (RestClientException e) {

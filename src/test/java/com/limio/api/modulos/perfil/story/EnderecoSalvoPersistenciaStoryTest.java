@@ -130,8 +130,8 @@ class EnderecoSalvoPersistenciaStoryTest {
         UUID perfilA = novoPerfil();
         UUID perfilB = novoPerfil();
         EnderecoSalvo antigo = endereco(perfilA, "Antigo", true);
-        antigo.setRemovidoEm(Instant.now());
         enderecos.saveAndFlush(antigo);
+        jdbc.update("update endereco_salvo set removido_em = now() where id = ?", antigo.getId());
 
         enderecos.saveAndFlush(endereco(perfilA, "Casa", true));
         enderecos.saveAndFlush(endereco(perfilB, "Casa", true));

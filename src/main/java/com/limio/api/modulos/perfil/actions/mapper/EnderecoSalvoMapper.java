@@ -23,7 +23,7 @@ public class EnderecoSalvoMapper implements BaseMapper<EnderecoSalvo, EnderecoSa
                 .bairroRegiao(request.bairroRegiao())
                 .cidade(request.cidade())
                 .uf(request.uf())
-                .padrao(request.padrao())
+                .padrao(Boolean.TRUE.equals(request.padrao()))
                 .build();
     }
 

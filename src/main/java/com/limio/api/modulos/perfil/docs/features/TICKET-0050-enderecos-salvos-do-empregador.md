@@ -12,7 +12,7 @@ TICKET-0034 (encerrar conta e anonimização), módulo `anuncio` (ainda inexiste
 Implementado (listar, criar, editar, remover e marcar padrão) na branch `feature/50`, com specs e stories.
 Latitude/longitude são obtidas por geocodificação no servidor.
 As decisões marcadas **Proposto** abaixo foram implementadas como propostas e seguem aguardando confirmação do
-tech lead (ver "Pontos para o tech lead"). Migration: `V15__criar_tabela_endereco_salvo.sql` — o número pode
+tech lead (ver "Pontos para o tech lead"). Migration: `V19__criar_tabela_endereco_salvo.sql` — o número pode
 mudar no merge.
 
 ## User Story
@@ -80,7 +80,7 @@ Prefixo `/conta/perfil-empregador`, mesmo padrão do TICKET-0048. O dono vem sem
 | Criar endereço | `POST /conta/perfil-empregador/enderecos` | `Bearer <token>` | `EnderecoSalvoRequest` | 201 `EnderecoSalvoResponse` |
 | Editar endereço | `PUT /conta/perfil-empregador/enderecos/{id}` | `Bearer <token>` | `EnderecoSalvoRequest` | 200 `EnderecoSalvoResponse` |
 | Remover endereço | `DELETE /conta/perfil-empregador/enderecos/{id}` | `Bearer <token>` | — | 204 |
-| Marcar como padrão | `PATCH /conta/perfil-empregador/enderecos/{id}/padrao` | `Bearer <token>` | — | 200 `EnderecoSalvoResponse` (idempotente) |
+| Marcar como padrão | `PATCH /conta/perfil-empregador/enderecos/{id}/padrao` | `Bearer <token>` | — | 200 `List<EnderecoSalvoResponse>` — lista atualizada, padrão primeiro (idempotente) |
 
 Pontos de contrato:
 
@@ -88,6 +88,8 @@ Pontos de contrato:
 - **`PUT` substitui todos os campos**; é o primeiro `PUT`/`DELETE` do projeto (hoje só `POST`/`PATCH`).
   **Pendente**: confirmar com o tech lead e com o front; alternativa é `PATCH` para editar.
 - `isPadrao` no corpo de criar/editar é aceito; marcar `true` desmarca o anterior (mesma regra da rota `/padrao`).
+  Ausente no `POST` vale `false`; ausente no `PUT` **mantém o padrão como está** (editar só o apelido não tira o
+  padrão sem querer). Só `true`/`false` explícito o altera.
 
 ### Corpo (`EnderecoSalvoRequest` / `EnderecoSalvoResponse`)
 
@@ -116,6 +118,7 @@ nos textos e só dígitos no CEP, antes da validação (padrão de `EditarNomeEx
 | `ENDERECO_NAO_ENCONTRADO` (404) | id inexistente, removido ou **de outro Empregador** | **novo, Definido** (sugerido no card) |
 | `VALIDACAO_FALHOU` (400) | CEP ≠ 8 dígitos, UF fora das 27, campo obrigatório vazio | existente — cobre o `DADOS_INVALIDOS` do card, **não criar** código novo |
 | `NAO_AUTENTICADO` (401) | sem token ou token inválido | existente |
+| `ACESSO_NEGADO` (403) | papel ativo diferente de `EMPREGADOR` | existente |
 | `ENDERECO_PADRAO_CONFLITO` (409) | rede de segurança do índice único do padrão (duas escritas simultâneas escaparam do lock); o cliente pode repetir a chamada | **novo**, criado na Parte 5 — a decisão inicial era "sem código novo", mas a rede de segurança precisa de um erro para devolver em vez de 500 |
 | `VALIDACAO_FALHOU` (400) também para `{id}` que não é UUID | `MethodArgumentTypeMismatchException` tratada no `GlobalExceptionHandler` | **novo handler** (antes caía em 500) |
 | `ENDERECO_NAO_LOCALIZADO` (422) | a geocodificação respondeu, mas não achou rua e número na cidade/UF informadas (ou só achou a cidade, o bairro ou outra UF) | **novo**, criado na Parte 7 |
@@ -130,9 +133,12 @@ Todo acesso por id busca por `id` **e** dono. Se não achar, responde 404 `ENDER
 para não revelar que o id existe em outra conta (mesma linha anti-enumeração do `auth`). A listagem filtra sempre
 pelo perfil do token.
 
-**Pendente**: nenhum controller hoje confere o papel ativo (`UsuarioAutenticado.papel()`; as authorities do token
-são vazias). Proposta: manter consistente com `PerfilEmpregadorController` e decidir a checagem de papel
-`EMPREGADOR` num card próprio, para todas as rotas de empregador.
+**Papel**: as cinco rotas de endereço exigem papel ativo `EMPREGADOR` (`UsuarioAutenticado.papel()`); qualquer outro
+recebe 403 `ACESSO_NEGADO`, antes de qualquer use case — um Prestador não ganha `perfil_empregador` nem endereços por
+aqui. Como as authorities do token são vazias e não há method security, a checagem é um guard no
+`EnderecoSalvoController`. O papel é o do token: depois de `PATCH /auth/papel-ativo`, só o próximo refresh o traz.
+**Pendente (tech lead)**: o `PerfilEmpregadorController` (TICKET-0048) segue sem checar papel; estender a regra a todo
+`/conta/perfil-empregador/**` fica para um card próprio.
 
 ### Soft delete (**Proposto**)
 
@@ -171,9 +177,13 @@ são vazias). Proposta: manter consistente com `PerfilEmpregadorController` e de
 
 ### Remoção e módulo `anuncio` (**Dependência**)
 
-Checagem não implementada. O `RemoverEnderecoSalvoUseCase` é o ponto de extensão; quando `anuncio`
-existir, usar uma porta em `comum/portas` (padrão de `ConsultaDadosUsuario`), nunca dependência direta de módulo
-(ADR-0001), e só então criar `ENDERECO_EM_USO`.
+Checagem não implementada. O módulo `anuncio` já existe (TICKET-0049), mas o `Anuncio` (V13) guarda só o snapshot do
+endereço (`endereco_completo_snapshot`, latitude/longitude e bairro), **sem** `endereco_salvo_id`: hoje não há como
+saber qual anúncio usa qual endereço salvo, então a regra não pode ser aplicada. O `RemoverEnderecoSalvoUseCase` é o
+ponto de extensão (tem um `TODO(ENDERECO_EM_USO)`). Quando o anúncio passar a referenciar o endereço salvo, usar uma
+porta em `comum/portas` (padrão de `ConsultaDadosUsuario`), nunca dependência direta de módulo (ADR-0001), e só
+então criar `ENDERECO_EM_USO`. **Follow-up a abrir** (precisa de card próprio, com o time de `anuncio`): ligar o
+anúncio ao endereço salvo e expor a consulta "endereço em uso por anúncio não terminal".
 
 ## Decisão técnica: latitude e longitude (geocodificação no servidor)
 
@@ -189,7 +199,19 @@ confia em coordenada do cliente.
   (a busca estruturada não o aceita) e **sem complemento** (não ajuda e é dado pessoal desnecessário).
 - **Validação do resultado**: só aceita `place_rank` ≥ 26 (rua ou mais preciso) **e** `address.state` igual à UF
   pedida (sem caixa/acento). Resultado só da cidade, de bairro ou de outra UF → "não localizado" (evita gravar o
-  centro da cidade como se fosse o endereço).
+  centro da cidade como se fosse o endereço). **Limite aceito**: `place_rank` 26 é a rua *sem* o número, e então o
+  ponto gravado é o centro da via; em rua longa pode ficar a quilômetros da porta. Serve para distância aproximada
+  (mural), não para rota até a porta. Se o produto precisar de precisão de número, exigir `place_rank` 30 (mais
+  "não localizado") ou trocar de provedor.
+- **Origem de lat/long e provedor (decisão a validar com o tech lead)**: Nominatim público do OpenStreetMap, a mesma
+  escolha do TICKET-0054. Foi decisão do dev, não confirmada; URL e User-Agent são configuração, então trocar para
+  instância própria ou outro provedor não exige versão nova.
+- **Limite do provedor (1 req/s)**: endereço não tem cache (cada rua+número é quase único). O
+  `NominatimGeocodificador` enfileira as consultas da instância com intervalo mínimo
+  `geocodificacao.nominatim.intervalo-minimo` (padrão `1s`; `0` desliga, para instância própria). Quem não pega a vez
+  dentro de `geocodificacao.timeout` recebe 503 `GEOCODIFICACAO_INDISPONIVEL` em vez de forçar o 429. O limite vale
+  por instância: com várias réplicas o total ainda pode passar de 1 req/s, e a saída então é provedor/instância
+  própria. Antes de ir para produção com volume real, decidir entre isso e uma instância própria.
 - **Falhas**: não encontrado → 422 `ENDERECO_NAO_LOCALIZADO`; timeout, erro HTTP, 429, JSON inválido, campos
   ausentes ou coordenada fora da faixa → 503 `GEOCODIFICACAO_INDISPONIVEL`. **Sem retry** (agravaria o 429). Em
   ambos a operação é recusada e nada é gravado: `latitude`/`longitude` continuam `NOT NULL`, **sem migration nova**.
@@ -213,9 +235,12 @@ endereço guarda os três campos separados, no banco e na API, em vez de `lograd
 (`logradouro_completo` é substituído por `rua`, `numero` e `complemento`) — o DER precisa ser atualizado por quem o
 mantém (fora deste repositório).
 
-- `rua`: obrigatório, até 255 caracteres.
-- `numero`: obrigatório, **texto** (até 20), porque aceita "S/N" e "123-A".
-- `complemento`: opcional (`NULL` quando não informado), até 100 caracteres.
+- `rua`: obrigatório, até 80 caracteres.
+- `numero`: obrigatório, **texto** (até 10), porque aceita "S/N" e "123-A".
+- `complemento`: opcional (`NULL` quando não informado), até 40 caracteres.
+- `bairroRegiao` e `cidade`: obrigatórios, até 50 caracteres cada.
+- Os limites somam no máximo 232 caracteres (rua + número + complemento + bairro + cidade + UF), para caber, com os
+  separadores, no `endereco_completo_snapshot` do anúncio (`VARCHAR(255)`, V13).
 - Quem precisar de uma linha única de endereço (ex.: o snapshot do anúncio, futuro módulo `anuncio`) monta o texto a
   partir dos três campos; o `perfil` não grava texto montado. Não há parsing de texto nem coluna redundante.
 
@@ -239,10 +264,11 @@ mantém (fora deste repositório).
 
 - Checagem de endereço em uso por anúncio e o código `ENDERECO_EM_USO` (depende de `anuncio`).
 - Anonimização/expurgo de endereços ao encerrar a conta (LGPD; listener de `ContaEncerradaEvent`).
-- Checagem do papel ativo `EMPREGADOR` nas rotas.
+- Checagem do papel ativo `EMPREGADOR` no `PerfilEmpregadorController` (as rotas de endereço já checam).
 - Preencher `enderecos.{quantidade, apelidoPadrao}` no `GET /conta/perfil-empregador`: **não feito** neste card;
   continua o placeholder `{"quantidade": 0, "apelidoPadrao": null}` do TICKET-0048. Já dá para implementar
   (`EnderecoSalvoService` conta os ativos e acha o padrão), mas exige a porta/ligação no `PerfilEmpregadorMapper`
   e decisão de card próprio.
-- Cache por endereço e limitador de 1 req/s no `NominatimGeocodificador` (evolução opcional).
+- Cache por endereço no `NominatimGeocodificador` e limitador distribuído entre réplicas (o limitador por instância
+  já existe; evolução opcional).
 

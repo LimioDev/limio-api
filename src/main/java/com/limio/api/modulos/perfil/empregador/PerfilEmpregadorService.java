@@ -34,6 +34,14 @@ public class PerfilEmpregadorService extends BaseService<PerfilEmpregador, UUID,
                 .orElseThrow(PerfilEmpregadorNaoEncontradoException::new);
     }
 
+    public PerfilEmpregador buscarPerfilExistente(UUID usuarioId) {
+        return repository.findByUsuarioId(usuarioId).orElseThrow(PerfilEmpregadorNaoEncontradoException::new);
+    }
+
+    public PerfilEmpregador travarPerfilExistente(UUID perfilId) {
+        return repository.findByIdParaAtualizar(perfilId).orElseThrow(PerfilEmpregadorNaoEncontradoException::new);
+    }
+
     private PerfilEmpregador buscarOuCriar(UUID usuarioId, String nomeInicial) {
         return repository.findByUsuarioId(usuarioId).orElseGet(() -> {
             repository.inserirSeAusente(usuarioId, nomeInicial);

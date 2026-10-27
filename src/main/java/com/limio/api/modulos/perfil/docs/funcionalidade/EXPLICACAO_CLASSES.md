@@ -31,6 +31,8 @@ Em todas as rotas o dono vem só do token (`usuario.id()`), nunca da URL ou do c
 2. Exceto listar, todo use case (criar e editar, dentro da transação, depois de geocodificar) começa com `PerfilEmpregadorService.garantirPerfilParaAtualizar`, que cria o
    perfil se for o primeiro acesso e o **trava** (`PESSIMISTIC_WRITE`). Escritas do mesmo Empregador ficam
    serializadas, e é isso que garante um único padrão sem depender só do índice.
+   O **editar** é a exceção: nunca cria perfil. Fora da transação lê com `buscarPerfilExistente` (sem efeito colateral,
+   404 se não houver) e dentro dela trava com `travarPerfilExistente(perfilId)`, sem nova ida ao auth.
 3. O acesso por id usa `EnderecoSalvoService.buscarEnderecoAtivoOuFalhar(id, perfilId)`: id inexistente, removido
    ou de outro Empregador dá a mesma `EnderecoSalvoNaoEncontradoException` (404 `ENDERECO_NAO_ENCONTRADO`).
 4. **Criar/editar**: antes de abrir a transação, o use case obtém as coordenadas em
@@ -45,7 +47,8 @@ Em todas as rotas o dono vem só do token (`usuario.id()`), nunca da URL ou do c
 5. **Remover**: `EnderecoSalvo.remover(Instant)` preenche `removidoEm` e zera `isPadrao`; a linha fica no banco.
    Remover o padrão deixa o Empregador sem padrão.
 6. **Marcar padrão** (`PATCH /{id}/padrao`): idempotente; se ainda não é o padrão, desmarca o atual, recarrega o
-   endereço (o clear do contexto o desanexou) e marca.
+   endereço (o clear do contexto o desanexou) e marca. A resposta é a lista atualizada dos endereços ativos (padrão
+   primeiro), como no card, para o front re-renderizar sem outro `GET`.
 7. `EnderecoSalvoService.salvar` faz `saveAndFlush` e converte a violação de `uk_endereco_salvo_padrao` em
    `EnderecoPadraoConflitoException` (409 `ENDERECO_PADRAO_CONFLITO`), rede de segurança caso uma escrita escape
    do lock.
@@ -151,7 +154,7 @@ o controller recebe com `@AuthenticationPrincipal`. Sem token válido, 401 `NAO_
 | `PerfilPrestador` | Entity raiz — atuação do Prestador; `atualizarAtuacao` + critério de `completo` |
 | `JanelaAtendimento` | Subentidade de `PerfilPrestador` (cascade + orphanRemoval) |
 | `Categoria` | Entity raiz — taxonomia de especialidades; `desativar` recusa a protegida; `ORDEM_EXIBICAO` |
-| `Coordenadas` | Record `@Embeddable` — resultado da geocodificação, embutido no `PerfilPrestador`; valida a faixa |
+| `geo/Coordenadas` | Record `@Embeddable` compartilhado — resultado da geocodificação, embutido no `PerfilPrestador` e aplicado no `EnderecoSalvo`; valida a faixa |
 | `PerfilPrestadorService` | Extends `comum/base/BaseService` — `buscarPorUsuario`, `buscarCoordenadasConhecidas`, `travarPorUsuario` |
 | `CategoriaService` | Extends `comum/base/BaseService` — `listarAtivas`, `buscarAtivasPorIds` |
 | `PerfilPrestadorRepository` / `CategoriaRepository` | Extends `comum/base/BaseRepository` — porta de persistência JPA |

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -60,13 +61,16 @@ class MarcarEnderecoSalvoPadraoUseCaseTest {
         EnderecoSalvo alvo = endereco(false);
         when(enderecoSalvoService.buscarEnderecoAtivoOuFalhar(ENDERECO_ID, PERFIL_ID)).thenReturn(alvo);
         when(enderecoSalvoService.salvar(alvo)).thenReturn(alvo);
+        when(enderecoSalvoService.listarEnderecosAtivos(PERFIL_ID)).thenReturn(List.of(alvo));
 
-        EnderecoSalvo marcado = useCase.executar(USUARIO_ID, ENDERECO_ID);
+        List<EnderecoSalvo> lista = useCase.executar(USUARIO_ID, ENDERECO_ID);
 
-        assertThat(marcado.isPadrao()).isTrue();
+        assertThat(lista).containsExactly(alvo);
+        assertThat(alvo.isPadrao()).isTrue();
         InOrder ordem = inOrder(enderecoSalvoService);
         ordem.verify(enderecoSalvoService).desmarcarEnderecoPadrao(PERFIL_ID);
         ordem.verify(enderecoSalvoService).salvar(alvo);
+        ordem.verify(enderecoSalvoService).listarEnderecosAtivos(PERFIL_ID);
     }
 
     @Test
@@ -74,7 +78,9 @@ class MarcarEnderecoSalvoPadraoUseCaseTest {
         EnderecoSalvo alvo = endereco(true);
         when(enderecoSalvoService.buscarEnderecoAtivoOuFalhar(ENDERECO_ID, PERFIL_ID)).thenReturn(alvo);
 
-        assertThat(useCase.executar(USUARIO_ID, ENDERECO_ID)).isSameAs(alvo);
+        when(enderecoSalvoService.listarEnderecosAtivos(PERFIL_ID)).thenReturn(List.of(alvo));
+
+        assertThat(useCase.executar(USUARIO_ID, ENDERECO_ID)).containsExactly(alvo);
 
         verify(enderecoSalvoService, never()).desmarcarEnderecoPadrao(any());
         verify(enderecoSalvoService, never()).salvar(any());

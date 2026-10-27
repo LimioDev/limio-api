@@ -51,7 +51,7 @@ class ListarEnderecosSalvosUseCaseTest {
         DadosUsuario dados = new DadosUsuario("Maria", "m@example.com", "+5511999998888", Instant.now(), null);
         when(perfilEmpregadorService.garantirPerfil(USUARIO_ID)).thenReturn(new MeuPerfilEmpregador(perfil, dados));
         List<EnderecoSalvo> ativos = List.of(EnderecoSalvo.builder().apelido("Casa").build());
-        when(enderecoSalvoService.listarEnderecoAtivos(PERFIL_ID)).thenReturn(ativos);
+        when(enderecoSalvoService.listarEnderecosAtivos(PERFIL_ID)).thenReturn(ativos);
 
         assertThat(useCase.executar(USUARIO_ID)).isSameAs(ativos);
     }

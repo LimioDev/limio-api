@@ -5,25 +5,24 @@ import java.util.UUID;
 
 import com.limio.api.comum.base.BaseEntity;
 import com.limio.api.modulos.perfil.enums.Uf;
-import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
+import com.limio.api.modulos.perfil.geo.Coordenadas;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Table(name = "endereco_salvo")
 @Getter
-@Setter
 @NoArgsConstructor
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 public class EnderecoSalvo extends BaseEntity {
 
@@ -36,19 +35,19 @@ public class EnderecoSalvo extends BaseEntity {
     @Column(name = "cep", nullable = false, length = 8)
     private String cep;
 
-    @Column(name = "rua", nullable = false, length = 255)
+    @Column(name = "rua", nullable = false, length = 80)
     private String rua;
 
-    @Column(name = "numero", nullable = false, length = 20)
+    @Column(name = "numero", nullable = false, length = 10)
     private String numero;
 
-    @Column(name = "complemento", length = 100)
+    @Column(name = "complemento", length = 40)
     private String complemento;
 
-    @Column(name = "bairro_regiao", nullable = false, length = 100)
+    @Column(name = "bairro_regiao", nullable = false, length = 50)
     private String bairroRegiao;
 
-    @Column(name = "cidade", nullable = false, length = 100)
+    @Column(name = "cidade", nullable = false, length = 50)
     private String cidade;
 
     @Enumerated(EnumType.STRING)
@@ -66,6 +65,10 @@ public class EnderecoSalvo extends BaseEntity {
 
     @Column(name = "removido_em")
     private Instant removidoEm;
+
+    public void pertencerA(UUID perfilEmpregadorId) {
+        this.perfilEmpregadorId = perfilEmpregadorId;
+    }
 
     public boolean isRemovido() {
         return removidoEm != null;
@@ -95,11 +98,18 @@ public class EnderecoSalvo extends BaseEntity {
         this.bairroRegiao = novos.bairroRegiao;
         this.cidade = novos.cidade;
         this.uf = novos.uf;
-        this.padrao = novos.padrao;
+    }
+
+    public void marcarComoPadrao() {
+        this.padrao = true;
+    }
+
+    public void desmarcarPadrao() {
+        this.padrao = false;
     }
 
     public void remover(Instant quando) {
         this.removidoEm = quando;
-        this.padrao = false;
+        desmarcarPadrao();
     }
 }

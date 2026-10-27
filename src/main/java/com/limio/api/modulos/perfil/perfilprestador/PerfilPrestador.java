@@ -9,6 +9,7 @@ import java.util.UUID;
 import com.limio.api.comum.base.BaseEntity;
 import com.limio.api.modulos.perfil.categoria.Categoria;
 import com.limio.api.modulos.perfil.enums.Uf;
+import com.limio.api.modulos.perfil.geo.Coordenadas;
 import com.limio.api.modulos.perfil.perfilprestador.janelaatendimento.JanelaAtendimento;
 
 import jakarta.persistence.AttributeOverride;

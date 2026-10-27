@@ -46,7 +46,7 @@ class EnderecoSalvoServiceTest {
         when(repository.findAllByPerfilEmpregadorIdAndRemovidoEmIsNullOrderByPadraoDescApelidoAsc(perfilId))
                 .thenReturn(ativos);
 
-        assertThat(service.listarEnderecoAtivos(perfilId)).isSameAs(ativos);
+        assertThat(service.listarEnderecosAtivos(perfilId)).isSameAs(ativos);
     }
 
     @Test

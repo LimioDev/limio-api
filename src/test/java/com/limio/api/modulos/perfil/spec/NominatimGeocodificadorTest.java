@@ -18,7 +18,7 @@ import com.limio.api.modulos.perfil.actions.service.NominatimGeocodificador;
 import com.limio.api.modulos.perfil.endereco.EnderecoParaGeocodificar;
 import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.excecao.GeocodificacaoIndisponivelException;
-import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
+import com.limio.api.modulos.perfil.geo.Coordenadas;
 import com.sun.net.httpserver.HttpServer;
 
 /**
@@ -65,6 +65,12 @@ class NominatimGeocodificadorTest {
         servidor.start();
         return new NominatimGeocodificador("http://127.0.0.1:" + servidor.getAddress().getPort(), USER_AGENT,
                 timeout);
+    }
+
+    private NominatimGeocodificador nominatimComIntervalo(Duration intervalo, Duration timeout) throws IOException {
+        nominatimRespondendo(200, "[]");
+        return new NominatimGeocodificador("http://127.0.0.1:" + servidor.getAddress().getPort(), USER_AGENT,
+                timeout, intervalo);
     }
 
     private static String resultado(String lat, String lon, int placeRank) {
@@ -169,6 +175,43 @@ class NominatimGeocodificadorTest {
 
         assertThatThrownBy(() -> servico.localizarMunicipio("Campinas", Uf.SP))
                 .isInstanceOf(GeocodificacaoIndisponivelException.class);
+    }
+
+    @Test
+    void deveEspacarAsConsultasPeloIntervaloMinimo() throws IOException {
+        NominatimGeocodificador servico = nominatimComIntervalo(Duration.ofMillis(400), Duration.ofSeconds(2));
+
+        long inicio = System.nanoTime();
+        servico.localizarMunicipio("Campinas", Uf.SP);
+        servico.localizarMunicipio("Santos", Uf.SP);
+        servico.localizarMunicipio("Osasco", Uf.SP);
+        long decorridoMs = Duration.ofNanos(System.nanoTime() - inicio).toMillis();
+
+        assertThat(decorridoMs).isGreaterThanOrEqualTo(780);
+    }
+
+    @Test
+    void deveDesistirComoIndisponivelQuandoAFilaNaoAndaDentroDoTimeout() throws Exception {
+        NominatimGeocodificador servico = nominatimComIntervalo(Duration.ofSeconds(1), Duration.ofMillis(300));
+        servico.localizarMunicipio("Campinas", Uf.SP);
+
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            java.util.concurrent.Future<?> a = pool.submit(() -> servico.localizarMunicipio("Santos", Uf.SP));
+            java.util.concurrent.Future<?> b = pool.submit(() -> servico.localizarMunicipio("Osasco", Uf.SP));
+            int falhas = 0;
+            for (java.util.concurrent.Future<?> f : java.util.List.of(a, b)) {
+                try {
+                    f.get();
+                } catch (java.util.concurrent.ExecutionException e) {
+                    assertThat(e.getCause()).isInstanceOf(GeocodificacaoIndisponivelException.class);
+                    falhas++;
+                }
+            }
+            assertThat(falhas).isEqualTo(1);
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     // ---------- localizarEndereco ----------

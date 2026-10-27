@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.limio.api.comum.seguranca.UsuarioAutenticado;
+import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.perfil.actions.mapper.EnderecoSalvoMapper;
 import com.limio.api.modulos.perfil.actions.usecase.CriarEnderecoSalvoUseCase;
 import com.limio.api.modulos.perfil.actions.usecase.EditarEnderecoSalvoUseCase;
@@ -28,6 +30,11 @@ import com.limio.api.modulos.perfil.records.EnderecoSalvoResponse;
 
 import jakarta.validation.Valid;
 
+/**
+ * Endereços salvos são do Empregador: todas as rotas exigem papel ativo {@code EMPREGADOR} (403 {@code ACESSO_NEGADO}
+ * caso contrário) e a checagem roda antes de qualquer use case, então um Prestador não cria perfil de Empregador por
+ * aqui. O papel é o do token (muda no próximo refresh depois de {@code PATCH /auth/papel-ativo}).
+ */
 @RestController
 @RequestMapping("/conta/perfil-empregador/enderecos")
 public class EnderecoSalvoController {
@@ -54,13 +61,15 @@ public class EnderecoSalvoController {
     }
 
     @GetMapping
-    public ResponseEntity<List<EnderecoSalvoResponse>> listarEndereco(@AuthenticationPrincipal UsuarioAutenticado usuario) {
+    public ResponseEntity<List<EnderecoSalvoResponse>> listarEnderecos(@AuthenticationPrincipal UsuarioAutenticado usuario) {
+        exigirEmpregador(usuario);
         return ResponseEntity.ok(enderecoSalvoMapper.toResponse(listarEnderecosSalvosUseCase.executar(usuario.id())));
     }
 
     @PostMapping
     public ResponseEntity<EnderecoSalvoResponse> criarEndereco(@AuthenticationPrincipal UsuarioAutenticado usuario,
             @Valid @RequestBody EnderecoSalvoRequest request) {
+        exigirEmpregador(usuario);
         var criado = criarEnderecoSalvoUseCase.executar(usuario.id(), enderecoSalvoMapper.toEntity(request));
         return ResponseEntity.status(HttpStatus.CREATED).body(enderecoSalvoMapper.toResponse(criado));
     }
@@ -68,20 +77,30 @@ public class EnderecoSalvoController {
     @PutMapping("/{id}")
     public ResponseEntity<EnderecoSalvoResponse> editarEndereco(@AuthenticationPrincipal UsuarioAutenticado usuario,
             @PathVariable UUID id, @Valid @RequestBody EnderecoSalvoRequest request) {
-        var editado = editarEnderecoSalvoUseCase.executar(usuario.id(), id, enderecoSalvoMapper.toEntity(request));
+        exigirEmpregador(usuario);
+        var editado = editarEnderecoSalvoUseCase.executar(usuario.id(), id, enderecoSalvoMapper.toEntity(request),
+                request.padrao());
         return ResponseEntity.ok(enderecoSalvoMapper.toResponse(editado));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> removerEndereco(@AuthenticationPrincipal UsuarioAutenticado usuario,
             @PathVariable UUID id) {
+        exigirEmpregador(usuario);
         removerEnderecoSalvoUseCase.executar(usuario.id(), id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/padrao")
-    public ResponseEntity<EnderecoSalvoResponse> marcarEnderecoPadrao(
+    public ResponseEntity<List<EnderecoSalvoResponse>> marcarEnderecoPadrao(
             @AuthenticationPrincipal UsuarioAutenticado usuario, @PathVariable UUID id) {
+        exigirEmpregador(usuario);
         return ResponseEntity.ok(enderecoSalvoMapper.toResponse(marcarEnderecoSalvoPadraoUseCase.executar(usuario.id(), id)));
+    }
+
+    private static void exigirEmpregador(UsuarioAutenticado usuario) {
+        if (usuario.papel() != PapelUsuario.EMPREGADOR) {
+            throw new AccessDeniedException("endereços salvos exigem o papel EMPREGADOR");
+        }
     }
 }
