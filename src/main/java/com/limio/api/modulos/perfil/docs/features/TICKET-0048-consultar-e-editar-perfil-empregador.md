@@ -123,7 +123,8 @@ contagem real igual a zero**.
 - `foto`: `null` (não existe `Midia`).
 - `mediaAvaliacoes`: `null` enquanto não há avaliação — nunca `0.0` (RB11: sem "média fantasma").
 - `qtdAvaliacoes`: `0`.
-- `enderecos.quantidade`: `0`; `enderecos.apelidoPadrao`: `null`.
+- `enderecos.quantidade`: `0`; `enderecos.apelidoPadrao`: `null`. **Continua placeholder**: os endereços já existem
+  (TICKET-0050, `/conta/perfil-empregador/enderecos`), mas o `GET` do perfil ainda não os consulta.
 - `emailConfirmadoEm` / `telefoneConfirmadoEm`: `null` = não confirmado (hoje é o estado de todas as contas,
   ver Dependências).
 

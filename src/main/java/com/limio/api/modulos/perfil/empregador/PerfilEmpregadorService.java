@@ -29,6 +29,20 @@ public class PerfilEmpregadorService extends BaseService<PerfilEmpregador, UUID,
         return new MeuPerfilEmpregador(perfil, dados);
     }
 
+    public PerfilEmpregador garantirPerfilParaAtualizar(UUID usuarioId) {
+        PerfilEmpregador perfil = garantirPerfil(usuarioId).perfil();
+        return repository.findByIdParaAtualizar(perfil.getId())
+                .orElseThrow(PerfilEmpregadorNaoEncontradoException::new);
+    }
+
+    public PerfilEmpregador buscarPerfilExistente(UUID usuarioId) {
+        return repository.findByUsuarioId(usuarioId).orElseThrow(PerfilEmpregadorNaoEncontradoException::new);
+    }
+
+    public PerfilEmpregador travarPerfilExistente(UUID perfilId) {
+        return repository.findByIdParaAtualizar(perfilId).orElseThrow(PerfilEmpregadorNaoEncontradoException::new);
+    }
+
     /** Sem criar: vazio é o usuário que nunca abriu o perfil de empregador. */
     public Optional<PerfilEmpregador> buscarPorUsuario(UUID usuarioId) {
         return repository.findByUsuarioId(usuarioId);

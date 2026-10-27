@@ -22,6 +22,49 @@ Mesmo caminho do `GET` (o mesmo `garantirPerfil`), com `EditarNomeExibicaoUseCas
 `EditarNomeExibicaoRequest` (obrigatório, sem espaços nas pontas, até 80 caracteres), o nome é gravado e a resposta
 é a mesma do `GET`.
 
+## Endereços salvos — `/conta/perfil-empregador/enderecos` (TICKET-0050)
+
+Em todas as rotas o dono vem só do token (`usuario.id()`), nunca da URL ou do corpo.
+
+1. `EnderecoSalvoController` chama o use case da rota. `EnderecoSalvoMapper` converte `EnderecoSalvoRequest` →
+   entity na entrada e entity → `EnderecoSalvoResponse` na saída; o use case nunca vê record.
+2. Exceto listar, todo use case (criar e editar, dentro da transação, depois de geocodificar) começa com `PerfilEmpregadorService.garantirPerfilParaAtualizar`, que cria o
+   perfil se for o primeiro acesso e o **trava** (`PESSIMISTIC_WRITE`). Escritas do mesmo Empregador ficam
+   serializadas, e é isso que garante um único padrão sem depender só do índice.
+   O **editar** é a exceção: nunca cria perfil. Fora da transação lê com `buscarPerfilExistente` (sem efeito colateral,
+   404 se não houver) e dentro dela trava com `travarPerfilExistente(perfilId)`, sem nova ida ao auth.
+3. O acesso por id usa `EnderecoSalvoService.buscarEnderecoAtivoOuFalhar(id, perfilId)`: id inexistente, removido
+   ou de outro Empregador dá a mesma `EnderecoSalvoNaoEncontradoException` (404 `ENDERECO_NAO_ENCONTRADO`).
+4. **Criar/editar**: antes de abrir a transação, o use case obtém as coordenadas em
+   `Geocodificador.localizarEndereco(EnderecoParaGeocodificar)` (rua, número, cidade, UF; sem CEP, bairro ou
+   complemento). Vazio → `EnderecoNaoLocalizadoException` (422 `ENDERECO_NAO_LOCALIZADO`); provedor fora do ar →
+   `GeocodificacaoIndisponivelException` (503). Só então `TransactionOperations` abre a transação (passo 2) e grava.
+   Na **edição** a consulta só acontece se `EnderecoSalvo.mesmaLocalizacaoQue` der falso (rua, número, cidade ou UF
+   mudaram); senão as coordenadas gravadas ficam. Com `isPadrao = true`, `desmarcarEnderecoPadrao` roda antes de
+   gravar (UPDATE com flush e clear do contexto — a ordem importa por causa do índice único parcial). `PUT`
+   substitui todos os campos (`EnderecoSalvo.substituirDadosPor`, que não copia coordenadas;
+   `definirCoordenadas` as aplica).
+5. **Remover**: `EnderecoSalvo.remover(Instant)` preenche `removidoEm` e zera `isPadrao`; a linha fica no banco.
+   Remover o padrão deixa o Empregador sem padrão.
+6. **Marcar padrão** (`PATCH /{id}/padrao`): idempotente; se ainda não é o padrão, desmarca o atual, recarrega o
+   endereço (o clear do contexto o desanexou) e marca. A resposta é a lista atualizada dos endereços ativos (padrão
+   primeiro), como no card, para o front re-renderizar sem outro `GET`.
+7. `EnderecoSalvoService.salvar` faz `saveAndFlush` e converte a violação de `uk_endereco_salvo_padrao` em
+   `EnderecoPadraoConflitoException` (409 `ENDERECO_PADRAO_CONFLITO`), rede de segurança caso uma escrita escape
+   do lock.
+
+| Classe | Papel |
+|---|---|
+| `endereco/EnderecoSalvo`, `EnderecoSalvoRepository`, `EnderecoSalvoService` | entity (com `remover` e `substituirDadosPor`), finders sempre com `RemovidoEmIsNull` e service (busca ou 404, desmarcar padrão, rede de segurança do índice) |
+| `enums/Uf` | as 27 siglas com nome por extenso (usado no `state` do Nominatim), valor fechado do domínio |
+| `actions/service/Geocodificador`, `NominatimGeocodificador` | porta de geocodificação (município e endereço) e sua implementação no Nominatim; `endereco/EnderecoParaGeocodificar` é o record de entrada |
+| `actions/usecase/ListarEnderecosSalvosUseCase`, `CriarEnderecoSalvoUseCase`, `EditarEnderecoSalvoUseCase`, `RemoverEnderecoSalvoUseCase`, `MarcarEnderecoSalvoPadraoUseCase` | regra de negócio de cada rota |
+| `actions/mapper/EnderecoSalvoMapper` | request/entity/response (só o controller chama) |
+| `actions/controller/EnderecoSalvoController` | tradução HTTP ↔ usecase |
+| `records/EnderecoSalvoRequest`, `EnderecoSalvoResponse` | contrato HTTP; o request normaliza CEP (só dígitos), `strip` e complemento em branco → `null` |
+| `excecao/EnderecoSalvoNaoEncontradoException`, `EnderecoPadraoConflitoException`, `EnderecoNaoLocalizadoException` | 404, 409 e 422 |
+| `empregador/PerfilEmpregadorRepository.findByIdParaAtualizar`, `PerfilEmpregadorService.garantirPerfilParaAtualizar` | lock pessimista do perfil usado por toda escrita de endereço |
+
 As rotas do TICKET-0054 também exigem login: o `JwtAuthFilter` (`comum/seguranca/`) põe o `UsuarioAutenticado` no SecurityContext e
 o controller recebe com `@AuthenticationPrincipal`. Sem token válido, 401 `NAO_AUTENTICADO` antes de chegar aqui.
 
@@ -53,7 +96,7 @@ o controller recebe com `@AuthenticationPrincipal`. Sem token válido, 401 `NAO_
    - `CategoriaService.buscarAtivasPorIds` — veio menos do que foi pedido (id inexistente ou inativo) →
      `CategoriaInvalidaException`.
    - Coordenadas: `PerfilPrestadorService.buscarCoordenadasConhecidas` (algum perfil já gravou esse município/UF —
-     cache) ou, se não, `GeocodificacaoService.localizarMunicipio` (Nominatim). Não achou →
+     cache) ou, se não, `Geocodificador.localizarMunicipio` (implementado por `NominatimGeocodificador`). Não achou →
      `MunicipioNaoEncontradoException`; serviço fora do ar ou resposta fora do formato →
      `GeocodificacaoIndisponivelException` (lançada pelo service).
    - Abre a transação (`TransactionOperations`): `PerfilPrestadorService.travarPorUsuario` (advisory lock até o fim
@@ -117,7 +160,7 @@ o resumo sai sem foto em vez de 503 — a foto não derruba o painel.
 | `PerfilPrestador` | Entity raiz — atuação do Prestador; `atualizarAtuacao` + critério de `completo` |
 | `JanelaAtendimento` | Subentidade de `PerfilPrestador` (cascade + orphanRemoval) |
 | `Categoria` | Entity raiz — taxonomia de especialidades; `desativar` recusa a protegida; `ORDEM_EXIBICAO` |
-| `Coordenadas` | Record `@Embeddable` — resultado da geocodificação, embutido no `PerfilPrestador`; valida a faixa |
+| `geo/Coordenadas` | Record `@Embeddable` compartilhado — resultado da geocodificação, embutido no `PerfilPrestador` e aplicado no `EnderecoSalvo`; valida a faixa |
 | `PerfilPrestadorService` | Extends `comum/base/BaseService` — `buscarPorUsuario`, `buscarCoordenadasConhecidas`, `travarPorUsuario` |
 | `CategoriaService` | Extends `comum/base/BaseService` — `listarAtivas`, `buscarAtivasPorIds` |
 | `PerfilPrestadorRepository` / `CategoriaRepository` | Extends `comum/base/BaseRepository` — porta de persistência JPA |

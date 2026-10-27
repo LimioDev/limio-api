@@ -3,15 +3,22 @@ package com.limio.api.modulos.perfil.empregador;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.limio.api.comum.base.BaseRepository;
 
+import jakarta.persistence.LockModeType;
+
 public interface PerfilEmpregadorRepository extends BaseRepository<PerfilEmpregador, UUID> {
 
     Optional<PerfilEmpregador> findByUsuarioId(UUID usuarioId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from PerfilEmpregador p where p.id = :id")
+    Optional<PerfilEmpregador> findByIdParaAtualizar(@Param("id") UUID id);
 
     @Modifying
     @Query(value = """

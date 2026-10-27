@@ -100,4 +100,57 @@ class PerfilEmpregadorServiceTest {
 
         verifyNoInteractions(repository);
     }
+
+    @Test
+    void garantirPerfilParaAtualizarDeveTravarOPerfilExistenteEDevolverOMesmoPerfil() {
+        PerfilEmpregador existente = perfil("Maria");
+        when(consultaDadosUsuario.buscarPorId(USUARIO_ID)).thenReturn(Optional.of(dados("Maria da Silva")));
+        when(repository.findByUsuarioId(USUARIO_ID)).thenReturn(Optional.of(existente));
+        when(repository.findByIdParaAtualizar(existente.getId())).thenReturn(Optional.of(existente));
+
+        assertThat(service.garantirPerfilParaAtualizar(USUARIO_ID)).isSameAs(existente);
+
+        verify(repository).findByIdParaAtualizar(existente.getId());
+    }
+
+    @Test
+    void buscarPerfilExistenteNaoDeveInserirNemConsultarOAuth() {
+        PerfilEmpregador existente = perfil("Maria");
+        when(repository.findByUsuarioId(USUARIO_ID)).thenReturn(Optional.of(existente));
+
+        assertThat(service.buscarPerfilExistente(USUARIO_ID)).isSameAs(existente);
+
+        verifyNoInteractions(consultaDadosUsuario);
+        verify(repository, never()).inserirSeAusente(any(), any());
+    }
+
+    @Test
+    void buscarPerfilExistenteDeveFalharComNotFoundSemInserirQuandoNaoHaPerfil() {
+        when(repository.findByUsuarioId(USUARIO_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.buscarPerfilExistente(USUARIO_ID))
+                .isInstanceOf(PerfilEmpregadorNaoEncontradoException.class);
+
+        verify(repository, never()).inserirSeAusente(any(), any());
+    }
+
+    @Test
+    void travarPerfilExistenteDeveTravarPeloIdSemConsultarOAuth() {
+        PerfilEmpregador existente = perfil("Maria");
+        when(repository.findByIdParaAtualizar(existente.getId())).thenReturn(Optional.of(existente));
+
+        assertThat(service.travarPerfilExistente(existente.getId())).isSameAs(existente);
+
+        verifyNoInteractions(consultaDadosUsuario);
+    }
+
+    @Test
+    void garantirPerfilParaAtualizarNaoDeveTravarQuandoAContaFoiEncerrada() {
+        when(consultaDadosUsuario.buscarPorId(USUARIO_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.garantirPerfilParaAtualizar(USUARIO_ID))
+                .isInstanceOf(PerfilEmpregadorNaoEncontradoException.class);
+
+        verify(repository, never()).findByIdParaAtualizar(any());
+    }
 }

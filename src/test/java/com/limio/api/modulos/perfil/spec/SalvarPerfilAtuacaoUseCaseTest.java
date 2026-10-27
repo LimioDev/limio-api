@@ -24,16 +24,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionOperations;
 
-import com.limio.api.modulos.perfil.actions.service.GeocodificacaoService;
+import com.limio.api.modulos.perfil.actions.service.Geocodificador;
 import com.limio.api.modulos.perfil.actions.usecase.SalvarPerfilAtuacaoUseCase;
 import com.limio.api.modulos.perfil.categoria.Categoria;
 import com.limio.api.modulos.perfil.categoria.CategoriaService;
+import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.excecao.CategoriaInvalidaException;
 import com.limio.api.modulos.perfil.excecao.MunicipioNaoEncontradoException;
-import com.limio.api.modulos.perfil.perfilprestador.Coordenadas;
+import com.limio.api.modulos.perfil.geo.Coordenadas;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestador;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestadorService;
-import com.limio.api.modulos.perfil.perfilprestador.enums.Uf;
 import com.limio.api.modulos.perfil.perfilprestador.janelaatendimento.JanelaAtendimento;
 import com.limio.api.modulos.perfil.perfilprestador.janelaatendimento.enums.DiaSemana;
 
@@ -50,13 +50,13 @@ class SalvarPerfilAtuacaoUseCaseTest {
     private CategoriaService categoriaService;
 
     @Mock
-    private GeocodificacaoService geocodificacaoService;
+    private Geocodificador geocodificador;
 
     private SalvarPerfilAtuacaoUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new SalvarPerfilAtuacaoUseCase(perfilPrestadorService, categoriaService, geocodificacaoService,
+        useCase = new SalvarPerfilAtuacaoUseCase(perfilPrestadorService, categoriaService, geocodificador,
                 TransactionOperations.withoutTransaction());
     }
 
@@ -92,7 +92,7 @@ class SalvarPerfilAtuacaoUseCaseTest {
         Categoria eletrica = categoria("Elétrica");
         when(categoriaService.buscarAtivasPorIds(Set.of(eletrica.getId()))).thenReturn(Set.of(eletrica));
         when(perfilPrestadorService.buscarCoordenadasConhecidas("Campinas", Uf.SP)).thenReturn(Optional.empty());
-        when(geocodificacaoService.localizarMunicipio("Campinas", Uf.SP)).thenReturn(Optional.of(CAMPINAS));
+        when(geocodificador.localizarMunicipio("Campinas", Uf.SP)).thenReturn(Optional.of(CAMPINAS));
         semPerfilSalvo();
         salvarDevolveOProprioPerfil();
 
@@ -134,7 +134,7 @@ class SalvarPerfilAtuacaoUseCaseTest {
         PerfilPrestador salvo = useCase.executar(USUARIO_ID, Set.of(), 10, "Campinas", Uf.SP, List.of());
 
         assertThat(salvo.getCoordenadasBase()).isEqualTo(CAMPINAS);
-        verifyNoInteractions(geocodificacaoService);
+        verifyNoInteractions(geocodificador);
     }
 
     @Test
@@ -147,14 +147,14 @@ class SalvarPerfilAtuacaoUseCaseTest {
                 .isInstanceOf(CategoriaInvalidaException.class);
 
         verify(perfilPrestadorService, never()).salvar(any());
-        verifyNoInteractions(geocodificacaoService);
+        verifyNoInteractions(geocodificador);
     }
 
     @Test
     void deveRecusarMunicipioQueAGeocodificacaoNaoAcha() {
         when(categoriaService.buscarAtivasPorIds(Set.of())).thenReturn(Set.of());
         when(perfilPrestadorService.buscarCoordenadasConhecidas("Campinass", Uf.SP)).thenReturn(Optional.empty());
-        when(geocodificacaoService.localizarMunicipio("Campinass", Uf.SP)).thenReturn(Optional.empty());
+        when(geocodificador.localizarMunicipio("Campinass", Uf.SP)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.executar(USUARIO_ID, Set.of(), 10, "Campinass", Uf.SP, List.of()))
                 .isInstanceOf(MunicipioNaoEncontradoException.class);

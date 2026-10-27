@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import com.limio.api.modulos.perfil.perfilprestador.enums.Uf;
+import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.perfilprestador.janelaatendimento.enums.DiaSemana;
 import com.limio.api.modulos.perfil.records.JanelaAtendimentoRequest;
 import com.limio.api.modulos.perfil.records.PerfilAtuacaoRequest;
