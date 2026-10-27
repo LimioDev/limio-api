@@ -39,6 +39,9 @@ public class Anuncio extends BaseEntity {
     @Column(name = "anuncio_origem_id")
     private UUID anuncioOrigemId;
 
+    @Column(name = "titulo", nullable = false, length = 100)
+    private String titulo;
+
     @Column(name = "descricao", nullable = false)
     private String descricao;
 

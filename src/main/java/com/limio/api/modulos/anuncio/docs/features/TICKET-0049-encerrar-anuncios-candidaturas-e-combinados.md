@@ -34,7 +34,7 @@ cards próprios (ver "Relacionado").
 ## Entidades
 
 ### `Anuncio` (agregado raiz, `modulos/anuncio/Anuncio.java`)
-`descricao`, `dataHoraPretendida`, `status: StatusAnuncio`, `bairroRegiaoSnapshot`,
+`titulo`, `descricao`, `dataHoraPretendida`, `status: StatusAnuncio`, `bairroRegiaoSnapshot`,
 `enderecoCompletoSnapshot`, `latitudeSnapshot`, `longitudeSnapshot`, `tamanhoLocal`, `numeroPessoas`,
 `observacoes`, `prazoValidacaoHoras`, `iniciadoEm`, `checkoutEm`, `validadoEm`, `encerradoEm` (usado
 por este card), `contratanteId`/`anuncioOrigemId: UUID` (colunas cruas, ADR-0001 §1.6).

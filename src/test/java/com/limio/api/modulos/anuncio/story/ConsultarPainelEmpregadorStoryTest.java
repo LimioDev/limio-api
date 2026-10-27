@@ -123,6 +123,7 @@ class ConsultarPainelEmpregadorStoryTest {
     private Anuncio anuncio(UUID contratanteId, String descricao, StatusAnuncio status, Duration daquiA) {
         return anuncioRepository.save(Anuncio.builder()
                 .contratanteId(contratanteId)
+                .titulo(descricao)
                 .descricao(descricao)
                 .dataHoraPretendida(Instant.now().plus(daquiA))
                 .bairroRegiaoSnapshot("Pinheiros")
