@@ -85,7 +85,8 @@ Erro: `ErroResponse { codigo, mensagem, timestamp, path }`, sempre via `GlobalEx
 
 ## Decisão técnica e alternativas descartadas
 
-Pendências do card resolvidas com o dev, a validar com tech lead/PO:
+Pendências do card resolvidas com o dev. **Decisão do tech lead (2026-10-26)**: aprovadas as partes técnicas (Nominatim, enum `DiaSemana`, DER);
+as de produto seguem com o PO:
 
 - **Coordenadas do município-base (tech lead)**: geocodificação pelo Nominatim (OpenStreetMap), em
   `actions/service/NominatimGeocodificador` (implementa a porta `Geocodificador`). Consulta estruturada `city` + `state` (nome da UF por extenso) +
@@ -186,11 +187,11 @@ O agrupamento acima foi inferido da ordem do Figma — confirmar com o PO.
   selecionadas" — se 12 for o máximo que o Prestador pode escolher (e não o total de categorias), falta o limite no
   record e no usecase.
 - **Front/PO**: onde exibir a atribuição ao OpenStreetMap.
-- **Tech lead**: validar Nominatim (servidor público x instância própria x outro provedor); o DER real das quatro
-  tabelas (aqui só os campos do card).
+- ~~**Tech lead**: validar Nominatim; o DER real das quatro tabelas~~. **Decisão do tech lead (2026-10-26)**: fica o Nominatim público, com o cache
+  por município que já existe e o limite de 1 req/s da política de uso; instância própria só se o volume pedir
+  (a URL já é configurável). O DER passa a ser o que está na V11.
 - Checagem de perfil completo na troca de papel (UC09) — continua fora, como no TICKET-0032; `completo` agora existe
   pra quando ela entrar (via evento ou contrato em `comum/`, nunca import de `perfil` dentro de `auth`).
 - Mural (anúncios por especialidade/raio) — consome `prestador_categoria` e as coordenadas, ticket próprio.
-- Raio decimal (`10.7`) é truncado pelo Jackson (vira `10`) em vez de recusado — comportamento padrão de todo campo
-  `Integer` do projeto (`ACCEPT_FLOAT_AS_INT`). O Zod do front já exige inteiro; recusar no back é configuração
-  global do Jackson, decisão do projeto todo, não deste card.
+- ~~Raio decimal (`10.7`) truncado pelo Jackson~~. **Decisão do tech lead (2026-10-26)**: `ACCEPT_FLOAT_AS_INT` desligado na API toda; decimal em
+  campo inteiro responde 400 `VALIDACAO_FALHOU`.

@@ -51,7 +51,8 @@ Erros (`ErroResponse { codigo, mensagem, timestamp, path }`):
 
 ## Decisão técnica e alternativas descartadas
 
-Pendências do card resolvidas, a validar com tech lead/PO:
+Pendências do card resolvidas. **Decisão do tech lead (2026-10-26)**: aprovadas as técnicas (storage, envio pela API); formatos e tamanho seguem com
+o PO:
 
 - **Qual storage / onde ficam as chaves (tech lead)**: o bucket S3-compatível que já existe
   (`comum/config/StorageConfig`, Railway hoje). Chaves nas envs `STORAGE_BUCKET`, `STORAGE_ENDPOINT`,
@@ -114,7 +115,7 @@ ADR-0001 §1.6), `uk_midia_url_s3` e o índice único parcial `uk_midia_foto_per
 ## Fora de escopo / pendências
 
 - **PO**: formatos e tamanho definitivos (hoje JPEG/PNG até 5 MB).
-- **Tech lead**: confirmar envio pela API (multipart) e o bucket privado com link temporário.
+- ~~**Tech lead**: confirmar envio pela API (multipart) e o bucket privado com link temporário.~~ **Decisão do tech lead (2026-10-26)**: aprovado.
 - **Moderação** (admin remove a foto) — US58. Basta expurgar a `Midia` e apagar o objeto, como na troca.
 - **Mural e perfil público** mostrarem a foto de outros usuários: ticket do mural (consulta por `usuario_id`).
 - **Remover a foto sem enviar outra**: não pedido no card.

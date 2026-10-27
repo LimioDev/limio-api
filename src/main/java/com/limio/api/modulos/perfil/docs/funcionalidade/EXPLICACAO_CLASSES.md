@@ -131,6 +131,12 @@ o controller recebe com `@AuthenticationPrincipal`. Sem token válido, 401 `NAO_
 
 `ConsultarFotoPerfilUseCase` busca a `Midia` ativa e gera o link temporário; sem foto, o controller responde 204.
 
+## Porta `ConsultaPerfilEmpregador` (TICKET-0052, painel do Empregador em `anuncio`)
+
+`actions/service/ConsultaPerfilEmpregadorService` implementa a porta de `comum/portas/`: `garantirPerfil` (mesma
+regra e mesmo 404 do `GET /conta/perfil-empregador`) + link temporário da foto ativa. Se o storage não gerar o link,
+o resumo sai sem foto em vez de 503 — a foto não derruba o painel.
+
 ## Classes envolvidas
 
 | Classe | Papel |
@@ -166,9 +172,13 @@ o controller recebe com `@AuthenticationPrincipal`. Sem token válido, 401 `NAO_
 | `actions/service/ArmazenamentoService` | integração com o bucket S3 (`enviar`, `gerarLink`, `remover`); 503 sem storage configurado |
 | `actions/service/FotoPerfilEventosService` | apaga do bucket o objeto anterior (commit) ou o novo (rollback) |
 | `eventos/FotoPerfilTrocadaEvent` | evento interno da troca: chave nova + chave anterior |
+| `eventos/FotoPerfilRemovidaEvent` | evento interno: foto tirada de uso sem substituta (conta encerrada); o objeto sai do bucket depois do commit |
+| `actions/usecase/AnonimizarPerfilDaContaEncerradaUseCase` | reação a `comum/eventos/ContaEncerradaEvent` (UC10): anonimiza o nome de exibição, apaga o `PerfilPrestador`, expurga a foto; cada parte isolada |
 | `actions/usecase/TrocarFotoPerfilUseCase`, `ConsultarFotoPerfilUseCase` | regra de negócio da foto |
 | `actions/mapper/FotoPerfilMapper`, `actions/controller/FotoPerfilController`, `records/FotoPerfilResponse` | contrato HTTP da foto |
 | `excecao/FotoInvalidaException`, `ArmazenamentoIndisponivelException` | 422 e 503 da foto |
 | `comum/persistencia/TravaTransacional`, `EscopoTrava` | Advisory lock do Postgres por escopo + chave (usado aqui e no login) |
+| `comum/portas/ConsultaPerfilEmpregador`, `ResumoPerfilEmpregador` | porta de leitura de nome de exibição + foto, pra outros módulos |
+| `actions/service/ConsultaPerfilEmpregadorService` | implementação da porta (TICKET-0052) |
 
 Atualize esta página sempre que uma classe mudar de responsabilidade.

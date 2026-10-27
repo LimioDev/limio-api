@@ -89,10 +89,13 @@ mensagem sempre genérica) e `TROCA_CONTATO_LIMITE_EXCEDIDO` (429).
   pela porta `ConsultaDadosUsuario` (testado). Alternativa descartada: rotas sob `/conta/perfil-empregador` com porta de
   comando em `comum/` (transformaria o `perfil` em repasse).
 
-## Contrato para a futura UC05 (não implementada)
+## Contrato para a UC05 (implementada no TICKET-0047)
+
+> `ConfirmarEmailUseCase` segue os itens 1 a 3 abaixo. O item 3 também foi aplicado ao `RedefinirSenhaUseCase`.
+> O item 4 continua dependendo da D10.
 
 O token foi desenhado para ser consumível por uma UC05: só o SHA-256 (64 caracteres) é gravado, a finalidade
-`CONFIRMACAO_EMAIL` é filtrada por `buscarPorTokenHashEFinalidade` (token de recuperação de senha não confirma e-mail e
+`CONFIRMACAO_EMAIL` é filtrada por `buscarParaConsumir` (token de recuperação de senha não confirma e-mail e
 vice-versa; testado), há `expiraEm` (`isValido`) e `consumidoEm` (`consumir`). Um token antigo não deve confirmar um
 endereço novo; hoje isso é garantido **só pela invalidação dos pendentes a cada troca ou reemissão**. A UC05 precisa:
 
@@ -100,7 +103,7 @@ endereço novo; hoje isso é garantido **só pela invalidação dos pendentes a 
    corrida entre o consumidor e uma troca concorrente);
 2. recusar conta encerrada;
 3. consumir o token de forma atômica sob esse lock (o `RedefinirSenhaUseCase` não faz isso hoje);
-4. **se a D10 for aprovada**, recusar token cujo `destino_hash` difira do hash do e-mail atual.
+4. recusar token cujo `destino_hash` difira do hash do e-mail atual (D10, aprovada e implementada).
 
 ## Migration
 
@@ -111,17 +114,20 @@ numeração da `V9` do perfil e, se a D10 for aprovada, a migration do `destino_
 
 ## Pendências
 
-- **D10 (aprovação pendente)**: gravar `destino_hash` (SHA-256 do e-mail-alvo) no token, para ele só valer para o
-  endereço emitido, inclusive contra emissores futuros e a corrida com o consumidor. Exigiria coluna anulável em
-  `verificacao_contato` e uma segunda migration provisória; **não implementado**. Guardar o e-mail em claro foi evitado de
+- ~~**D10 (aprovação pendente)**~~: **Decisão do tech lead (2026-10-26)**: aprovada e implementada (migration V16). `destino_hash` = SHA-256 do
+  e-mail normalizado; vale para confirmação de e-mail **e** recuperação de senha (link enviado ao endereço antigo para
+  de valer depois da troca). Tokens da conta são apagados no encerramento. Guardar o e-mail em claro foi evitado de
   propósito: o encerramento de conta (`feature/36`) anonimiza `usuario.email` e não limparia essa cópia.
 - **E-mail pendente promovido na confirmação (review)**: hoje o e-mail de login troca na hora; um typo (`@gmial.com`) deixa
   a conta presa, pois a recuperação de senha vai para a caixa errada. O aviso ao e-mail antigo cobre o takeover, não o typo.
   Resolver exige guardar o novo endereço como pendente e promovê-lo na UC05 (coluna/migration nova); não implementado.
-- UC05 (endpoint de consumo do link), UC04 (OTP/SMS e gateway), regra de telefone do UC01 (PO: recusar fixo?), ordem de merge e
-  numeração das migrations (`V9`, e a da D10 se aprovada), `app.frontend.url` vs `app.deeplink.url` (`feature/36`; o link sai de um único método).
-- Riscos aceitos: recusa por e-mail em uso tem status diferente do sucesso e não consome limite (igual ao cadastro); o
-  cadastro não trata a violação de `uk_usuario_email` (500 pré-existente).
+- ~~UC05 (endpoint de consumo do link)~~: `POST /auth/confirmar-email` (TICKET-0047).
+- ~~`app.frontend.url` vs `app.deeplink.url`~~: os dois saíram; o link é `https` em `app.web.url` (ADR-0002).
+- UC04 (OTP/SMS e gateway) e regra de telefone do UC01 (PO: recusar fixo?) continuam pendentes. A numeração das
+  migrations se resolveu sozinha (V14 a V17, `out-of-order=true`).
+- Riscos aceitos: recusa por e-mail em uso tem status diferente do sucesso e não consome limite (igual ao cadastro).
+  ~~O cadastro não trata a violação de `uk_usuario_email` (500)~~: resolvido no TICKET-0047
+  (`UsuarioService.salvarNovo` → 409 `CADASTRO_DADOS_INDISPONIVEIS`).
 
 ## Fora de escopo
 

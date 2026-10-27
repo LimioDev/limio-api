@@ -9,7 +9,8 @@ Relacionado: [anuncio] [BACK-END] Encerrar anúncios, candidaturas e combinados 
 
 ## Status
 
-Implementado — só a reação de `auth` (ver "Fora de escopo" abaixo pro resto do card).
+Implementado. A reação de `auth` veio aqui; as de `anuncio` (TICKET-0049), `perfil` e `notificacao` (TICKET-0047)
+vieram depois, cada uma num listener próprio de `ContaEncerradaEvent`.
 
 ## Regra de negócio implementada
 
@@ -92,6 +93,13 @@ Implementado — só a reação de `auth` (ver "Fora de escopo" abaixo pro resto
   o usuário quando possível" foi interpretada: nenhum campo de `LogAuditoria` recebe nome/e-mail/CPF.
 
 ## Fora de escopo (não implementado aqui)
+
+> **Atualização (TICKET-0047):** o reator de `perfil` agora existe —
+> `perfil/actions/usecase/AnonimizarPerfilDaContaEncerradaUseCase` anonimiza o nome de exibição do
+> `PerfilEmpregador`, apaga o `PerfilPrestador` (localização, raio, especialidades e janelas) e expurga a foto
+> de perfil, apagando o objeto do storage depois do commit. `notificacao` também ganhou o seu
+> (`RemoverPreferenciaDaContaEncerradaUseCase`). `AceiteTermo` continua sem existir e, como explicado abaixo, não
+> precisa de reator. O texto abaixo registra o motivo de, na época, não terem entrado neste card.
 
 Os reatores de `perfil` e "Consentimentos" ao `ContaEncerradaEvent` **não foram implementados** —
 decisão consciente, não esquecimento:

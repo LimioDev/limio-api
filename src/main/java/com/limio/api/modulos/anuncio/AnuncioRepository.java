@@ -9,4 +9,7 @@ import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 public interface AnuncioRepository extends BaseRepository<Anuncio, UUID> {
 
     List<Anuncio> findByContratanteIdAndStatusIn(UUID contratanteId, List<StatusAnuncio> status);
+
+    List<Anuncio> findByContratanteIdAndStatusInOrderByDataHoraPretendidaAsc(UUID contratanteId,
+            List<StatusAnuncio> status);
 }

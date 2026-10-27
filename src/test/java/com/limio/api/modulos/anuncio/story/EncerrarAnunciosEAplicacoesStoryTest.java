@@ -140,6 +140,7 @@ class EncerrarAnunciosEAplicacoesStoryTest {
 
     private Anuncio anuncio(UUID contratanteId, StatusAnuncio status, Instant dataHoraPretendida) {
         return anuncioRepository.save(Anuncio.builder()
+                .titulo("Faxina")
                 .contratanteId(contratanteId)
                 .descricao("Faxina pós-obra")
                 .dataHoraPretendida(dataHoraPretendida)

@@ -6,7 +6,9 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 import com.limio.api.modulos.auth.actions.helper.DispositivoHelper;
+import com.limio.api.modulos.auth.actions.helper.IpHelper;
 import com.limio.api.modulos.auth.actions.helper.LimiteTentativasLogin;
+import com.limio.api.modulos.auth.actions.helper.LimiteTentativasLoginPorIp;
 import com.limio.api.modulos.auth.actions.helper.SenhaHasher;
 import com.limio.api.modulos.auth.actions.service.TokenService;
 import com.limio.api.modulos.auth.excecao.ContaSuspensaException;
@@ -15,6 +17,7 @@ import com.limio.api.modulos.auth.excecao.LoginTemporariamenteBloqueadoException
 import com.limio.api.modulos.auth.sessao.Sessao;
 import com.limio.api.modulos.auth.sessao.SessaoService;
 import com.limio.api.modulos.auth.sessao.TokensSessao;
+import com.limio.api.modulos.auth.tentativalogin.RegraBloqueio;
 import com.limio.api.modulos.auth.tentativalogin.TentativaLogin;
 import com.limio.api.modulos.auth.tentativalogin.TentativaLoginService;
 import com.limio.api.modulos.auth.usuario.Usuario;
@@ -25,7 +28,8 @@ import com.limio.api.modulos.auth.usuario.UsuarioService;
  * pro aparelho e devolve os tokens com o papel ativo salvo no usuário.
  *
  * E-mail inexistente, senha errada e conta encerrada respondem igual
- * ({@link CredenciaisInvalidasException}) e contam pro rate limit.
+ * ({@link CredenciaisInvalidasException}) e contam pro rate limit — por e-mail
+ * e, quando o IP do cliente é público, também por IP.
  *
  * A tentativa é gravada antes de conferir a senha (assim tentativas
  * simultâneas já contam umas pras outras) e apagada se a senha conferir — o
@@ -46,6 +50,7 @@ public class AutenticarUsuarioUseCase {
     private final SessaoService sessaoService;
     private final TentativaLoginService tentativaLoginService;
     private final LimiteTentativasLogin limiteTentativasLogin;
+    private final LimiteTentativasLoginPorIp limitePorIp;
     private final SenhaHasher senhaHasher;
     private final TokenService tokenService;
 
@@ -53,12 +58,14 @@ public class AutenticarUsuarioUseCase {
             SessaoService sessaoService,
             TentativaLoginService tentativaLoginService,
             LimiteTentativasLogin limiteTentativasLogin,
+            LimiteTentativasLoginPorIp limitePorIp,
             SenhaHasher senhaHasher,
             TokenService tokenService) {
         this.usuarioService = usuarioService;
         this.sessaoService = sessaoService;
         this.tentativaLoginService = tentativaLoginService;
         this.limiteTentativasLogin = limiteTentativasLogin;
+        this.limitePorIp = limitePorIp;
         this.senhaHasher = senhaHasher;
         this.tokenService = tokenService;
     }
@@ -103,9 +110,13 @@ public class AutenticarUsuarioUseCase {
     }
 
     private TentativaLogin registrarTentativa(String contador, String ip, Instant agora) {
-        return tentativaLoginService
-                .registrarSeLiberado(contador, ip, limiteTentativasLogin.maxFalhas(),
-                        falhas -> limiteTentativasLogin.estaBloqueado(falhas, agora))
+        RegraBloqueio porEmail = new RegraBloqueio(limiteTentativasLogin.maxFalhas(),
+                falhas -> limiteTentativasLogin.estaBloqueado(falhas, agora));
+        // IP interno = o IP real não chegou (ver IpHelper); limitar por ele bloquearia todo mundo
+        Optional<RegraBloqueio> porIp = IpHelper.ehPublico(ip)
+                ? Optional.of(new RegraBloqueio(limitePorIp.maxFalhas(), falhas -> limitePorIp.estaBloqueado(falhas, agora)))
+                : Optional.empty();
+        return tentativaLoginService.registrarSeLiberado(contador, ip, porEmail, porIp)
                 .orElseThrow(LoginTemporariamenteBloqueadoException::new);
     }
 }

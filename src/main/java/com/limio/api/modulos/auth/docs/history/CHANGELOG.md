@@ -203,8 +203,8 @@ por thread); sem transação ele ainda rodava a ação na hora. A `TrocarEmailUs
 `ConfirmacaoEmailSolicitadaEvent` e `EmailContaAlteradoEvent`, e `EmailEventosService` envia com
 `@TransactionalEventListener(AFTER_COMMIT)`. Fora de transação o evento é descartado, nunca envia antes de persistir.
 Os eventos ficam em `auth/eventos/` (internos); a #7 usa `comum/eventos/` só para evento entre módulos
-(`ContaEncerradaEvent`). Local provisório, ADR pendente do tech lead. `SolicitarRecuperacaoSenhaUseCase` e
-`AlterarSenhaUseCase` seguem enviando dentro da transação.
+(`ContaEncerradaEvent`). Formalizado no ADR-0003 (2026-10-26). `SolicitarRecuperacaoSenhaUseCase` e
+`AlterarSenhaUseCase` passaram a usar evento também em 2026-10-26 (ver abaixo).
 
 ## 2026-10-21 — lock do login vai pro helper comum
 
@@ -212,3 +212,36 @@ O `pg_advisory_xact_lock` por e-mail de `TentativaLoginService.registrarSeLibera
 `TentativaLoginRepository` e passou a usar `comum/persistencia/TravaTransacional` com escopo `EscopoTrava.LOGIN`
 (review da PR #9, TICKET-0054: o perfil era o segundo módulo com o mesmo lock feito à mão). Muda só a chave do lock
 (forma de duas chaves, escopo + e-mail); a serialização por e-mail é a mesma.
+
+## 2026-10-26 — TICKET-0047: links de e-mail em `https` com páginas web; UC05 implementada
+
+**Decisão revertida.** Em 2026-10-16 ficou decidido que os links de senha seriam só `limio://` (custom scheme), sem
+página web (`docs/features/PENDENCIA-universal-link-deeplink-app.md`). O card ETI-47 pede o contrário, e o link
+`limio://` em e-mail tem três problemas: clientes como o Gmail bloqueiam o link, sem o app instalado ele não faz nada,
+e qualquer app pode registrar o esquema e receber o token. Agora vale o ADR-0002 (`docs/adr/` na raiz do repo):
+todo link é `https` em `app.web.url`, com o token no fragmento, e abre uma página estática da API que chama os
+endpoints JSON. `LinkApp`/`app.deeplink.url` viraram `LinkWeb`/`app.web.url`; o doc da pendência foi removido.
+O e-mail "senha alterada" perdeu o link `limio://recuperar-senha` e passou a orientar "Esqueci minha senha" no app.
+
+**UC05 que faltava no ETI-30.** O cadastro (`feature/30`) não emitia nem consumia o token de confirmação. Entraram:
+emissão no cadastro, `POST /auth/confirmar-email` e `POST /auth/reenviar-confirmacao-email`, com a emissão
+centralizada em `EmissorConfirmacaoEmail` (antes ficava dentro do `TrocarEmailUseCase`). O link do cadastro
+conta no mesmo limite de 3 e-mails de confirmação por hora da troca de e-mail.
+
+**Pendências antigas resolvidas junto:** consumo atômico do token no `RedefinirSenhaUseCase` (TICKET-0048, item 3);
+cadastro simultâneo com o mesmo e-mail/CPF respondendo 500 (agora 409, `UsuarioService.salvarNovo`); limpeza de
+`tentativa_login` (TICKET-0032), com cada limpeza da rotina de retenção isolada das outras, como o javadoc já dizia
+e o código não fazia. Detalhe em `docs/features/TICKET-0047-paginas-web-nova-senha-e-confirmar-email.md`.
+
+## 2026-10-26 — decisões do tech lead sobre as pendências do módulo
+
+- **ADR-0002 aceito** (links `https` + páginas web) e **ADR-0003 criado** (eventos para reação, portas para
+  consulta), fechando as propostas "pendentes de ADR" da porta `ConsultaDadosUsuario` e do lugar dos eventos.
+- **`PapelUsuario.ADMIN` removido** (V15): administrador é ator próprio na tabela `administrador`. Papel fora do
+  enum responde 400; `PapelInvalidoException`/`PAPEL_INVALIDO` saíram.
+- **D10 aprovada** (V16): `verificacao_contato.destino_hash`. Vale também para a recuperação de senha. Tokens da
+  conta apagados no encerramento.
+- **IP real e limite por IP no login** (V17): `server.forward-headers-strategy=native` e
+  `auth.login.max-falhas-por-ip` (30/15 min, só IP público).
+- **E-mails de recuperação e de senha alterada em `AFTER_COMMIT`**, como os demais.
+- Aprovadas como estão as decisões "a validar" do TICKET-0032 e do TICKET-0048.

@@ -27,6 +27,11 @@ public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository
         return repository.findByContratanteIdAndStatusIn(usuarioId, STATUS_ABERTOS);
     }
 
+    /** Mesma busca que {@link #buscarAbertosDoContratante}, da data pretendida mais próxima pra mais distante. */
+    public List<Anuncio> buscarAbertosDoContratantePorData(UUID usuarioId) {
+        return repository.findByContratanteIdAndStatusInOrderByDataHoraPretendidaAsc(usuarioId, STATUS_ABERTOS);
+    }
+
     /**
      * Busca que não lança — {@code anuncio_id} em {@code Aplicacao}/{@code
      * Reagendamento} não tem FK (ADR-0001 §1.6), então um anúncio ausente é

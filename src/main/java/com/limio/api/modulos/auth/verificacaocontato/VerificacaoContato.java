@@ -23,8 +23,8 @@ import lombok.Setter;
 
 /**
  * Token de uso único enviado por um canal de contato, pra confirmar a posse
- * dele — recuperação de senha (TICKET-0033) ou, no futuro, confirmação de
- * e-mail (UC05). Tabela compartilhada com o Cadastro (UC01).
+ * dele — recuperação de senha (TICKET-0033) ou confirmação de e-mail (UC05,
+ * TICKET-0047). Emitido no cadastro, na troca de e-mail e no reenvio.
  *
  * Nunca guarda o token em texto puro, só {@code tokenHash} (mesma lógica do
  * refresh token da {@link com.limio.api.modulos.auth.sessao.Sessao}).
@@ -53,6 +53,13 @@ public class VerificacaoContato extends BaseEntity {
     @Column(name = "token_hash", nullable = false, length = 64)
     private String tokenHash;
 
+    /**
+     * SHA-256 do e-mail de destino (D10 do TICKET-0048, aprovada em 2026-10-26). Nulo em token emitido
+     * antes da V16: esse continua valendo só pelas outras regras.
+     */
+    @Column(name = "destino_hash", length = 64)
+    private String destinoHash;
+
     @Column(name = "expira_em", nullable = false)
     private Instant expiraEm;
 
@@ -61,6 +68,11 @@ public class VerificacaoContato extends BaseEntity {
 
     public boolean isValido(Instant agora) {
         return consumidoEm == null && agora.isBefore(expiraEm);
+    }
+
+    /** Vale pro e-mail atual da conta? Quem chama passa o hash ({@code TokenVerificacaoHelper.hashDestino}). */
+    public boolean valeParaDestino(String hashDestinoAtual) {
+        return destinoHash == null || destinoHash.equals(hashDestinoAtual);
     }
 
     public void consumir(Instant agora) {

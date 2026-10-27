@@ -51,3 +51,9 @@ em vez de colunas em `usuario`.
   UC15.
 - **Testes.** A story de persistência via usecase foi removida; seus cenários únicos (dois `PUT` mantêm um registro e
   unicidade no banco) passaram para `PreferenciaNotificacaoStoryTest`.
+
+## 2026-10-26 — TICKET-0047: preferência apagada no encerramento de conta
+
+Resolvida a pendência do item 8 do UC15: `RemoverPreferenciaDaContaEncerradaUseCase` escuta `ContaEncerradaEvent`
+(`AFTER_COMMIT` + `REQUIRES_NEW`, mesmo padrão do listener de `anuncio`) e apaga a linha de
+`preferencia_notificacao`. Falha é logada e não volta para quem encerrou a conta.

@@ -100,8 +100,8 @@ aparelho" (o token de acesso/JWT não carrega id de sessão) — mesmo campo que
 
 ## Fora de escopo
 
-- `FinalidadeVerificacao.CONFIRMACAO_EMAIL` existe no enum (decisão já tomada) mas nenhum usecase a emite ainda —
-  entra com a UC05 ("Confirmar e-mail"), card relacionado, não este.
+- ~~`FinalidadeVerificacao.CONFIRMACAO_EMAIL` sem emissor~~: emitida pela troca de e-mail (TICKET-0048) e pelo
+  cadastro, e consumida pela UC05 (TICKET-0047).
 - `CanalVerificacao.SMS` idem: não usado por nenhum fluxo hoje (recuperação de senha e confirmação de e-mail
   saem só por `EMAIL`).
 

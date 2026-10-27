@@ -43,7 +43,8 @@
 | `AtualizarPreferenciaNotificacaoUseCase` | Regra de negócio: gravar canais (cria o registro no primeiro `PUT`); aceite do WhatsApp em `AceiteTermo` ainda pendente |
 | `PreferenciaNotificacaoMapper` | `PreferenciaNotificacao` ⇄ `PreferenciaNotificacaoRequest`/`PreferenciaNotificacaoResponse` |
 | `PreferenciaNotificacao` | Entity (`extends BaseEntity`): `usuario_id`, `push`, `email`, `sms`, `whatsapp` |
-| `PreferenciaNotificacaoService` | Extends `comum/base/BaseService` — CRUD genérico + busca por usuário |
+| `PreferenciaNotificacaoService` | Extends `comum/base/BaseService` — CRUD genérico + busca por usuário + `apagarDoUsuario` |
+| `RemoverPreferenciaDaContaEncerradaUseCase` | Reação a `comum/eventos/ContaEncerradaEvent`: apaga a preferência da conta encerrada depois do commit de `auth` |
 | `PreferenciaNotificacaoRepository` | Extends `comum/base/BaseRepository` — porta de persistência JPA |
 | `PreferenciaNotificacaoRequest` / `PreferenciaNotificacaoResponse` | Records HTTP com os 4 booleanos |
 | `AceiteTermo` | Registro do consentimento de WhatsApp — **ainda não existe** (definição fora desta feature) |
