@@ -88,6 +88,12 @@ o controller recebe com `@AuthenticationPrincipal`. Sem token válido, 401 `NAO_
 
 `ConsultarFotoPerfilUseCase` busca a `Midia` ativa e gera o link temporário; sem foto, o controller responde 204.
 
+## Porta `ConsultaPerfilEmpregador` (TICKET-0052, painel do Empregador em `anuncio`)
+
+`actions/service/ConsultaPerfilEmpregadorService` implementa a porta de `comum/portas/`: `garantirPerfil` (mesma
+regra e mesmo 404 do `GET /conta/perfil-empregador`) + link temporário da foto ativa. Se o storage não gerar o link,
+o resumo sai sem foto em vez de 503 — a foto não derruba o painel.
+
 ## Classes envolvidas
 
 | Classe | Papel |
@@ -127,5 +133,7 @@ o controller recebe com `@AuthenticationPrincipal`. Sem token válido, 401 `NAO_
 | `actions/mapper/FotoPerfilMapper`, `actions/controller/FotoPerfilController`, `records/FotoPerfilResponse` | contrato HTTP da foto |
 | `excecao/FotoInvalidaException`, `ArmazenamentoIndisponivelException` | 422 e 503 da foto |
 | `comum/persistencia/TravaTransacional`, `EscopoTrava` | Advisory lock do Postgres por escopo + chave (usado aqui e no login) |
+| `comum/portas/ConsultaPerfilEmpregador`, `ResumoPerfilEmpregador` | porta de leitura de nome de exibição + foto, pra outros módulos |
+| `actions/service/ConsultaPerfilEmpregadorService` | implementação da porta (TICKET-0052) |
 
 Atualize esta página sempre que uma classe mudar de responsabilidade.
