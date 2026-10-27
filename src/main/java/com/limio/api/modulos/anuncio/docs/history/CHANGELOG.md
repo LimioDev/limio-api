@@ -86,3 +86,11 @@ Achados de code review no PR #12, corrigidos antes do merge:
 - Migration renumerada de `V11` pra `V13`: `V11` colide com a #9 (`TICKET-0054`, ainda aberta) e `V12`
   já é da #10 — nenhuma das duas tinha mergeado ainda, então `V13` é o próximo número livre sem
   depender da ordem de merge entre elas.
+
+## 2026-10-22 — TICKET-0052: painel "Início" do Empregador
+
+Primeiro endpoint HTTP do módulo: `GET /anuncios/painel-empregador`. Nome de exibição e foto vêm de `perfil`
+pela porta nova `comum/portas/ConsultaPerfilEmpregador`; nome do prestador escolhido pela `ConsultaDadosUsuario`,
+abreviado ("Rafael S."). Decisões tomadas neste card (o card não definia): "anúncios abertos" = `StatusAnuncio.isAberto()`, "novos
+candidatos" = candidaturas `ENVIADA`, foto do anúncio `null` até existir o card de criar anúncio. Detalhe em
+`docs/features/TICKET-0052-listar-anuncios-do-empregador-para-o-painel.md`.
