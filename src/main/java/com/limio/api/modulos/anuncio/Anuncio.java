@@ -88,6 +88,18 @@ public class Anuncio extends BaseEntity {
     @Column(name = "encerrado_em")
     private Instant encerradoEm;
 
+    /**
+     * Por que o anúncio foi pra {@code ENCERRADO} — não existe status próprio pra "cancelado" nem
+     * "expirado" (ETI-63: decisão pendente do card, resolvida assim). Texto livre, não enum: cada
+     * caminho (exclusão de conta, cancelamento pelo Empregador, expiração futura — ETI-66) grava o
+     * próprio motivo sem precisar de um valor novo em {@link StatusAnuncio} a cada card.
+     */
+    @Column(name = "motivo_encerramento")
+    private String motivoEncerramento;
+
+    private static final String MOTIVO_EXCLUSAO_DE_CONTA = "Cancelado por saída de conta";
+    private static final String MOTIVO_CANCELAMENTO_PELO_EMPREGADOR = "Cancelado pelo Empregador";
+
     /** Status ainda "vivo" — ainda não chegou num estado final (TICKET-0049: candidato a encerramento). */
     public boolean isAberto() {
         return status.isAberto();
@@ -95,8 +107,18 @@ public class Anuncio extends BaseEntity {
 
     /** UC16 (encerrar conta do contratante): tira do mural, não conclui. */
     public void encerrarPorExclusaoDeConta(Instant agora) {
+        encerrar(agora, MOTIVO_EXCLUSAO_DE_CONTA);
+    }
+
+    /** ETI-63: Empregador cancela antes de escolher alguém. Quem chama já validou o estado do anúncio. */
+    public void cancelarPeloEmpregador(Instant agora) {
+        encerrar(agora, MOTIVO_CANCELAMENTO_PELO_EMPREGADOR);
+    }
+
+    private void encerrar(Instant agora, String motivo) {
         this.status = StatusAnuncio.ENCERRADO;
         this.encerradoEm = agora;
+        this.motivoEncerramento = motivo;
     }
 
     /**
