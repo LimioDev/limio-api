@@ -36,6 +36,12 @@ public enum CodigoErro {
     FOTO_INVALIDA("Envie uma foto JPG ou PNG."),
     ARQUIVO_GRANDE_DEMAIS("O arquivo é maior que o permitido."),
     ARMAZENAMENTO_INDISPONIVEL("Não foi possível guardar o arquivo agora. Tente novamente em instantes."),
+    PAPEL_INVALIDO("Troque para o papel de Prestador para se candidatar."),
+    CONTATOS_NAO_CONFIRMADOS("Confirme seu telefone e e-mail para se candidatar."),
+    ANUNCIO_PROPRIO("Você não pode se candidatar ao próprio anúncio."),
+    ANUNCIO_ESTADO_INVALIDO("Este anúncio não está mais aceitando candidaturas."),
+    CANDIDATURA_DUPLICADA("Você já tem uma candidatura em aberto para este anúncio."),
+    COTA_ESGOTADA("Você atingiu o limite de candidaturas escolhidas do plano gratuito neste mês."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;
