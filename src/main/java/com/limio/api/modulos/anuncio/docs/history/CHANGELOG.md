@@ -94,3 +94,32 @@ pela porta nova `comum/portas/ConsultaPerfilEmpregador`; nome do prestador escol
 abreviado ("Rafael S."). Decisões tomadas neste card (o card não definia): "anúncios abertos" = `StatusAnuncio.isAberto()`, "novos
 candidatos" = candidaturas `ENVIADA`, foto do anúncio `null` até existir o card de criar anúncio. Detalhe em
 `docs/features/TICKET-0052-listar-anuncios-do-empregador-para-o-painel.md`.
+
+## 2026-10-28 — ETI-75: candidatar-se a um anúncio
+
+Segundo endpoint HTTP do módulo: `POST /anuncios/{anuncioId}/candidaturas`. `EmitirConfirmacaoEmailUseCase`-style:
+`CandidatarSeUseCase` cria a `Aplicacao` em `ENVIADA` e publica `CandidaturaCriadaEvent` (novo, `comum/eventos/`) —
+dois consumidores previstos (`chat` abre o 1:1, `notificacao` avisa o Empregador), nenhum existe em código ainda.
+
+Duas decisões que o card deixava em aberto:
+
+- **Rota "a definir"**: `POST /anuncios/{anuncioId}/candidaturas`, sem corpo — o único dado de entrada
+  (id do anúncio) já vem do path, e o prestador vem do token.
+- **"GOLD ativo" não existe em código** (`modulos.financeiro` é só o esqueleto do TICKET-0044, nada
+  implementado antes de `ETI-81`): até lá, todo Prestador é tratado como FREE, então o limite de 4
+  escolhas/mês sempre vale. O cenário do card "GOLD com 4 escolhas" (deveria passar) não tem teste por
+  isso — não há como ainda ser GOLD.
+
+**Clique duplo**: a checagem do usecase (`AplicacaoService.existeAbertaDoPar`) não basta sob corrida real
+— duas requisições podem passar pela checagem antes de qualquer insert. Índice único parcial
+`uk_aplicacao_par_ativo` (migration V20, `WHERE status IN ('ENVIADA','ESCOLHIDA','AGUARDANDO_VALIDACAO')`)
+mais `AplicacaoService.salvarCandidatura` (`saveAndFlush` + catch de `DataIntegrityViolationException` →
+`CandidaturaDuplicadaException`) garantem o par único — mesmo idioma de `EnderecoSalvoService.salvar`
+(TICKET-0050). `CandidatarSeStoryTest` testa com duas requisições HTTP paralelas reais, não só mocks.
+
+Cota mensal contada por `escolhidaEm` (mês civil UTC), não por `dataAplicacao`: bate com a tela "Cota do
+mês" do Figma, que lista os serviços pela data em que o Prestador foi escolhido. Candidatar-se em si não
+consome cota (card explícito: "Não mexe na cota") — só bloqueia se a cota de escolhas já está no limite,
+pra não deixar o Prestador se candidatar a algo que, escolhido, ele não teria como aceitar.
+
+Detalhe completo em `docs/features/ETI-75-candidatar-se-a-um-anuncio.md`.
