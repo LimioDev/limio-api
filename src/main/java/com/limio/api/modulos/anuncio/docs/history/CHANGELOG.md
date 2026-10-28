@@ -94,3 +94,31 @@ pela porta nova `comum/portas/ConsultaPerfilEmpregador`; nome do prestador escol
 abreviado ("Rafael S."). Decisões tomadas neste card (o card não definia): "anúncios abertos" = `StatusAnuncio.isAberto()`, "novos
 candidatos" = candidaturas `ENVIADA`, foto do anúncio `null` até existir o card de criar anúncio. Detalhe em
 `docs/features/TICKET-0052-listar-anuncios-do-empregador-para-o-painel.md`.
+
+## 2026-10-28 — ETI-63: cancelar anúncio antes da escolha
+
+`POST /anuncios/{anuncioId}/cancelar`. O card deixava uma decisão pendente (status `CANCELADO` novo vs.
+gravar o motivo) — resolvida gravando o motivo: `Anuncio` ganhou `motivoEncerramento` (migration V21),
+mesmo padrão que `Aplicacao.motivoEncerramento` já usa desde o TICKET-0049, em vez de um valor de enum
+por cenário de encerramento. `Anuncio.encerrarPorExclusaoDeConta` (TICKET-0049) foi retroativamente
+ajustado pra também gravar motivo (`"Cancelado por saída de conta"`), fechando a inconsistência de ter
+`ENCERRADO` com motivo às vezes sim, às vezes não — sem mudar a assinatura pública nem quebrar teste
+existente (nenhum testava o motivo de `Anuncio`). O raciocínio completo, e por que serve também pro
+futuro `ETI-66` (expiração) e `ETI-94`/`95` (cancelamento com/sem estorno), está em
+`docs/features/ETI-63-cancelar-anuncio-antes-da-escolha.md`.
+
+Reaproveitado do ETI-75 (candidatar-se, `PR #19`, ainda não mergeado quando este card começou):
+`AplicacaoService.temCandidaturaEscolhida` (mesmo finder) e `CodigoErro.ANUNCIO_ESTADO_INVALIDO` (mesmo
+valor, mensagem generalizada pra servir os dois usecases). Como as duas branches tocam os mesmos
+arquivos (`CodigoErro.java`, `AplicacaoService`/`AplicacaoRepository`, a exceção
+`AnuncioEstadoInvalidoException`), um conflito de merge trivial é esperado entre elas — resolve mantendo
+os dois lados (`ANUNCIO_NAO_ENCONTRADO` deste card + os nomes do ETI-75).
+
+Dono errado e anúncio inexistente respondem o mesmo 404 `ANUNCIO_NAO_ENCONTRADO` — quem não é dono não
+descobre se o id existe, mesmo critério que `ConsultarPainelEmpregadorUseCase` já segue (só lista os
+anúncios do próprio contratante).
+
+`AnuncioCanceladoEvent(anuncioId, ocorridoEm)` — novo em `comum/eventos/`, só o id do anúncio: o módulo
+`chat` (ETI-101, ainda não existe em código) vai guardar `anuncioId` cru em cada chat (recebido no
+`CandidaturaCriadaEvent` de cada candidatura, ETI-75), então não precisa da lista de candidaturas aqui
+pra marcar os chats em somente leitura.
