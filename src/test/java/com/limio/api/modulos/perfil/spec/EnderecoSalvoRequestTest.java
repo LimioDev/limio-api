@@ -6,7 +6,7 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
-import com.limio.api.modulos.perfil.enums.Uf;
+import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.modulos.perfil.records.EnderecoSalvoRequest;
 
 import jakarta.validation.ConstraintViolation;

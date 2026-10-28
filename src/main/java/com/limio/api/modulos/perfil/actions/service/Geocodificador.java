@@ -2,8 +2,8 @@ package com.limio.api.modulos.perfil.actions.service;
 
 import java.util.Optional;
 
+import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.modulos.perfil.endereco.EnderecoParaGeocodificar;
-import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.geo.Coordenadas;
 
 /**

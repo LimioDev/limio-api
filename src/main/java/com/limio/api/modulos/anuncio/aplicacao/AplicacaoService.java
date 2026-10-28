@@ -1,5 +1,6 @@
 package com.limio.api.modulos.anuncio.aplicacao;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -15,8 +16,22 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     private static final List<StatusAplicacao> STATUS_ABERTOS =
             List.of(StatusAplicacao.ENVIADA, StatusAplicacao.ESCOLHIDA, StatusAplicacao.AGUARDANDO_VALIDACAO);
 
+    /** Derivado de {@link StatusAplicacao#isEscolhida()} — fonte única, não duplica a lista aqui. */
+    private static final List<StatusAplicacao> STATUS_ESCOLHIDA =
+            Arrays.stream(StatusAplicacao.values()).filter(StatusAplicacao::isEscolhida).toList();
+
     public AplicacaoService(AplicacaoRepository repository) {
         super(repository);
+    }
+
+    /** Algum prestador já foi escolhido pro anúncio (ver {@link Aplicacao#isEscolhida()}). */
+    public boolean existeEscolhida(UUID anuncioId) {
+        return repository.existsByAnuncioIdAndStatusIn(anuncioId, STATUS_ESCOLHIDA);
+    }
+
+    /** Candidaturas ainda sem resposta do Empregador, da mais antiga pra mais nova. */
+    public List<Aplicacao> buscarEnviadasDoAnuncio(UUID anuncioId) {
+        return repository.findByAnuncioIdAndStatusOrderByDataAplicacaoAscIdAsc(anuncioId, StatusAplicacao.ENVIADA);
     }
 
     /** Candidaturas ainda abertas (não recusadas/concluídas/encerradas) em que {@code usuarioId} é o prestador. */

@@ -94,3 +94,13 @@ pela porta nova `comum/portas/ConsultaPerfilEmpregador`; nome do prestador escol
 abreviado ("Rafael S."). Decisões tomadas neste card (o card não definia): "anúncios abertos" = `StatusAnuncio.isAberto()`, "novos
 candidatos" = candidaturas `ENVIADA`, foto do anúncio `null` até existir o card de criar anúncio. Detalhe em
 `docs/features/TICKET-0052-listar-anuncios-do-empregador-para-o-painel.md`.
+
+## 2026-10-27 — ETI-59: criar e publicar anúncio, com fotos
+
+Primeiro card que cria anúncio pela API: `POST /anuncios`, `POST /anuncios/{id}/fotos` e `GET /anuncios/{id}`.
+Categoria, endereço salvo e geocodificação do endereço avulso vêm de `perfil` pelas portas novas
+`ConsultaCategoria`/`ConsultaEndereco`; a mídia subiu pra `comum/midia` (ver o CHANGELOG de `perfil`). Migrations
+`V20` (categoria e endereço salvo no anúncio, `anuncio_id` na mídia) e `V21` (retrato da UF). O título (5 a 80) usa a coluna da V18 (PR #17).
+`StatusAplicacao.isEscolhida()` virou a fonte única de "prestador escolhido" (`Aplicacao.isEscolhida()` delega). Contrato alinhado ao front-end par (limio-app#17): `enderecoAvulso`, fotos
+respondidas como lista, `categoria.grupo` e `uf` na consulta. Detalhe
+em `docs/features/TICKET-0059-criar-e-publicar-anuncio-com-fotos.md`.

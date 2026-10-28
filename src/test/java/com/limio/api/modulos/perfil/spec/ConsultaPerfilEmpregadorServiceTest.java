@@ -15,18 +15,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.limio.api.comum.midia.ArmazenamentoService;
+import com.limio.api.comum.midia.LinkTemporario;
+import com.limio.api.comum.midia.Midia;
+import com.limio.api.comum.midia.MidiaService;
+import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
 import com.limio.api.comum.portas.DadosUsuario;
 import com.limio.api.comum.portas.ResumoPerfilEmpregador;
-import com.limio.api.modulos.perfil.actions.service.ArmazenamentoService;
 import com.limio.api.modulos.perfil.actions.service.ConsultaPerfilEmpregadorService;
 import com.limio.api.modulos.perfil.empregador.MeuPerfilEmpregador;
 import com.limio.api.modulos.perfil.empregador.PerfilEmpregador;
 import com.limio.api.modulos.perfil.empregador.PerfilEmpregadorService;
-import com.limio.api.modulos.perfil.excecao.ArmazenamentoIndisponivelException;
 import com.limio.api.modulos.perfil.excecao.PerfilEmpregadorNaoEncontradoException;
-import com.limio.api.modulos.perfil.midia.LinkTemporario;
-import com.limio.api.modulos.perfil.midia.Midia;
-import com.limio.api.modulos.perfil.midia.MidiaService;
 
 @ExtendWith(MockitoExtension.class)
 class ConsultaPerfilEmpregadorServiceTest {

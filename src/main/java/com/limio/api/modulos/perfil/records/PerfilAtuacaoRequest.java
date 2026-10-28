@@ -8,7 +8,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.limio.api.modulos.perfil.enums.Uf;
+import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.modulos.perfil.perfilprestador.janelaatendimento.enums.DiaSemana;
 
 import jakarta.validation.Valid;

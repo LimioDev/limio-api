@@ -16,5 +16,8 @@ public enum EscopoTrava {
     PERFIL_PRESTADOR,
 
     /** Troca da foto de perfil por usuário (TICKET-0056). */
-    FOTO_PERFIL
+    FOTO_PERFIL,
+
+    /** Envio de fotos por anúncio, pro limite de quantidade (ETI-59). */
+    FOTOS_ANUNCIO
 }

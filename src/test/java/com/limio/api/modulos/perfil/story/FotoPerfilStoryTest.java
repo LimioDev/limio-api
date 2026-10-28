@@ -40,10 +40,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import com.limio.api.TestcontainersConfiguration;
-import com.limio.api.modulos.perfil.actions.service.ArmazenamentoService;
-import com.limio.api.modulos.perfil.excecao.ArmazenamentoIndisponivelException;
-import com.limio.api.modulos.perfil.midia.LinkTemporario;
-import com.limio.api.modulos.perfil.spec.ImagensDeTeste;
+import com.limio.api.comum.midia.ArmazenamentoService;
+import com.limio.api.comum.midia.ImagensDeTeste;
+import com.limio.api.comum.midia.LinkTemporario;
+import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
 
 import tools.jackson.databind.ObjectMapper;
 
