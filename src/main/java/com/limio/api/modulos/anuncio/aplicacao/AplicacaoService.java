@@ -15,6 +15,9 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     private static final List<StatusAplicacao> STATUS_ABERTOS =
             List.of(StatusAplicacao.ENVIADA, StatusAplicacao.ESCOLHIDA, StatusAplicacao.AGUARDANDO_VALIDACAO);
 
+    private static final List<StatusAplicacao> STATUS_ESCOLHIDA =
+            List.of(StatusAplicacao.ESCOLHIDA, StatusAplicacao.AGUARDANDO_VALIDACAO);
+
     public AplicacaoService(AplicacaoRepository repository) {
         super(repository);
     }
@@ -39,5 +42,10 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
             return List.of();
         }
         return repository.findByAnuncioIdInAndStatusIn(anuncioIds, STATUS_ABERTOS);
+    }
+
+    /** O anúncio já tem alguém escolhido (combinado ou aguardando validação) — bloqueia candidatura (ETI-75) e cancelamento (ETI-63). */
+    public boolean temCandidaturaEscolhida(UUID anuncioId) {
+        return repository.existsByAnuncioIdAndStatusIn(anuncioId, STATUS_ESCOLHIDA);
     }
 }
