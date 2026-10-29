@@ -27,4 +27,14 @@ class NomeHelperTest {
     void dadoNomeDeUmaPalavra_quandoAbrevia_entaoSaiComoEsta() {
         assertThat(NomeHelper.abreviar("Rafael")).isEqualTo("Rafael");
     }
+
+    @Test
+    void dadoVariosSobrenomes_quandoGeraIniciais_entaoPrimeiroNomeEUltimoSobrenome() {
+        assertThat(NomeHelper.iniciais("  maria da   silva ")).isEqualTo("MS");
+    }
+
+    @Test
+    void dadoNomeDeUmaPalavra_quandoGeraIniciais_entaoUmaLetra() {
+        assertThat(NomeHelper.iniciais("maria")).isEqualTo("M");
+    }
 }
