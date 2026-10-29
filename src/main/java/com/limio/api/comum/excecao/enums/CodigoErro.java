@@ -40,6 +40,9 @@ public enum CodigoErro {
     DATA_NO_PASSADO("A data e a hora do serviço precisam estar no futuro."),
     ANUNCIO_NAO_ENCONTRADO("Anúncio não encontrado."),
     ANUNCIO_ESTADO_INVALIDO("O anúncio não permite esta ação no estado atual."),
+    CANDIDATURA_NAO_ENCONTRADA("Candidatura não encontrada."),
+    CANDIDATURA_ESTADO_INVALIDO("Esta candidatura já foi encerrada."),
+    USE_CANCELAMENTO_SERVICO("Você já foi escolhido para este serviço. Para desistir, cancele o serviço combinado."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;
