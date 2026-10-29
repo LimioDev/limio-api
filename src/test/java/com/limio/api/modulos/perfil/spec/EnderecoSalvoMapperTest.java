@@ -8,9 +8,9 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.modulos.perfil.actions.mapper.EnderecoSalvoMapper;
 import com.limio.api.modulos.perfil.endereco.EnderecoSalvo;
-import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.records.EnderecoSalvoRequest;
 import com.limio.api.modulos.perfil.records.EnderecoSalvoResponse;
 

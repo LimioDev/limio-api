@@ -11,9 +11,9 @@
  *   <li>{@code anuncio} — agregado raiz</li>
  *   <li>{@code aplicacao} — candidatura de prestador a um anúncio</li>
  *   <li>{@code valor_combinado}, {@code reagendamento}, {@code nao_comparecimento}, {@code contestacao} — subentidades de {@code anuncio}</li>
- *   <li>{@code midia} — mídia anexada a anúncio/aplicação (também referenciada por {@code chat}). A tabela
- *       já existe (TICKET-0056, foto de perfil) com a entity em {@code modulos.perfil.midia}; quando este
- *       módulo precisar dela, a entity sobe pra {@code comum/} (ADR-0001: nunca importar {@code perfil})</li>
+ *   <li>{@code midia} — mídia anexada a anúncio/aplicação (também referenciada por {@code chat}). As fotos
+ *       do anúncio (ETI-59) usam a entity {@code comum.midia.Midia}, que subiu de {@code modulos.perfil}
+ *       quando este módulo passou a gravar mídia (ADR-0001: nunca importar {@code perfil})</li>
  * </ul>
  */
 package com.limio.api.modulos.anuncio;

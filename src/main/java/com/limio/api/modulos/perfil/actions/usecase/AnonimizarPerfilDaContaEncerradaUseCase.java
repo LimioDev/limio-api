@@ -13,9 +13,9 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.limio.api.comum.eventos.ContaEncerradaEvent;
+import com.limio.api.comum.midia.MidiaService;
 import com.limio.api.modulos.perfil.empregador.PerfilEmpregadorService;
 import com.limio.api.modulos.perfil.eventos.FotoPerfilRemovidaEvent;
-import com.limio.api.modulos.perfil.midia.MidiaService;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestadorService;
 
 /**

@@ -17,8 +17,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.modulos.perfil.actions.usecase.ConsultarPerfilAtuacaoUseCase;
-import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.geo.Coordenadas;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestador;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestadorService;

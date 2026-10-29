@@ -19,12 +19,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 import com.limio.api.comum.eventos.ContaEncerradaEvent;
+import com.limio.api.comum.midia.Midia;
+import com.limio.api.comum.midia.MidiaService;
 import com.limio.api.modulos.perfil.actions.usecase.AnonimizarPerfilDaContaEncerradaUseCase;
 import com.limio.api.modulos.perfil.empregador.PerfilEmpregador;
 import com.limio.api.modulos.perfil.empregador.PerfilEmpregadorService;
 import com.limio.api.modulos.perfil.eventos.FotoPerfilRemovidaEvent;
-import com.limio.api.modulos.perfil.midia.Midia;
-import com.limio.api.modulos.perfil.midia.MidiaService;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestadorService;
 
 @ExtendWith(MockitoExtension.class)

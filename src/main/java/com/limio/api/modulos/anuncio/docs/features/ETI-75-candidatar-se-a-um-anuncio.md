@@ -32,14 +32,14 @@ aqui), chat em si (`ETI-101`/`ETI-102`, só o evento é publicado aqui), consult
 
 | Critério do card | Implementação |
 |---|---|
-| Papel ativo `PRESTADOR` | `PapelInvalidoException` (403 `PAPEL_INVALIDO`) se o papel do token não for `PRESTADOR`. |
-| Telefone e e-mail confirmados | `ConsultaDadosUsuario` (porta, `comum/portas/`) — `ContatosNaoConfirmadosException` (403 `CONTATOS_NAO_CONFIRMADOS`) se `emailConfirmadoEm`/`telefoneConfirmadoEm` nulos. |
-| Anúncio em `PUBLICADO` sem candidatura `ESCOLHIDA` | `AnuncioEstadoInvalidoException` (409 `ANUNCIO_ESTADO_INVALIDO`) se o status não for `PUBLICADO` ou já existir candidatura `ESCOLHIDA`/`AGUARDANDO_VALIDACAO` (`AplicacaoService.temCandidaturaEscolhida`). |
+| Papel ativo `PRESTADOR` | `SomentePrestadorCandidataException` (403 `ACESSO_NEGADO`) se o papel do token não for `PRESTADOR` — mesmo código de publicar anúncio e das rotas de endereço salvo. |
+| Telefone e e-mail confirmados | `ConsultaDadosUsuario` (porta, `comum/portas/`) + `DadosUsuario.contatosConfirmados()` — `ContatosNaoConfirmadosException` (403 `CONTATOS_NAO_CONFIRMADOS`), a mesma de publicar anúncio. Conta encerrada também cai aqui, igual em publicar. |
+| Anúncio em `PUBLICADO` sem candidatura `ESCOLHIDA` | `AnuncioEstadoInvalidoException` (409 `ANUNCIO_ESTADO_INVALIDO`) se o status não for `PUBLICADO` ou já existir candidatura `ESCOLHIDA`/`AGUARDANDO_VALIDACAO` (`AplicacaoService.existeEscolhida`, que já existia na develop). |
 | Anúncio do próprio usuário | `AnuncioProprioException` (403 `ANUNCIO_PROPRIO`) se `anuncio.contratanteId == prestadorId`. |
 | Candidatura `ENVIADA`/`ESCOLHIDA` já existente do mesmo par | `CandidaturaDuplicadaException` (409 `CANDIDATURA_DUPLICADA`), checada no usecase (`AplicacaoService.existeAbertaDoPar`) **e** garantida pelo índice único `uk_aplicacao_par_ativo` sob concorrência (ver "Clique duplo"). |
 | Cota esgotada (FREE, 4 escolhas no mês) | `CotaEsgotadaException` (403 `COTA_ESGOTADA`) se `AplicacaoService.contarEscolhidasNoPeriodo` (mês civil UTC, por `escolhidaEm`) ≥ `anuncio.candidatura.max-escolhas-gratuitas` (default `4`). Ver "GOLD ainda não existe" abaixo. |
 | Pode candidatar de novo após `RECUSADA`/`ENCERRADA` | Essas duas não entram no índice parcial nem em `STATUS_ABERTOS` — uma nova linha pro mesmo par é permitida. |
-| Clique duplo cria uma candidatura só | Índice único parcial `uk_aplicacao_par_ativo (anuncio_id, prestador_id) WHERE status IN ('ENVIADA','ESCOLHIDA','AGUARDANDO_VALIDACAO')` (migration V20). `AplicacaoService.salvarCandidatura` usa `saveAndFlush` + catch de `DataIntegrityViolationException` traduzido pra `CandidaturaDuplicadaException` — mesmo idioma de `EnderecoSalvoService.salvar` (TICKET-0050). Testado com duas requisições HTTP paralelas de verdade (`CandidatarSeStoryTest`), não só a checagem do usecase. |
+| Clique duplo cria uma candidatura só | Índice único parcial `uk_aplicacao_par_ativo (anuncio_id, prestador_id) WHERE status IN ('ENVIADA','ESCOLHIDA','AGUARDANDO_VALIDACAO')` (migration V22). `AplicacaoService.salvarCandidatura` usa `saveAndFlush` + catch de `DataIntegrityViolationException` traduzido pra `CandidaturaDuplicadaException` — mesmo idioma de `EnderecoSalvoService.salvar` (TICKET-0050). Testado com duas requisições HTTP paralelas de verdade (`CandidatarSeStoryTest`), não só a checagem do usecase. |
 
 ### GOLD ainda não existe (decisão de implementação)
 
@@ -70,10 +70,10 @@ própria porta/fonte.
 |---|---|---|---|
 | Candidatar-se | `POST /anuncios/{anuncioId}/candidaturas` | `anuncioId` no path | 201, `CandidaturaResponse(id, status=ENVIADA)` |
 
-`CodigoErro` novos: `PAPEL_INVALIDO` (403), `CONTATOS_NAO_CONFIRMADOS` (403), `ANUNCIO_PROPRIO` (403),
-`ANUNCIO_ESTADO_INVALIDO` (409), `CANDIDATURA_DUPLICADA` (409), `COTA_ESGOTADA` (403). Anúncio
-inexistente reaproveita o genérico `ENTIDADE_NAO_ENCONTRADA` (404) de `BaseService.buscarPorIdOuFalhar`
-— o card não pedia um código específico pra esse caso.
+`CodigoErro` novos: `ANUNCIO_PROPRIO` (403), `CANDIDATURA_DUPLICADA` (409), `COTA_ESGOTADA` (403).
+Reaproveitados da develop: `ACESSO_NEGADO` (403, papel errado), `CONTATOS_NAO_CONFIRMADOS` (403, mensagem
+agora neutra porque atende publicar e candidatar-se), `ANUNCIO_ESTADO_INVALIDO` (409) e
+`ANUNCIO_NAO_ENCONTRADO` (404, anúncio inexistente).
 
 ## Testes
 

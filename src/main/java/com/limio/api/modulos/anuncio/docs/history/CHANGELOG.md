@@ -95,9 +95,19 @@ abreviado ("Rafael S."). Decisões tomadas neste card (o card não definia): "an
 candidatos" = candidaturas `ENVIADA`, foto do anúncio `null` até existir o card de criar anúncio. Detalhe em
 `docs/features/TICKET-0052-listar-anuncios-do-empregador-para-o-painel.md`.
 
+## 2026-10-27 — ETI-59: criar e publicar anúncio, com fotos
+
+Primeiro card que cria anúncio pela API: `POST /anuncios`, `POST /anuncios/{id}/fotos` e `GET /anuncios/{id}`.
+Categoria, endereço salvo e geocodificação do endereço avulso vêm de `perfil` pelas portas novas
+`ConsultaCategoria`/`ConsultaEndereco`; a mídia subiu pra `comum/midia` (ver o CHANGELOG de `perfil`). Migrations
+`V20` (categoria e endereço salvo no anúncio, `anuncio_id` na mídia) e `V21` (retrato da UF). O título (5 a 80) usa a coluna da V18 (PR #17).
+`StatusAplicacao.isEscolhida()` virou a fonte única de "prestador escolhido" (`Aplicacao.isEscolhida()` delega). Contrato alinhado ao front-end par (limio-app#17): `enderecoAvulso`, fotos
+respondidas como lista, `categoria.grupo` e `uf` na consulta. Detalhe
+em `docs/features/TICKET-0059-criar-e-publicar-anuncio-com-fotos.md`.
+
 ## 2026-10-28 — ETI-75: candidatar-se a um anúncio
 
-Segundo endpoint HTTP do módulo: `POST /anuncios/{anuncioId}/candidaturas`. `EmitirConfirmacaoEmailUseCase`-style:
+Endpoint `POST /anuncios/{anuncioId}/candidaturas`:
 `CandidatarSeUseCase` cria a `Aplicacao` em `ENVIADA` e publica `CandidaturaCriadaEvent` (novo, `comum/eventos/`) —
 dois consumidores previstos (`chat` abre o 1:1, `notificacao` avisa o Empregador), nenhum existe em código ainda.
 
@@ -112,7 +122,7 @@ Duas decisões que o card deixava em aberto:
 
 **Clique duplo**: a checagem do usecase (`AplicacaoService.existeAbertaDoPar`) não basta sob corrida real
 — duas requisições podem passar pela checagem antes de qualquer insert. Índice único parcial
-`uk_aplicacao_par_ativo` (migration V20, `WHERE status IN ('ENVIADA','ESCOLHIDA','AGUARDANDO_VALIDACAO')`)
+`uk_aplicacao_par_ativo` (migration V22, `WHERE status IN ('ENVIADA','ESCOLHIDA','AGUARDANDO_VALIDACAO')`)
 mais `AplicacaoService.salvarCandidatura` (`saveAndFlush` + catch de `DataIntegrityViolationException` →
 `CandidaturaDuplicadaException`) garantem o par único — mesmo idioma de `EnderecoSalvoService.salvar`
 (TICKET-0050). `CandidatarSeStoryTest` testa com duas requisições HTTP paralelas reais, não só mocks.

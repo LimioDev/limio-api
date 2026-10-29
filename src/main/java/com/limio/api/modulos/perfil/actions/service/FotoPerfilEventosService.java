@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import com.limio.api.comum.midia.ArmazenamentoService;
 import com.limio.api.modulos.perfil.eventos.FotoPerfilRemovidaEvent;
 import com.limio.api.modulos.perfil.eventos.FotoPerfilTrocadaEvent;
 

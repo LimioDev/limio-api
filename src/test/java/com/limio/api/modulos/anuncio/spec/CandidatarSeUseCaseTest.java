@@ -22,7 +22,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.limio.api.comum.eventos.CandidaturaCriadaEvent;
-import com.limio.api.comum.excecao.EntidadeNaoEncontradaException;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.DadosUsuario;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
@@ -34,11 +33,12 @@ import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
 import com.limio.api.modulos.anuncio.excecao.AnuncioEstadoInvalidoException;
+import com.limio.api.modulos.anuncio.excecao.AnuncioNaoEncontradoException;
 import com.limio.api.modulos.anuncio.excecao.AnuncioProprioException;
 import com.limio.api.modulos.anuncio.excecao.CandidaturaDuplicadaException;
 import com.limio.api.modulos.anuncio.excecao.ContatosNaoConfirmadosException;
 import com.limio.api.modulos.anuncio.excecao.CotaEsgotadaException;
-import com.limio.api.modulos.anuncio.excecao.PapelInvalidoException;
+import com.limio.api.modulos.anuncio.excecao.SomentePrestadorCandidataException;
 
 @ExtendWith(MockitoExtension.class)
 class CandidatarSeUseCaseTest {
@@ -85,8 +85,8 @@ class CandidatarSeUseCaseTest {
     /** Monta os mocks do caminho feliz; cada teste sobrescreve só o que precisa mudar. */
     private void prepararCaminhoFeliz() {
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(CONTATOS_CONFIRMADOS));
-        when(anuncioService.buscarPorIdOuFalhar(ANUNCIO_ID)).thenReturn(anuncioPublicado());
-        when(aplicacaoService.temCandidaturaEscolhida(ANUNCIO_ID)).thenReturn(false);
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncioPublicado()));
+        when(aplicacaoService.existeEscolhida(ANUNCIO_ID)).thenReturn(false);
         when(aplicacaoService.existeAbertaDoPar(ANUNCIO_ID, PRESTADOR_ID)).thenReturn(false);
         when(aplicacaoService.contarEscolhidasNoPeriodo(any(), any(), any())).thenReturn(0L);
         when(aplicacaoService.salvarCandidatura(any())).thenAnswer(chamada -> {
@@ -119,7 +119,7 @@ class CandidatarSeUseCaseTest {
     @Test
     void dadoPapelAtivoEmpregador_quandoCandidatarSe_entaoRecusaSemConsultarNada() {
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, PRESTADOR_ID, PapelUsuario.EMPREGADOR))
-                .isInstanceOf(PapelInvalidoException.class);
+                .isInstanceOf(SomentePrestadorCandidataException.class);
 
         verifyNoInteractionsComAsDependencias();
     }
@@ -132,7 +132,7 @@ class CandidatarSeUseCaseTest {
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, PRESTADOR_ID, PapelUsuario.PRESTADOR))
                 .isInstanceOf(ContatosNaoConfirmadosException.class);
 
-        verify(anuncioService, never()).buscarPorIdOuFalhar(any());
+        verify(anuncioService, never()).buscarPorId(any());
     }
 
     @Test
@@ -145,11 +145,20 @@ class CandidatarSeUseCaseTest {
     }
 
     @Test
-    void dadoContaInexistenteOuEncerrada_quandoCandidatarSe_entaoEntidadeNaoEncontrada() {
+    void dadoContaInexistenteOuEncerrada_quandoCandidatarSe_entaoRecusaComoContatosNaoConfirmados() {
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, PRESTADOR_ID, PapelUsuario.PRESTADOR))
-                .isInstanceOf(EntidadeNaoEncontradaException.class);
+                .isInstanceOf(ContatosNaoConfirmadosException.class);
+    }
+
+    @Test
+    void dadoAnuncioInexistente_quandoCandidatarSe_entaoAnuncioNaoEncontrado() {
+        when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(CONTATOS_CONFIRMADOS));
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, PRESTADOR_ID, PapelUsuario.PRESTADOR))
+                .isInstanceOf(AnuncioNaoEncontradoException.class);
     }
 
     @Test
@@ -162,7 +171,7 @@ class CandidatarSeUseCaseTest {
                 .dataHoraPretendida(Instant.now().plus(Duration.ofDays(1)))
                 .status(StatusAnuncio.PUBLICADO)
                 .build();
-        when(anuncioService.buscarPorIdOuFalhar(ANUNCIO_ID)).thenReturn(proprio);
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(proprio));
 
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, PRESTADOR_ID, PapelUsuario.PRESTADOR))
                 .isInstanceOf(AnuncioProprioException.class);
@@ -175,7 +184,7 @@ class CandidatarSeUseCaseTest {
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(CONTATOS_CONFIRMADOS));
         Anuncio concluido = anuncioPublicado();
         concluido.setStatus(StatusAnuncio.CONCLUIDO);
-        when(anuncioService.buscarPorIdOuFalhar(ANUNCIO_ID)).thenReturn(concluido);
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(concluido));
 
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, PRESTADOR_ID, PapelUsuario.PRESTADOR))
                 .isInstanceOf(AnuncioEstadoInvalidoException.class);
@@ -184,8 +193,8 @@ class CandidatarSeUseCaseTest {
     @Test
     void dadoAnuncioPublicadoComCandidaturaEscolhida_quandoCandidatarSe_entaoEstadoInvalido() {
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(CONTATOS_CONFIRMADOS));
-        when(anuncioService.buscarPorIdOuFalhar(ANUNCIO_ID)).thenReturn(anuncioPublicado());
-        when(aplicacaoService.temCandidaturaEscolhida(ANUNCIO_ID)).thenReturn(true);
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncioPublicado()));
+        when(aplicacaoService.existeEscolhida(ANUNCIO_ID)).thenReturn(true);
 
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, PRESTADOR_ID, PapelUsuario.PRESTADOR))
                 .isInstanceOf(AnuncioEstadoInvalidoException.class);
@@ -196,8 +205,8 @@ class CandidatarSeUseCaseTest {
     @Test
     void dadoCandidaturaAtivaDoMesmoPar_quandoCandidatarSe_entaoDuplicada() {
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(CONTATOS_CONFIRMADOS));
-        when(anuncioService.buscarPorIdOuFalhar(ANUNCIO_ID)).thenReturn(anuncioPublicado());
-        when(aplicacaoService.temCandidaturaEscolhida(ANUNCIO_ID)).thenReturn(false);
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncioPublicado()));
+        when(aplicacaoService.existeEscolhida(ANUNCIO_ID)).thenReturn(false);
         when(aplicacaoService.existeAbertaDoPar(ANUNCIO_ID, PRESTADOR_ID)).thenReturn(true);
 
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, PRESTADOR_ID, PapelUsuario.PRESTADOR))
@@ -220,8 +229,8 @@ class CandidatarSeUseCaseTest {
     @Test
     void dadoPrestadorFreeComQuatroEscolhasNoMes_quandoCandidatarSe_entaoCotaEsgotada() {
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(CONTATOS_CONFIRMADOS));
-        when(anuncioService.buscarPorIdOuFalhar(ANUNCIO_ID)).thenReturn(anuncioPublicado());
-        when(aplicacaoService.temCandidaturaEscolhida(ANUNCIO_ID)).thenReturn(false);
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncioPublicado()));
+        when(aplicacaoService.existeEscolhida(ANUNCIO_ID)).thenReturn(false);
         when(aplicacaoService.existeAbertaDoPar(ANUNCIO_ID, PRESTADOR_ID)).thenReturn(false);
         when(aplicacaoService.contarEscolhidasNoPeriodo(any(), any(), any())).thenReturn(4L);
 

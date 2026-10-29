@@ -19,8 +19,8 @@ import org.springframework.web.client.RestClientException;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.modulos.perfil.endereco.EnderecoParaGeocodificar;
-import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.excecao.GeocodificacaoIndisponivelException;
 import com.limio.api.modulos.perfil.geo.Coordenadas;
 

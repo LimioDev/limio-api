@@ -10,7 +10,7 @@ public final class NomeHelper {
 
     /**
      * Primeiro nome + inicial do último sobrenome ({@code "Rafael da Silva Souza"} → {@code "Rafael S."}),
-     * pra não expor o nome completo no painel. Nome de uma palavra só sai como está.
+     * pra não expor o nome completo no painel e na tela 16. Nome de uma palavra só sai como está.
      */
     public static String abreviar(String nomeCompleto) {
         String[] partes = nomeCompleto.strip().split("\\s+");

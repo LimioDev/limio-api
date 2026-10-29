@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.eventos.CandidaturaCriadaEvent;
-import com.limio.api.comum.excecao.EntidadeNaoEncontradaException;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.DadosUsuario;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
@@ -22,11 +21,12 @@ import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
 import com.limio.api.modulos.anuncio.excecao.AnuncioEstadoInvalidoException;
+import com.limio.api.modulos.anuncio.excecao.AnuncioNaoEncontradoException;
 import com.limio.api.modulos.anuncio.excecao.AnuncioProprioException;
 import com.limio.api.modulos.anuncio.excecao.CandidaturaDuplicadaException;
 import com.limio.api.modulos.anuncio.excecao.ContatosNaoConfirmadosException;
 import com.limio.api.modulos.anuncio.excecao.CotaEsgotadaException;
-import com.limio.api.modulos.anuncio.excecao.PapelInvalidoException;
+import com.limio.api.modulos.anuncio.excecao.SomentePrestadorCandidataException;
 
 /**
  * UC — Prestador se candidata a um anúncio (ETI-75): cria a {@link Aplicacao} em {@code ENVIADA} e
@@ -37,7 +37,7 @@ import com.limio.api.modulos.anuncio.excecao.PapelInvalidoException;
  * Ordem das checagens (nenhuma é pré-requisito técnico da outra, mas segue papel → conta → anúncio →
  * candidatura → cota, do mais genérico ao mais específico):
  * <ol>
- *   <li>papel ativo {@code PRESTADOR};</li>
+ *   <li>papel ativo {@code PRESTADOR} (403 {@code ACESSO_NEGADO}, mesmo padrão de publicar anúncio);</li>
  *   <li>telefone e e-mail confirmados ({@link ConsultaDadosUsuario}, porta pra não importar {@code
  *       modulos.auth} — ADR-0001/0003);</li>
  *   <li>anúncio existe, não é do próprio Prestador, está {@code PUBLICADO} e sem candidatura
@@ -72,16 +72,14 @@ public class CandidatarSeUseCase {
 
     @Transactional
     public Aplicacao executar(UUID anuncioId, UUID prestadorId, PapelUsuario papelAtivo) {
-        if (papelAtivo != PapelUsuario.PRESTADOR) {
-            throw new PapelInvalidoException();
-        }
+        exigirPrestador(papelAtivo);
         exigirContatosConfirmados(prestadorId);
 
-        Anuncio anuncio = anuncioService.buscarPorIdOuFalhar(anuncioId);
-        if (anuncio.getContratanteId().equals(prestadorId)) {
+        Anuncio anuncio = anuncioService.buscarPorId(anuncioId).orElseThrow(AnuncioNaoEncontradoException::new);
+        if (anuncio.pertenceA(prestadorId)) {
             throw new AnuncioProprioException();
         }
-        if (anuncio.getStatus() != StatusAnuncio.PUBLICADO || aplicacaoService.temCandidaturaEscolhida(anuncioId)) {
+        if (anuncio.getStatus() != StatusAnuncio.PUBLICADO || aplicacaoService.existeEscolhida(anuncioId)) {
             throw new AnuncioEstadoInvalidoException();
         }
         if (aplicacaoService.existeAbertaDoPar(anuncioId, prestadorId)) {
@@ -105,10 +103,24 @@ public class CandidatarSeUseCase {
         return aplicacao;
     }
 
-    /** Conta sumida/encerrada entre o token ser emitido e esta chamada (token de acesso não revalida no banco). */
+    /** Mesmo padrão de {@code PublicarAnuncioUseCase}: papel errado responde 403 {@code ACESSO_NEGADO}. */
+    private static void exigirPrestador(PapelUsuario papelAtivo) {
+        switch (papelAtivo) {
+            case PRESTADOR -> {
+            }
+            case EMPREGADOR -> throw new SomentePrestadorCandidataException();
+        }
+    }
+
+    /**
+     * Mesmo comportamento de {@code PublicarAnuncioUseCase}: conta sumida/encerrada entre o token ser emitido e
+     * esta chamada também cai em {@code CONTATOS_NAO_CONFIRMADOS}.
+     */
     private void exigirContatosConfirmados(UUID prestadorId) {
-        DadosUsuario dados = consultaDadosUsuario.buscarPorId(prestadorId).orElseThrow(EntidadeNaoEncontradaException::new);
-        if (dados.emailConfirmadoEm() == null || dados.telefoneConfirmadoEm() == null) {
+        boolean confirmados = consultaDadosUsuario.buscarPorId(prestadorId)
+                .map(DadosUsuario::contatosConfirmados)
+                .orElse(false);
+        if (!confirmados) {
             throw new ContatosNaoConfirmadosException();
         }
     }

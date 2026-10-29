@@ -18,11 +18,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.limio.api.TestcontainersConfiguration;
+import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.modulos.perfil.empregador.PerfilEmpregador;
 import com.limio.api.modulos.perfil.empregador.PerfilEmpregadorRepository;
 import com.limio.api.modulos.perfil.endereco.EnderecoSalvo;
 import com.limio.api.modulos.perfil.endereco.EnderecoSalvoRepository;
-import com.limio.api.modulos.perfil.enums.Uf;
 
 /**
  * Fumaça da persistência de {@code endereco_salvo} (TICKET-0050, Parte 2): o Flyway sobe, o

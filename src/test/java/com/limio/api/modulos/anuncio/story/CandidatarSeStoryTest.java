@@ -158,6 +158,7 @@ class CandidatarSeStoryTest {
         return anuncioRepository.save(Anuncio.builder()
                 .contratanteId(contratanteId)
                 .titulo("Instalar 3 tomadas")
+                .categoriaId(UUID.randomUUID()) // sem FK pra categoria (ADR-0001 §1.6): qualquer id serve aqui
                 .descricao("Instalar 3 tomadas novas na sala e trocar o disjuntor")
                 .dataHoraPretendida(Instant.now().plus(Duration.ofDays(5)))
                 .bairroRegiaoSnapshot("Pinheiros")
@@ -211,14 +212,14 @@ class CandidatarSeStoryTest {
     }
 
     @Test
-    void dadoPapelAtivoEmpregador_quandoCandidataSe_entao403PapelInvalido() throws Exception {
+    void dadoPapelAtivoEmpregador_quandoCandidataSe_entao403AcessoNegado() throws Exception {
         Usuario maria = empregador("Maria da Silva", "maria@example.com", "52998224725");
         Usuario outroEmpregador = empregador("João Pereira", "joao@example.com", "11144477735");
         Anuncio anuncio = anuncio(outroEmpregador.getId(), StatusAnuncio.PUBLICADO);
 
         candidatarSe(logar("maria@example.com"), anuncio.getId())
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.codigo", is("PAPEL_INVALIDO")));
+                .andExpect(jsonPath("$.codigo", is("ACESSO_NEGADO")));
     }
 
     @Test
@@ -238,7 +239,7 @@ class CandidatarSeStoryTest {
 
         candidatarSe(logar("rafael@example.com"), UUID.randomUUID())
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.codigo", is("ENTIDADE_NAO_ENCONTRADA")));
+                .andExpect(jsonPath("$.codigo", is("ANUNCIO_NAO_ENCONTRADO")));
     }
 
     @Test

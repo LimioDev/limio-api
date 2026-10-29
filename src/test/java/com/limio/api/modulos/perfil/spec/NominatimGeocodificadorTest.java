@@ -14,9 +14,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.modulos.perfil.actions.service.NominatimGeocodificador;
 import com.limio.api.modulos.perfil.endereco.EnderecoParaGeocodificar;
-import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.excecao.GeocodificacaoIndisponivelException;
 import com.limio.api.modulos.perfil.geo.Coordenadas;
 import com.sun.net.httpserver.HttpServer;

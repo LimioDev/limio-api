@@ -2,6 +2,7 @@ package com.limio.api.modulos.perfil.categoria;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -28,5 +29,10 @@ public class CategoriaService extends BaseService<Categoria, UUID, CategoriaRepo
             return Set.of();
         }
         return new HashSet<>(repository.findByIdInAndAtivaTrue(ids));
+    }
+
+    /** Ativa ou não; vazio só se o id não existe. */
+    public Optional<Categoria> buscarPorId(UUID id) {
+        return repository.findById(id);
     }
 }

@@ -8,4 +8,9 @@ public record DadosUsuario(
         String telefone,
         Instant emailConfirmadoEm,
         Instant telefoneConfirmadoEm) {
+
+    /** E-mail e telefone confirmados: pré-condição de publicar anúncio e de se candidatar. */
+    public boolean contatosConfirmados() {
+        return emailConfirmadoEm != null && telefoneConfirmadoEm != null;
+    }
 }

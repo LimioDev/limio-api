@@ -142,6 +142,7 @@ class EncerrarAnunciosEAplicacoesStoryTest {
         return anuncioRepository.save(Anuncio.builder()
                 .titulo("Faxina")
                 .contratanteId(contratanteId)
+                .categoriaId(UUID.randomUUID()) // sem FK pra categoria (ADR-0001 §1.6): qualquer id serve aqui
                 .descricao("Faxina pós-obra")
                 .dataHoraPretendida(dataHoraPretendida)
                 .status(status)

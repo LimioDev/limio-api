@@ -58,10 +58,7 @@ public class Aplicacao extends BaseEntity {
 
     /** Prestador já escolhido pelo contratante: combinado ou aguardando validação (TICKET-0052). */
     public boolean isEscolhida() {
-        return switch (status) {
-            case ESCOLHIDA, AGUARDANDO_VALIDACAO -> true;
-            case ENVIADA, RECUSADA, CONCLUIDA, ENCERRADA -> false;
-        };
+        return status.isEscolhida();
     }
 
     public void encerrar(Instant agora, String motivo) {

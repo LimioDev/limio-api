@@ -1,6 +1,7 @@
 package com.limio.api.modulos.anuncio.aplicacao;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,13 +20,24 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     private static final List<StatusAplicacao> STATUS_ABERTOS =
             List.of(StatusAplicacao.ENVIADA, StatusAplicacao.ESCOLHIDA, StatusAplicacao.AGUARDANDO_VALIDACAO);
 
+    /** Derivado de {@link StatusAplicacao#isEscolhida()} — fonte única, não duplica a lista aqui. */
     private static final List<StatusAplicacao> STATUS_ESCOLHIDA =
-            List.of(StatusAplicacao.ESCOLHIDA, StatusAplicacao.AGUARDANDO_VALIDACAO);
+            Arrays.stream(StatusAplicacao.values()).filter(StatusAplicacao::isEscolhida).toList();
 
     private static final String CONSTRAINT_PAR_ATIVO_UNICO = "uk_aplicacao_par_ativo";
 
     public AplicacaoService(AplicacaoRepository repository) {
         super(repository);
+    }
+
+    /** Algum prestador já foi escolhido pro anúncio (ver {@link Aplicacao#isEscolhida()}). */
+    public boolean existeEscolhida(UUID anuncioId) {
+        return repository.existsByAnuncioIdAndStatusIn(anuncioId, STATUS_ESCOLHIDA);
+    }
+
+    /** Candidaturas ainda sem resposta do Empregador, da mais antiga pra mais nova. */
+    public List<Aplicacao> buscarEnviadasDoAnuncio(UUID anuncioId) {
+        return repository.findByAnuncioIdAndStatusOrderByDataAplicacaoAscIdAsc(anuncioId, StatusAplicacao.ENVIADA);
     }
 
     /** Candidaturas ainda abertas (não recusadas/concluídas/encerradas) em que {@code usuarioId} é o prestador. */
@@ -48,11 +60,6 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
             return List.of();
         }
         return repository.findByAnuncioIdInAndStatusIn(anuncioIds, STATUS_ABERTOS);
-    }
-
-    /** O anúncio já tem alguém escolhido (combinado ou aguardando validação) — não aceita nova candidatura (ETI-75). */
-    public boolean temCandidaturaEscolhida(UUID anuncioId) {
-        return repository.existsByAnuncioIdAndStatusIn(anuncioId, STATUS_ESCOLHIDA);
     }
 
     /** Já existe candidatura ativa deste Prestador pra este anúncio — recusa de duplicata (ETI-75). */

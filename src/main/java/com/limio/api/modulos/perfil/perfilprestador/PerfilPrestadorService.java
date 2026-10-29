@@ -8,9 +8,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.base.BaseService;
+import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.comum.persistencia.TravaTransacional;
 import com.limio.api.comum.persistencia.enums.EscopoTrava;
-import com.limio.api.modulos.perfil.enums.Uf;
 import com.limio.api.modulos.perfil.geo.Coordenadas;
 
 /** Camada técnica de persistência de {@link PerfilPrestador} — CRUD genérico (herdado) + finders da entity. */

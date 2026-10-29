@@ -124,6 +124,7 @@ class ConsultarPainelEmpregadorStoryTest {
         return anuncioRepository.save(Anuncio.builder()
                 .contratanteId(contratanteId)
                 .titulo(descricao)
+                .categoriaId(UUID.randomUUID()) // sem FK pra categoria (ADR-0001 §1.6): qualquer id serve aqui
                 .descricao(descricao)
                 .dataHoraPretendida(Instant.now().plus(daquiA))
                 .bairroRegiaoSnapshot("Pinheiros")

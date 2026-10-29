@@ -5,7 +5,10 @@ import org.springframework.http.HttpStatus;
 import com.limio.api.comum.excecao.NegocioException;
 import com.limio.api.comum.excecao.enums.CodigoErro;
 
-/** Telefone e/ou e-mail do Prestador ainda não confirmados (pré-condição do UC, ETI-75). */
+/**
+ * E-mail e/ou telefone ainda não confirmados: pré-condição de publicar anúncio (ETI-59) e de se candidatar
+ * (ETI-75). Conta encerrada também cai aqui.
+ */
 public class ContatosNaoConfirmadosException extends NegocioException {
 
     public ContatosNaoConfirmadosException() {
