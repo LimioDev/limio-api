@@ -38,6 +38,14 @@ public class MidiaService extends BaseService<Midia, UUID, MidiaRepository> {
                 .collect(Collectors.toMap(Midia::getUsuarioId, Function.identity()));
     }
 
+    public Map<UUID, Midia> buscarPrimeirasFotosDosAnuncios(Collection<UUID> anuncioIds) {
+        if (anuncioIds.isEmpty()) {
+            return Map.of();
+        }
+        return repository.findPrimeirasFotosDosAnuncios(anuncioIds).stream()
+                .collect(Collectors.toMap(Midia::getAnuncioId, Function.identity()));
+    }
+
     /** Serializa trocas simultâneas da foto do mesmo usuário até o fim da transação. */
     public void travarFotoPerfil(UUID usuarioId) {
         travaTransacional.travar(EscopoTrava.FOTO_PERFIL, usuarioId.toString());
