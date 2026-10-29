@@ -55,6 +55,7 @@ class ConsultaEnderecoServiceTest {
         EnderecoLocalizado localizado = service.buscarSalvo(USUARIO_ID, ENDERECO_ID);
 
         assertThat(localizado.bairroRegiao()).isEqualTo("Pinheiros");
+        assertThat(localizado.cidade()).isEqualTo("São Paulo");
         assertThat(localizado.uf()).isEqualTo(Uf.SP);
         assertThat(localizado.enderecoCompleto())
                 .isEqualTo("Rua dos Pinheiros, 100 - Apto 12, Pinheiros, São Paulo - SP");
@@ -83,6 +84,7 @@ class ConsultaEnderecoServiceTest {
 
         assertThat(localizado.enderecoCompleto()).isEqualTo("Avenida Paulista, 1000, Bela Vista, São Paulo - SP");
         assertThat(localizado.bairroRegiao()).isEqualTo("Bela Vista");
+        assertThat(localizado.cidade()).isEqualTo("São Paulo");
         assertThat(localizado.uf()).isEqualTo(Uf.SP);
         assertThat(localizado.latitude()).isEqualTo(-23.5614);
     }

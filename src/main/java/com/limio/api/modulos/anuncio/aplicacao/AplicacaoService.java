@@ -106,4 +106,12 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
         }
         return false;
     }
+
+    /**
+     * A candidatura de {@code prestadorId} ao anúncio, de qualquer status. O banco não impede duas para o mesmo
+     * par (só uma ESCOLHIDA por anúncio); com mais de uma vale a mais recente.
+     */
+    public Optional<Aplicacao> buscarDoPrestadorNoAnuncio(UUID anuncioId, UUID prestadorId) {
+        return repository.findFirstByAnuncioIdAndPrestadorIdOrderByDataAplicacaoDescIdDesc(anuncioId, prestadorId);
+    }
 }

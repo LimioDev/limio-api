@@ -149,6 +149,17 @@ o resumo sai sem foto em vez de 503 — a foto não derruba o painel.
 4. Os dois devolvem `EnderecoLocalizado` com `"Rua, número - complemento, bairro, cidade - UF"` (cabe nos 255 do
    `anuncio.endereco_completo_snapshot`).
 
+## Portas do mural do Prestador (ETI-79, mural em `anuncio`)
+
+1. `ConsultaPerfilPrestadorService.buscarCompleto(usuarioId)` → `PerfilPrestadorService.buscarPorUsuario`; só devolve
+   `ResumoPerfilPrestador` (ids das especialidades, id da categoria protegida "Outros", raio, base) se o perfil existe
+   e `completo`. Inexistente ou incompleto → vazio (o mural responde `PERFIL_INCOMPLETO`).
+2. `ConsultaPerfilEmpregadorService.buscarResumosEmLote(ids)` → `PerfilEmpregadorService.buscarPerfisOuIniciais` +
+   `MidiaService.buscarFotosPerfilAtivas`: 2 consultas para N Empregadores, sem criar perfil (quem nunca abriu o perfil
+   sai com o nome inicial). O resumo agora traz `mediaAvaliacoes` e `qtdAvaliacoes`.
+3. `ConsultaCategoriaService.buscarPorIdsEmLote(ids)` → `CategoriaService.buscarPorIds`: id inexistente não vem no mapa.
+4. `EnderecoLocalizado` ganhou `cidade` (vem do endereço salvo ou do avulso), para o retrato `cidade_snapshot` do anúncio.
+
 ## Classes envolvidas
 
 | Classe | Papel |
@@ -193,6 +204,8 @@ o resumo sai sem foto em vez de 503 — a foto não derruba o painel.
 | `comum/portas/ConsultaPerfilEmpregador`, `ResumoPerfilEmpregador` | porta de leitura de nome de exibição + foto, pra outros módulos |
 | `actions/service/ConsultaPerfilEmpregadorService` | implementação da porta (TICKET-0052) |
 | `actions/service/ConsultaCategoriaService` | implementa `comum/portas/ConsultaCategoria` (ETI-59): categoria por id, ativa ou não |
+| `comum/portas/ConsultaPerfilPrestador`, `ResumoPerfilPrestador` | porta de leitura da atuação do Prestador (especialidades, "Outros", raio, base) — ETI-79 |
+| `actions/service/ConsultaPerfilPrestadorService` | implementação da porta (ETI-79): só perfil completo |
 | `actions/service/ConsultaEnderecoService` | implementa `comum/portas/ConsultaEndereco` (ETI-59): endereço salvo do usuário ou avulso geocodificado, sempre com o texto de uma linha do retrato do anúncio |
 
 Atualize esta página sempre que uma classe mudar de responsabilidade.

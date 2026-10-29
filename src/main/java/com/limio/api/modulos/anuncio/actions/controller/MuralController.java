@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,8 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.limio.api.comum.records.PageResponse;
 import com.limio.api.comum.seguranca.UsuarioAutenticado;
 import com.limio.api.modulos.anuncio.actions.mapper.MuralMapper;
+import com.limio.api.modulos.anuncio.actions.usecase.ConsultarDetalheDoMuralUseCase;
 import com.limio.api.modulos.anuncio.actions.usecase.ListarMuralUseCase;
 import com.limio.api.modulos.anuncio.enums.QuandoMural;
+import com.limio.api.modulos.anuncio.records.MuralDetalheResponse;
 import com.limio.api.modulos.anuncio.records.MuralItemResponse;
 
 import jakarta.validation.constraints.Max;
@@ -25,10 +28,13 @@ import jakarta.validation.constraints.Min;
 public class MuralController {
 
     private final ListarMuralUseCase listarMuralUseCase;
+    private final ConsultarDetalheDoMuralUseCase consultarDetalheDoMuralUseCase;
     private final MuralMapper muralMapper;
 
-    public MuralController(ListarMuralUseCase listarMuralUseCase, MuralMapper muralMapper) {
+    public MuralController(ListarMuralUseCase listarMuralUseCase,
+            ConsultarDetalheDoMuralUseCase consultarDetalheDoMuralUseCase, MuralMapper muralMapper) {
         this.listarMuralUseCase = listarMuralUseCase;
+        this.consultarDetalheDoMuralUseCase = consultarDetalheDoMuralUseCase;
         this.muralMapper = muralMapper;
     }
 
@@ -42,5 +48,12 @@ public class MuralController {
             @RequestParam(defaultValue = "20") @Min(1) @Max(50) int tamanho) {
         return ResponseEntity.ok(muralMapper.toResponse(listarMuralUseCase.executar(
                 usuario.id(), usuario.papel(), categorias, raio, quando, pagina, tamanho)));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<MuralDetalheResponse> detalhar(@AuthenticationPrincipal UsuarioAutenticado usuario,
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(muralMapper.toResponse(
+                consultarDetalheDoMuralUseCase.executar(usuario.id(), usuario.papel(), id)));
     }
 }

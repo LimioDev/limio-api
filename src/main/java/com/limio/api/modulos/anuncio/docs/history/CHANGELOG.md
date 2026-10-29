@@ -167,3 +167,17 @@ anúncios do próprio contratante).
 `chat` (ETI-101, ainda não existe em código) vai guardar `anuncioId` cru em cada chat (recebido no
 `CandidaturaCriadaEvent` de cada candidatura, ETI-75), então não precisa da lista de candidaturas aqui
 pra marcar os chats em somente leitura.
+
+## 2026-10-29 — ETI-73: mural e detalhe do anúncio para o Prestador
+
+Primeiro consumo do anúncio por quem não é o dono: `GET /anuncios/mural` (paginado, com filtros) e
+`GET /anuncios/mural/{id}`. A compatibilidade (especialidade/"Outros" + raio) roda inteira no banco, numa query
+nativa com haversine — o projeto não tem PostGIS nem paginação antes disso; `PageResponse<T>` nasceu em
+`comum/records`. O que é do Prestador (especialidades, "Outros", raio, base) chega pela porta nova
+`ConsultaPerfilPrestador`; `ConsultaPerfilEmpregador` e `ConsultaCategoria` ganharam consulta em lote para não
+fazer uma query por item. Decisões que o card não tomava e foram feitas aqui (a confirmar com o PO): semântica de
+"esta semana"/"fim de semana" (segunda a domingo, Brasília), anúncio no passado não aparece, visibilidade do
+detalhe, papel inválido como `ACESSO_NEGADO` em vez de `PAPEL_INVALIDO`. `anuncio` ganhou `cidade_snapshot`
+(`EnderecoLocalizado` passou a ter `cidade`). Migrations `V25` (índices do mural) e `V26` (cidade) — pulam V22–V24
+porque outras PRs abertas já usam V22/V23. Detalhe em
+`docs/features/ETI-79-mural-e-detalhe-do-anuncio-para-o-prestador.md`.

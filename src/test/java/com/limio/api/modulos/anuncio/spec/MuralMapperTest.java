@@ -2,6 +2,7 @@ package com.limio.api.modulos.anuncio.spec;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -10,11 +11,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
+import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.comum.midia.LinkTemporario;
 import com.limio.api.comum.portas.ResumoCategoria;
 import com.limio.api.comum.portas.ResumoPerfilEmpregador;
 import com.limio.api.comum.records.PageResponse;
+import com.limio.api.modulos.anuncio.DetalheDoMural;
+import com.limio.api.modulos.anuncio.FotoDoAnuncio;
 import com.limio.api.modulos.anuncio.ItemDoMural;
+import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
+import com.limio.api.modulos.anuncio.records.MuralDetalheResponse;
 import com.limio.api.modulos.anuncio.actions.mapper.MuralMapper;
 import com.limio.api.modulos.anuncio.records.MuralItemResponse;
 
@@ -48,5 +54,30 @@ class MuralMapperTest {
                 .content().get(0);
 
         assertThat(mapeado.fotoUrl()).isNull();
+    }
+
+    @Test
+    void dadoDetalheComFotosECandidatura_quandoMapeia_entaoTrazTodasAsFotosCidadeUfEReputacao() {
+        UUID fotoComLink = UUID.randomUUID();
+        UUID fotoSemLink = UUID.randomUUID();
+        DetalheDoMural detalhe = new DetalheDoMural(UUID.randomUUID(), "Trocar chuveiro", "Descrição completa",
+                new ResumoCategoria(UUID.randomUUID(), "Elétrica", "Reparos", true),
+                List.of(new FotoDoAnuncio(fotoComLink, new LinkTemporario("https://bucket/1", Instant.now())),
+                        new FotoDoAnuncio(fotoSemLink, null)),
+                Instant.parse("2026-11-05T13:00:00Z"), "Cambuí", "Campinas", Uf.SP, 9.96,
+                new ResumoPerfilEmpregador("Mari", "https://bucket/mari", Instant.now(), new BigDecimal("4.5"), 8),
+                StatusAplicacao.ENVIADA);
+
+        MuralDetalheResponse resposta = mapper.toResponse(detalhe);
+
+        assertThat(resposta.fotos()).hasSize(2);
+        assertThat(resposta.fotos().get(0).url()).isEqualTo("https://bucket/1");
+        assertThat(resposta.fotos().get(1).url()).isNull();
+        assertThat(resposta.cidade()).isEqualTo("Campinas");
+        assertThat(resposta.uf()).isEqualTo(Uf.SP);
+        assertThat(resposta.distanciaKm()).isEqualTo(10.0);
+        assertThat(resposta.empregador().mediaAvaliacoes()).isEqualByComparingTo("4.5");
+        assertThat(resposta.empregador().qtdAvaliacoes()).isEqualTo(8);
+        assertThat(resposta.minhaCandidatura()).isEqualTo(StatusAplicacao.ENVIADA);
     }
 }
