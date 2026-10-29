@@ -22,7 +22,8 @@ import lombok.Setter;
  * Conversa 1:1 entre o Empregador dono do anúncio e o Prestador de uma candidatura (ETI-101). Nasce com a candidatura
  * e nunca é apagada: quando a candidatura ou o anúncio encerram, fica somente leitura e o histórico continua.
  * {@code aplicacaoId}, {@code anuncioId} e os ids das partes são colunas cruas (ADR-0001 §1.6), copiadas do
- * {@code CandidaturaCriadaEvent}.
+ * {@code CandidaturaCriadaEvent} (ou da candidatura, quando é criado ao abrir). Criado só por
+ * {@code ChatService#garantirDaCandidatura}, que segura a corrida no índice único.
  */
 @Entity
 @Table(name = "chat")
@@ -54,15 +55,6 @@ public class Chat extends BaseEntity {
 
     @Column(name = "somente_leitura_em")
     private Instant somenteLeituraEm;
-
-    public static Chat daCandidatura(UUID aplicacaoId, UUID anuncioId, UUID contratanteId, UUID prestadorId) {
-        return Chat.builder()
-                .aplicacaoId(aplicacaoId)
-                .anuncioId(anuncioId)
-                .contratanteId(contratanteId)
-                .prestadorId(prestadorId)
-                .build();
-    }
 
     public boolean participa(UUID usuarioId) {
         return contratanteId.equals(usuarioId) || prestadorId.equals(usuarioId);

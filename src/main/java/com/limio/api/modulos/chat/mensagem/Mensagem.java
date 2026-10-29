@@ -17,7 +17,8 @@ import lombok.Setter;
 /**
  * Mensagem de um {@code Chat}. {@code texto} é o que o remetente escreveu e {@code textoExibido} o que a outra parte
  * vê: iguais até o mascaramento de contato (US50) entrar. {@code entregueEm} e {@code lidaEm} são preenchidos pela
- * outra parte, uma vez só.
+ * outra parte, uma vez só, direto no banco ({@code MensagemRepository#marcarEntregues}/{@code #marcarLidas}). Lida
+ * implica entregue.
  */
 @Entity
 @Table(name = "mensagem")
@@ -57,17 +58,5 @@ public class Mensagem extends BaseEntity {
                 .textoExibido(texto)
                 .dataEnvio(agora)
                 .build();
-    }
-
-    public void marcarEntregue(Instant agora) {
-        if (entregueEm == null)
-            this.entregueEm = agora;
-    }
-
-    /** Lida implica entregue: abrir a conversa antes da confirmação de entrega preenche as duas. */
-    public void marcarLida(Instant agora) {
-        marcarEntregue(agora);
-        if (lidaEm == null)
-            this.lidaEm = agora;
     }
 }

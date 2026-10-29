@@ -104,3 +104,10 @@ Categoria, endereço salvo e geocodificação do endereço avulso vêm de `perfi
 `StatusAplicacao.isEscolhida()` virou a fonte única de "prestador escolhido" (`Aplicacao.isEscolhida()` delega). Contrato alinhado ao front-end par (limio-app#17): `enderecoAvulso`, fotos
 respondidas como lista, `categoria.grupo` e `uf` na consulta. Detalhe
 em `docs/features/TICKET-0059-criar-e-publicar-anuncio-com-fotos.md`.
+
+## 2026-10-29 — ETI-101 (review da PR #21): foto dos candidatos pela porta `ConsultaFotoPerfil`
+
+`ConsultarMeuAnuncioUseCase` busca a foto de perfil dos primeiros candidatos pela porta `ConsultaFotoPerfil` (de
+`perfil`), em vez de usar `MidiaService` e `ArmazenamentoService` direto. A mesma lógica deixa de existir em dois
+módulos. As fotos do anúncio continuam pelo `comum/midia`. `ConsultaCandidaturaService` passou a mandar
+`anuncioId`, `contratanteId` e `prestadorId` no `ResumoCandidatura`, para o chat criar o chat que faltar.

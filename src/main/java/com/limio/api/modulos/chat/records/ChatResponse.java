@@ -29,6 +29,7 @@ public record ChatResponse(
     public record Anuncio(String titulo, String categoria) {
     }
 
-    public record Historico(List<MensagemResponse> mensagens, int pagina, int tamanho, boolean temMais) {
+    /** Para carregar as anteriores, o app manda o id da última de {@code mensagens} em {@code antesDe}. */
+    public record Historico(List<MensagemResponse> mensagens, int tamanho, boolean temMais) {
     }
 }

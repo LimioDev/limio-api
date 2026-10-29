@@ -6,10 +6,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.limio.api.comum.seguranca.UsuarioAutenticado;
@@ -20,6 +20,7 @@ import com.limio.api.modulos.chat.actions.usecase.EnviarMensagemUseCase;
 import com.limio.api.modulos.chat.enums.Confirmacao;
 import com.limio.api.modulos.chat.records.ChatResponse;
 import com.limio.api.modulos.chat.records.EnviarMensagemRequest;
+import com.limio.api.modulos.chat.records.HistoricoFiltro;
 import com.limio.api.modulos.chat.records.MensagemResponse;
 
 import jakarta.validation.Valid;
@@ -47,11 +48,9 @@ public class ChatController {
 
     @GetMapping("/candidaturas/{candidaturaId}/chat")
     public ResponseEntity<ChatResponse> abrirChat(@AuthenticationPrincipal UsuarioAutenticado usuario,
-            @PathVariable UUID candidaturaId,
-            @RequestParam(defaultValue = "0") int pagina,
-            @RequestParam(defaultValue = "30") int tamanho) {
+            @PathVariable UUID candidaturaId, @Valid @ModelAttribute HistoricoFiltro filtro) {
         return ResponseEntity.ok(chatMapper.toResponse(
-                abrirChatUseCase.executar(candidaturaId, usuario.id(), pagina, tamanho)));
+                abrirChatUseCase.executar(candidaturaId, usuario.id(), filtro.antesDe(), filtro.tamanho())));
     }
 
     @PostMapping("/chats/{chatId}/mensagens")

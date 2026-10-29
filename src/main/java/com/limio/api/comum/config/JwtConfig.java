@@ -16,7 +16,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
 /**
  * Par encoder/decoder do token de acesso (JWT HS256), com a mesma chave
- * simétrica. O decoder é usado pelo {@code JwtAuthFilter}; o encoder, por
+ * simétrica. O decoder é usado pelo {@code LeitorTokenAcesso}; o encoder, por
  * quem emite token ({@code modulos.auth}).
  */
 @Configuration

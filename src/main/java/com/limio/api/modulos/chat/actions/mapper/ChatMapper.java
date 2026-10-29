@@ -14,7 +14,8 @@ import com.limio.api.modulos.chat.records.MensagemResponse;
 
 /**
  * Chat e mensagens para os contratos HTTP e do canal em tempo real. O canal ({@code ChatTempoRealService}) é saída
- * igual ao controller, por isso também usa este mapper.
+ * igual ao controller, por isso também usa este mapper: exceção registrada à regra "mapper só no controller" (ver
+ * {@code docs/history/CHANGELOG.md}).
  */
 @Component
 public class ChatMapper {
@@ -31,7 +32,7 @@ public class ChatMapper {
                 aberto.chat().isSomenteLeitura(),
                 aberto.chat().getMotivoSomenteLeitura(),
                 new ChatResponse.Historico(aberto.mensagens().stream().map(this::toResponse).toList(),
-                        aberto.pagina(), aberto.tamanho(), aberto.temMais()));
+                        aberto.tamanho(), aberto.temMais()));
     }
 
     public MensagemResponse toResponse(Mensagem mensagem) {

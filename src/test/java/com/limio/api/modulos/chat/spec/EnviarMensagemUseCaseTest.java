@@ -53,7 +53,12 @@ class EnviarMensagemUseCaseTest {
     }
 
     private Chat chat() {
-        return Chat.daCandidatura(UUID.randomUUID(), UUID.randomUUID(), CONTRATANTE_ID, PRESTADOR_ID);
+        return Chat.builder()
+                .aplicacaoId(UUID.randomUUID())
+                .anuncioId(UUID.randomUUID())
+                .contratanteId(CONTRATANTE_ID)
+                .prestadorId(PRESTADOR_ID)
+                .build();
     }
 
     @Test

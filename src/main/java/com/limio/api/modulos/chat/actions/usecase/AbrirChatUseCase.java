@@ -7,14 +7,12 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.limio.api.comum.midia.LinkTemporario;
 import com.limio.api.comum.portas.ConsultaCandidatura;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.ConsultaFotoPerfil;
 import com.limio.api.comum.portas.ConsultaPerfilEmpregador;
-import com.limio.api.comum.portas.DadosUsuario;
-import com.limio.api.comum.portas.FotoPerfil;
 import com.limio.api.comum.portas.ResumoCandidatura;
-import com.limio.api.comum.portas.ResumoPerfilEmpregador;
 import com.limio.api.modulos.chat.Chat;
 import com.limio.api.modulos.chat.ChatAberto;
 import com.limio.api.modulos.chat.ChatService;
@@ -28,11 +26,12 @@ import com.limio.api.modulos.chat.mensagem.MensagemService;
  * Abre o chat de uma candidatura (ETI-101): cabeçalho, somente leitura e uma página do histórico. Só as duas partes
  * enxergam o chat; para qualquer outra pessoa ele não existe. Não marca nada como lido: isso é
  * {@link ConfirmarMensagensUseCase}, chamado pelo app ao exibir a conversa.
+ *
+ * Se o chat ainda não existe (a reação ao {@code CandidaturaCriadaEvent} falhou depois do commit, ou a candidatura é
+ * anterior ao módulo), ele é criado aqui: a candidatura nunca fica sem chat.
  */
 @Service
 public class AbrirChatUseCase {
-
-    public static final int TAMANHO_PAGINA_MAXIMO = 100;
 
     private final ChatService chatService;
     private final MensagemService mensagemService;
@@ -52,41 +51,41 @@ public class AbrirChatUseCase {
         this.consultaFotoPerfil = consultaFotoPerfil;
     }
 
-    // sem readOnly: ConsultaPerfilEmpregador cria o perfil do Empregador que ainda não tem um (mesma regra do painel)
+    /**
+     * @param antesDe id da mensagem mais antiga que o app já tem, para carregar as anteriores; {@code null} abre nas
+     *     mais recentes
+     */
+    // sem readOnly: cria o chat que faltar
     @Transactional
-    public ChatAberto executar(UUID aplicacaoId, UUID usuarioId, int pagina, int tamanho) {
-        Chat chat = chatService.buscarDaCandidaturaDoParticipante(aplicacaoId, usuarioId);
+    public ChatAberto executar(UUID aplicacaoId, UUID usuarioId, UUID antesDe, int tamanho) {
         ResumoCandidatura candidatura = consultaCandidatura.buscarPorId(aplicacaoId)
+                .filter(encontrada -> encontrada.participa(usuarioId))
                 .orElseThrow(ChatNaoEncontradoException::new);
-        OutraParte outraParte = outraParte(chat, usuarioId);
+        Chat chat = chatService.garantirDaCandidatura(aplicacaoId, candidatura.anuncioId(),
+                candidatura.contratanteId(), candidatura.prestadorId());
 
-        int paginaValida = Math.max(pagina, 0);
-        int tamanhoValido = Math.clamp(tamanho, 1, TAMANHO_PAGINA_MAXIMO);
-        Slice<Mensagem> historico = mensagemService.buscarHistorico(chat.getId(), paginaValida, tamanhoValido);
-        return new ChatAberto(chat, outraParte, candidatura, historico.getContent(), paginaValida, tamanhoValido,
+        Slice<Mensagem> historico = mensagemService.buscarHistorico(chat.getId(), antesDe, tamanho);
+        return new ChatAberto(chat, outraParte(chat, usuarioId), candidatura, historico.getContent(), tamanho,
                 historico.hasNext());
     }
 
     /**
      * Empregador aparece pelo nome de exibição do perfil; Prestador, pelo nome do cadastro. Conta encerrada (porta
-     * de {@code auth} vazia) vira "Usuário excluído" sem consultar mais nada.
+     * vazia) vira "Usuário excluído". Só leitura: abrir o chat nunca cria nada no perfil da outra parte.
      */
     private OutraParte outraParte(Chat chat, UUID usuarioId) {
         UUID outraParteId = chat.outraParte(usuarioId);
         PapelNoChat papel = chat.papelDaOutraParte(usuarioId);
-        Optional<DadosUsuario> dados = consultaDadosUsuario.buscarPorId(outraParteId);
-        if (dados.isEmpty())
-            return OutraParte.contaEncerrada(papel);
-        return switch (papel) {
-            case EMPREGADOR -> {
-                ResumoPerfilEmpregador perfil = consultaPerfilEmpregador.buscarResumo(outraParteId);
-                yield new OutraParte(perfil.nomeExibicao(), perfil.fotoUrl(), perfil.fotoExpiraEm(), papel);
-            }
-            case CANDIDATO -> {
-                Optional<FotoPerfil> foto = consultaFotoPerfil.buscarFoto(outraParteId);
-                yield new OutraParte(dados.get().nomeCompleto(), foto.map(FotoPerfil::url).orElse(null),
-                        foto.map(FotoPerfil::expiraEm).orElse(null), papel);
-            }
+        Optional<OutraParte> encontrada = switch (papel) {
+            case EMPREGADOR -> consultaPerfilEmpregador.buscarResumoSemCriar(outraParteId)
+                    .map(perfil -> new OutraParte(perfil.nomeExibicao(), perfil.fotoUrl(), perfil.fotoExpiraEm(),
+                            papel));
+            case CANDIDATO -> consultaDadosUsuario.buscarPorId(outraParteId).map(dados -> {
+                Optional<LinkTemporario> foto = consultaFotoPerfil.buscarFoto(outraParteId);
+                return new OutraParte(dados.nomeCompleto(), foto.map(LinkTemporario::url).orElse(null),
+                        foto.map(LinkTemporario::expiraEm).orElse(null), papel);
+            });
         };
+        return encontrada.orElseGet(() -> OutraParte.contaEncerrada(papel));
     }
 }

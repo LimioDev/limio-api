@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -41,6 +42,11 @@ import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.socket.WebSocketHttpHeaders;
@@ -50,6 +56,7 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 import com.limio.api.TestcontainersConfiguration;
 import com.limio.api.comum.eventos.AnuncioCanceladoEvent;
 import com.limio.api.comum.eventos.CandidaturaCriadaEvent;
+import com.limio.api.comum.seguranca.JwtAuthFilter;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioRepository;
@@ -111,6 +118,9 @@ class ChatDaCandidaturaStoryTest {
 
     @Autowired
     private TransactionTemplate transacao;
+
+    @Autowired
+    private JwtEncoder jwtEncoder;
 
     private final List<StompSession> sessoes = new ArrayList<>();
 
@@ -190,6 +200,24 @@ class ChatDaCandidaturaStoryTest {
         transacao.executeWithoutResult(status -> eventos.publishEvent(new CandidaturaCriadaEvent(candidatura.getId(),
                 anuncio.getId(), anuncio.getTitulo(), empregador.getId(), prestador.getId(), Instant.now())));
         return jdbc.queryForObject("select id from chat where aplicacao_id = ?", UUID.class, candidatura.getId());
+    }
+
+    /** Token de acesso que vence em {@code validade}, no formato lido pelo {@link JwtAuthFilter}. */
+    private String tokenQueVenceEm(Usuario usuario, Duration validade) {
+        Instant agora = Instant.now();
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .subject(usuario.getId().toString())
+                .claim(JwtAuthFilter.CLAIM_PAPEL, usuario.getPapelAtivo().name())
+                .issuedAt(agora)
+                .expiresAt(agora.plus(validade))
+                .build();
+        return jwtEncoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
+                .getTokenValue();
+    }
+
+    private UUID mensagemComTexto(UUID chatId, String texto) {
+        return jdbc.queryForObject("select id from mensagem where chat_id = ? and texto = ?", UUID.class, chatId,
+                texto);
     }
 
     private void enviar(String token, UUID chatId, String texto, int statusEsperado) throws Exception {
@@ -302,7 +330,7 @@ class ChatDaCandidaturaStoryTest {
     }
 
     @Test
-    void dadoHistorico_quandoAbre_entaoMaisNovaPrimeiroEPaginado() throws Exception {
+    void dadoHistorico_quandoAbre_entaoMaisNovaPrimeiroEPaginaPelaUltimaMensagemVista() throws Exception {
         UUID chatId = candidaturaCriada();
         String tokenPrestador = logar(prestador);
         enviar(tokenPrestador, chatId, "primeira", 201);
@@ -314,10 +342,61 @@ class ChatDaCandidaturaStoryTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenPrestador))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.outraParte.papel", is("EMPREGADOR")))
+                .andExpect(jsonPath("$.outraParte.nome", is("Marina Bertoldi")))
                 .andExpect(jsonPath("$.historico.mensagens", hasSize(2)))
                 .andExpect(jsonPath("$.historico.mensagens[0].texto", is("terceira")))
                 .andExpect(jsonPath("$.historico.mensagens[1].texto", is("segunda")))
                 .andExpect(jsonPath("$.historico.temMais", is(true)));
+
+        // chega mensagem nova enquanto o usuário rola: a página seguinte não repete nada
+        enviar(tokenPrestador, chatId, "quarta", 201);
+        mockMvc.perform(get("/candidaturas/{id}/chat", candidatura.getId())
+                        .param("antesDe", mensagemComTexto(chatId, "segunda").toString())
+                        .param("tamanho", "2")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenPrestador))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.historico.mensagens", hasSize(1)))
+                .andExpect(jsonPath("$.historico.mensagens[0].texto", is("primeira")))
+                .andExpect(jsonPath("$.historico.temMais", is(false)));
+
+        assertThat(jdbc.queryForObject("select count(*) from perfil_empregador", Integer.class))
+                .as("abrir o chat não cria o perfil de Empregador da outra parte").isZero();
+    }
+
+    @Test
+    void dadoTamanhoForaDoLimite_quandoAbre_entaoValidacaoFalhou() throws Exception {
+        candidaturaCriada();
+        String token = logar(prestador);
+
+        for (String tamanho : List.of("0", "101")) {
+            mockMvc.perform(get("/candidaturas/{id}/chat", candidatura.getId())
+                            .param("tamanho", tamanho)
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.codigo", is("VALIDACAO_FALHOU")));
+        }
+    }
+
+    @Test
+    void dadaCandidaturaSemChat_quandoUmaDasPartesAbre_entaoChatCriadoNaHora() throws Exception {
+        // sem CandidaturaCriadaEvent: como se a reação depois do commit tivesse falhado
+        String tokenTerceiro = logar(cadastrar("Curioso", "curioso@example.com", "39053344705",
+                PapelUsuario.PRESTADOR));
+        mockMvc.perform(get("/candidaturas/{id}/chat", candidatura.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenTerceiro))
+                .andExpect(status().isNotFound());
+        assertThat(jdbc.queryForObject("select count(*) from chat", Integer.class))
+                .as("terceiro não cria chat").isZero();
+
+        mockMvc.perform(get("/candidaturas/{id}/chat", candidatura.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + logar(empregador)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", notNullValue()))
+                .andExpect(jsonPath("$.isSomenteLeitura", is(false)));
+
+        candidaturaCriada(); // o evento atrasado não cria um segundo
+        assertThat(jdbc.queryForObject("select count(*) from chat where aplicacao_id = ?", Integer.class,
+                candidatura.getId())).isEqualTo(1);
     }
 
     @Test
@@ -381,7 +460,7 @@ class ChatDaCandidaturaStoryTest {
     }
 
     @Test
-    void dadoAutorComContaEncerrada_quandoOutraParteAbre_entaoUsuarioExcluidoEHistoricoMantido() throws Exception {
+    void dadoAutorComContaEncerrada_quandoOutraParteAbre_entaoUsuarioExcluidoSomenteLeituraEHistoricoMantido() throws Exception {
         UUID chatId = candidaturaCriada();
         String tokenPrestador = logar(prestador);
         enviar(tokenPrestador, chatId, "Boa tarde! Vi o anúncio.", 201);
@@ -398,11 +477,30 @@ class ChatDaCandidaturaStoryTest {
                 .andExpect(jsonPath("$.outraParte.nome", is(OutraParte.NOME_CONTA_ENCERRADA)))
                 .andExpect(jsonPath("$.outraParte.fotoUrl", nullValue()))
                 .andExpect(jsonPath("$.historico.mensagens", hasSize(1)))
-                .andExpect(jsonPath("$.historico.mensagens[0].texto", is("Boa tarde! Vi o anúncio.")));
+                .andExpect(jsonPath("$.historico.mensagens[0].texto", is("Boa tarde! Vi o anúncio.")))
+                .andExpect(jsonPath("$.isSomenteLeitura", is(true)))
+                .andExpect(jsonPath("$.motivoSomenteLeitura", is("CONTA_ENCERRADA")));
+        enviar(logar(empregador), chatId, "Ainda está aí?", 409);
     }
 
     @Test
     void dadoTokenInvalido_quandoConectaNoCanal_entaoConexaoRecusada() {
         assertThatThrownBy(() -> conectar("token-invalido")).isInstanceOf(ExecutionException.class);
+    }
+
+    @Test
+    void dadoTokenVencido_quandoChegaMensagemNova_entaoConexaoFechadaSemEntregar() throws Exception {
+        UUID chatId = candidaturaCriada();
+        StompSession sessao = conectar(tokenQueVenceEm(prestador, Duration.ofSeconds(2)));
+        BlockingQueue<EventoChatResponse> doPrestador = assinarChat(sessao);
+
+        Thread.sleep(2_500);
+        enviar(logar(empregador), chatId, "Consegue amanhã cedo?", 201);
+
+        assertThat(doPrestador.poll(ESPERA.toMillis(), TimeUnit.MILLISECONDS)).isNull();
+        long limite = System.currentTimeMillis() + ESPERA.toMillis();
+        while (sessao.isConnected() && System.currentTimeMillis() < limite)
+            Thread.sleep(50);
+        assertThat(sessao.isConnected()).as("sessão fechada depois do vencimento").isFalse();
     }
 }

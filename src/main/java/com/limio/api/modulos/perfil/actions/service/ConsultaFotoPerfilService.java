@@ -8,13 +8,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import com.limio.api.comum.midia.ArmazenamentoService;
+import com.limio.api.comum.midia.LinkTemporario;
 import com.limio.api.comum.midia.Midia;
 import com.limio.api.comum.midia.MidiaService;
 import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
 import com.limio.api.comum.portas.ConsultaFotoPerfil;
-import com.limio.api.comum.portas.FotoPerfil;
 
-/** Implementa {@link ConsultaFotoPerfil} para o cabeçalho do chat ({@code modulos.chat}, ETI-101). */
+/**
+ * Implementa {@link ConsultaFotoPerfil}: cabeçalho do chat ({@code modulos.chat}), candidatos do anúncio
+ * ({@code modulos.anuncio}) e o resumo do Empregador ({@link ConsultaPerfilEmpregadorService}).
+ */
 @Component
 public class ConsultaFotoPerfilService implements ConsultaFotoPerfil {
 
@@ -30,12 +33,11 @@ public class ConsultaFotoPerfilService implements ConsultaFotoPerfil {
 
     /** Sem storage quem consulta continua de pé, só sem a foto (a consulta da própria foto segue respondendo 503). */
     @Override
-    public Optional<FotoPerfil> buscarFoto(UUID usuarioId) {
+    public Optional<LinkTemporario> buscarFoto(UUID usuarioId) {
         try {
             return midiaService.buscarFotoPerfilAtiva(usuarioId)
                     .map(Midia::getUrlS3)
-                    .map(armazenamentoService::gerarLink)
-                    .map(link -> new FotoPerfil(link.url(), link.expiraEm()));
+                    .map(armazenamentoService::gerarLink);
         } catch (ArmazenamentoIndisponivelException e) {
             log.warn("link da foto de perfil indisponível; consulta segue sem foto");
             return Optional.empty();

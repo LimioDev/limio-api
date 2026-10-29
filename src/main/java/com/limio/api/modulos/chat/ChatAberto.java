@@ -10,5 +10,5 @@ import com.limio.api.modulos.chat.mensagem.Mensagem;
  * e uma página do histórico, da mensagem mais nova para a mais antiga.
  */
 public record ChatAberto(Chat chat, OutraParte outraParte, ResumoCandidatura candidatura,
-        List<Mensagem> mensagens, int pagina, int tamanho, boolean temMais) {
+        List<Mensagem> mensagens, int tamanho, boolean temMais) {
 }

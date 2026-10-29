@@ -24,23 +24,28 @@ public class ChatService extends BaseService<Chat, UUID, ChatRepository> {
                 .orElseThrow(ChatNaoEncontradoException::new);
     }
 
-    /** Mesma regra de {@link #buscarDoParticipante}, pela candidatura. */
-    public Chat buscarDaCandidaturaDoParticipante(UUID aplicacaoId, UUID usuarioId) {
-        return repository.findByAplicacaoId(aplicacaoId)
-                .filter(chat -> chat.participa(usuarioId))
-                .orElseThrow(ChatNaoEncontradoException::new);
-    }
-
     public Optional<Chat> buscarDaCandidatura(UUID aplicacaoId) {
         return repository.findByAplicacaoId(aplicacaoId);
     }
 
-    public boolean existeDaCandidatura(UUID aplicacaoId) {
-        return repository.existsByAplicacaoId(aplicacaoId);
+    /**
+     * O chat da candidatura, criado agora se ainda não existe. Idempotente e seguro com chamadas simultâneas: quem
+     * perde a corrida no índice único só lê o chat de quem ganhou.
+     */
+    public Chat garantirDaCandidatura(UUID aplicacaoId, UUID anuncioId, UUID contratanteId, UUID prestadorId) {
+        return repository.findByAplicacaoId(aplicacaoId).orElseGet(() -> {
+            repository.inserirSeAusente(aplicacaoId, anuncioId, contratanteId, prestadorId);
+            return repository.findByAplicacaoId(aplicacaoId).orElseThrow();
+        });
     }
 
     /** Chats do anúncio que ainda recebem mensagens. */
     public List<Chat> buscarAbertosDoAnuncio(UUID anuncioId) {
         return repository.findByAnuncioIdAndSomenteLeituraFalse(anuncioId);
+    }
+
+    /** Chats em que o usuário é uma das partes e que ainda recebem mensagens. */
+    public List<Chat> buscarAbertosDoParticipante(UUID usuarioId) {
+        return repository.buscarAbertosDoParticipante(usuarioId);
     }
 }

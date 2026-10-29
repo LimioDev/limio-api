@@ -34,6 +34,7 @@ public class ConsultaCandidaturaService implements ConsultaCandidatura {
         return aplicacaoService.buscarPorId(candidaturaId)
                 .flatMap(aplicacao -> anuncioService.buscarPorId(aplicacao.getAnuncioId())
                         .map(anuncio -> new ResumoCandidatura(aplicacao.getId(), aplicacao.getStatus().name(),
+                                anuncio.getId(), anuncio.getContratanteId(), aplicacao.getPrestadorId(),
                                 anuncio.getTitulo(), nomeDaCategoria(anuncio.getCategoriaId()))));
     }
 

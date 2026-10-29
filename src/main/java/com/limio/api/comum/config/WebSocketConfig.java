@@ -6,11 +6,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
+import com.limio.api.comum.seguranca.ExpiracaoSessaoWebSocket;
+import com.limio.api.comum.seguranca.LeitorTokenAcesso;
 import com.limio.api.comum.seguranca.WebSocketAuthInterceptor;
 
 /**
@@ -25,11 +26,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     /** Handshake público: a autenticação acontece no frame CONNECT ({@link WebSocketAuthInterceptor}). */
     public static final String ROTA_WEBSOCKET = "/ws";
 
-    private final JwtDecoder jwtDecoder;
+    private final LeitorTokenAcesso leitorTokenAcesso;
     private final List<String> origensPermitidas;
+    private final ExpiracaoSessaoWebSocket expiracao = new ExpiracaoSessaoWebSocket();
 
-    public WebSocketConfig(JwtDecoder jwtDecoder, @Value("${cors.origens-permitidas}") List<String> origensPermitidas) {
-        this.jwtDecoder = jwtDecoder;
+    public WebSocketConfig(LeitorTokenAcesso leitorTokenAcesso,
+            @Value("${cors.origens-permitidas}") List<String> origensPermitidas) {
+        this.leitorTokenAcesso = leitorTokenAcesso;
         this.origensPermitidas = origensPermitidas.stream().map(String::trim).filter(o -> !o.isEmpty()).toList();
     }
 
@@ -47,6 +50,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(new WebSocketAuthInterceptor(jwtDecoder));
+        registration.interceptors(new WebSocketAuthInterceptor(leitorTokenAcesso, expiracao));
+    }
+
+    @Override
+    public void configureClientOutboundChannel(ChannelRegistration registration) {
+        registration.interceptors(expiracao);
     }
 }

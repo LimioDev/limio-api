@@ -1,9 +1,11 @@
 package com.limio.api.modulos.chat.mensagem;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Component;
 
@@ -17,22 +19,24 @@ public class MensagemService extends BaseService<Mensagem, UUID, MensagemReposit
         super(repository);
     }
 
-    /** Uma página do histórico, da mais nova para a mais antiga. */
-    public Slice<Mensagem> buscarHistorico(UUID chatId, int pagina, int tamanho) {
-        return repository.findByChatIdOrderByDataEnvioDescIdDesc(chatId, PageRequest.of(pagina, tamanho));
+    /**
+     * Uma página do histórico, da mais nova para a mais antiga: as mais recentes sem {@code antesDe}, ou as anteriores
+     * à mensagem {@code antesDe}.
+     */
+    public Slice<Mensagem> buscarHistorico(UUID chatId, UUID antesDe, int tamanho) {
+        Pageable pagina = PageRequest.ofSize(tamanho);
+        return antesDe == null
+                ? repository.findByChatIdOrderByDataEnvioDescIdDesc(chatId, pagina)
+                : repository.buscarAntesDe(chatId, antesDe, pagina);
     }
 
-    /** Mensagens que a outra parte mandou para {@code usuarioId} e ainda não chegaram ao aparelho dele. */
-    public List<Mensagem> buscarNaoEntreguesPara(UUID chatId, UUID usuarioId) {
-        return repository.findByChatIdAndRemetenteIdNotAndEntregueEmIsNull(chatId, usuarioId);
+    /** Ids das mensagens recebidas por {@code usuarioId} que só agora chegaram ao aparelho dele. */
+    public List<UUID> marcarEntregues(UUID chatId, UUID usuarioId, Instant agora) {
+        return repository.marcarEntregues(chatId, usuarioId, agora);
     }
 
-    /** Mensagens que a outra parte mandou para {@code usuarioId} e ele ainda não leu. */
-    public List<Mensagem> buscarNaoLidasPor(UUID chatId, UUID usuarioId) {
-        return repository.findByChatIdAndRemetenteIdNotAndLidaEmIsNull(chatId, usuarioId);
-    }
-
-    public List<Mensagem> salvarTodas(List<Mensagem> mensagens) {
-        return repository.saveAll(mensagens);
+    /** Ids das mensagens recebidas por {@code usuarioId} que só agora ele leu. */
+    public List<UUID> marcarLidas(UUID chatId, UUID usuarioId, Instant agora) {
+        return repository.marcarLidas(chatId, usuarioId, agora);
     }
 }
