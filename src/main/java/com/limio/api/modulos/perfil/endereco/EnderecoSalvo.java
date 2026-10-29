@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 import com.limio.api.comum.base.BaseEntity;
-import com.limio.api.modulos.perfil.enums.Uf;
+import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.modulos.perfil.geo.Coordenadas;
 
 import jakarta.persistence.Column;

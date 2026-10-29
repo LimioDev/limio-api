@@ -84,7 +84,7 @@ class CancelarAnuncioUseCaseTest {
         Aplicacao enviada1 = aplicacao(StatusAplicacao.ENVIADA);
         Aplicacao enviada2 = aplicacao(StatusAplicacao.ENVIADA);
         when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
-        when(aplicacaoService.temCandidaturaEscolhida(ANUNCIO_ID)).thenReturn(false);
+        when(aplicacaoService.existeEscolhida(ANUNCIO_ID)).thenReturn(false);
         when(aplicacaoService.buscarAbertasDoAnuncio(ANUNCIO_ID)).thenReturn(List.of(enviada1, enviada2));
 
         useCase.executar(ANUNCIO_ID, CONTRATANTE_ID);
@@ -109,7 +109,7 @@ class CancelarAnuncioUseCaseTest {
     void dadoAnuncioSemCandidatos_quandoCancela_entaoEncerraSoOAnuncio() {
         Anuncio anuncio = anuncioPublicado();
         when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
-        when(aplicacaoService.temCandidaturaEscolhida(ANUNCIO_ID)).thenReturn(false);
+        when(aplicacaoService.existeEscolhida(ANUNCIO_ID)).thenReturn(false);
         when(aplicacaoService.buscarAbertasDoAnuncio(ANUNCIO_ID)).thenReturn(List.of());
 
         useCase.executar(ANUNCIO_ID, CONTRATANTE_ID);
@@ -123,7 +123,7 @@ class CancelarAnuncioUseCaseTest {
     void dadoAnuncioComCandidaturaEscolhida_quandoCancela_entaoRecusa() {
         Anuncio anuncio = anuncioPublicado();
         when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
-        when(aplicacaoService.temCandidaturaEscolhida(ANUNCIO_ID)).thenReturn(true);
+        when(aplicacaoService.existeEscolhida(ANUNCIO_ID)).thenReturn(true);
 
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, CONTRATANTE_ID))
                 .isInstanceOf(AnuncioEstadoInvalidoException.class);
@@ -142,7 +142,9 @@ class CancelarAnuncioUseCaseTest {
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, CONTRATANTE_ID))
                 .isInstanceOf(AnuncioEstadoInvalidoException.class);
 
-        verify(aplicacaoService, never()).temCandidaturaEscolhida(any());
+        assertThat(concluido.getStatus()).isEqualTo(StatusAnuncio.CONCLUIDO);
+        verify(anuncioService, never()).salvar(any());
+        verifyNoInteractionsComEventos();
     }
 
     @Test
@@ -153,7 +155,7 @@ class CancelarAnuncioUseCaseTest {
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, UUID.randomUUID()))
                 .isInstanceOf(AnuncioNaoEncontradoException.class);
 
-        verify(aplicacaoService, never()).temCandidaturaEscolhida(any());
+        verify(aplicacaoService, never()).existeEscolhida(any());
         verifyNoInteractionsComEventos();
     }
 

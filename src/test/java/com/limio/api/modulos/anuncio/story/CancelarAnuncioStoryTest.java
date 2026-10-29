@@ -122,6 +122,7 @@ class CancelarAnuncioStoryTest {
         return anuncioRepository.save(Anuncio.builder()
                 .contratanteId(contratanteId)
                 .titulo("Instalar 3 tomadas")
+                .categoriaId(UUID.randomUUID()) // sem FK pra categoria (ADR-0001 §1.6): qualquer id serve aqui
                 .descricao("Instalar 3 tomadas novas na sala e trocar o disjuntor")
                 .dataHoraPretendida(Instant.now().plus(Duration.ofDays(5)))
                 .bairroRegiaoSnapshot("Pinheiros")

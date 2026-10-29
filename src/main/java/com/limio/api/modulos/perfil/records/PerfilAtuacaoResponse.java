@@ -2,7 +2,7 @@ package com.limio.api.modulos.perfil.records;
 
 import java.util.List;
 
-import com.limio.api.modulos.perfil.enums.Uf;
+import com.limio.api.comum.localizacao.enums.Uf;
 
 /**
  * Perfil de atuação do usuário logado. Prestador que nunca salvou recebe tudo vazio (raio, município e

@@ -35,7 +35,7 @@ encerramento. Decisão: **gravar o motivo**, sem status novo.
 Razão: `Aplicacao` já resolve exatamente esse problema desde o TICKET-0049 —
 `motivoEncerramento` (texto livre) ao lado de um único status `ENCERRADA` genérico, em vez de um valor
 de enum por motivo (`"Cancelado por saída de conta"` já é gravado assim). `Anuncio` não tinha o campo
-equivalente; esta decisão adiciona `motivo_encerramento` (migration V21) e aplica o mesmo padrão.
+equivalente; esta decisão adiciona `motivo_encerramento` (migration V23) e aplica o mesmo padrão.
 
 Isso também resolve a frase do card "a mesma decisão vale para Expirado (`ETI-66`) e os cancelamentos
 com/sem estorno de cota (`ETI-94`/`95`)": cada card futuro só precisa de um texto de motivo novo, não de
@@ -49,7 +49,7 @@ quebrar nenhum teste existente (nenhum testava o motivo de `Anuncio`, só o de `
 
 | Critério do card | Implementação |
 |---|---|
-| Só em `PUBLICADO` sem candidatura `ESCOLHIDA` | `AnuncioEstadoInvalidoException` (409) se `status != PUBLICADO` ou `AplicacaoService.temCandidaturaEscolhida` — mesmo finder do ETI-75, reaproveitado. |
+| Só em `PUBLICADO` sem candidatura `ESCOLHIDA` | `AnuncioEstadoInvalidoException` (409) via `Anuncio.permiteAlteracao(AplicacaoService.existeEscolhida)` — mesma regra de domínio do anexar fotos (ETI-59), com `switch` sem `default`. |
 | Muda `ENVIADA` pra `ENCERRADA` | `AplicacaoService.buscarAbertasDoAnuncio` + `Aplicacao.encerrar(agora, motivo)`. Só `ENVIADA` pode estar "aberta" aqui: `ESCOLHIDA`/`AGUARDANDO_VALIDACAO` já teriam barrado a checagem acima — não precisa filtrar por status de novo. |
 | `RECUSADA` continua `RECUSADA` | Automático: `buscarAbertasDoAnuncio` já exclui `RECUSADA` (não está em `STATUS_ABERTOS`). |
 | Não mexe na cota | Nenhuma chamada a serviço de cota — ausência de código é a regra, mesmo idioma do TICKET-0049. |

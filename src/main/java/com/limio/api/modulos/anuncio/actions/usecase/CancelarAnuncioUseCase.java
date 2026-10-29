@@ -12,7 +12,6 @@ import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
-import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.excecao.AnuncioEstadoInvalidoException;
 import com.limio.api.modulos.anuncio.excecao.AnuncioNaoEncontradoException;
 
@@ -44,10 +43,10 @@ public class CancelarAnuncioUseCase {
     @Transactional
     public void executar(UUID anuncioId, UUID contratanteId) {
         Anuncio anuncio = anuncioService.buscarPorId(anuncioId)
-                .filter(encontrado -> encontrado.getContratanteId().equals(contratanteId))
+                .filter(encontrado -> encontrado.pertenceA(contratanteId))
                 .orElseThrow(AnuncioNaoEncontradoException::new);
 
-        if (anuncio.getStatus() != StatusAnuncio.PUBLICADO || aplicacaoService.temCandidaturaEscolhida(anuncioId)) {
+        if (!anuncio.permiteAlteracao(aplicacaoService.existeEscolhida(anuncioId))) {
             throw new AnuncioEstadoInvalidoException();
         }
 

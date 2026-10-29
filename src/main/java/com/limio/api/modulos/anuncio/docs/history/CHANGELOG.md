@@ -95,10 +95,20 @@ abreviado ("Rafael S."). Decisões tomadas neste card (o card não definia): "an
 candidatos" = candidaturas `ENVIADA`, foto do anúncio `null` até existir o card de criar anúncio. Detalhe em
 `docs/features/TICKET-0052-listar-anuncios-do-empregador-para-o-painel.md`.
 
+## 2026-10-27 — ETI-59: criar e publicar anúncio, com fotos
+
+Primeiro card que cria anúncio pela API: `POST /anuncios`, `POST /anuncios/{id}/fotos` e `GET /anuncios/{id}`.
+Categoria, endereço salvo e geocodificação do endereço avulso vêm de `perfil` pelas portas novas
+`ConsultaCategoria`/`ConsultaEndereco`; a mídia subiu pra `comum/midia` (ver o CHANGELOG de `perfil`). Migrations
+`V20` (categoria e endereço salvo no anúncio, `anuncio_id` na mídia) e `V21` (retrato da UF). O título (5 a 80) usa a coluna da V18 (PR #17).
+`StatusAplicacao.isEscolhida()` virou a fonte única de "prestador escolhido" (`Aplicacao.isEscolhida()` delega). Contrato alinhado ao front-end par (limio-app#17): `enderecoAvulso`, fotos
+respondidas como lista, `categoria.grupo` e `uf` na consulta. Detalhe
+em `docs/features/TICKET-0059-criar-e-publicar-anuncio-com-fotos.md`.
+
 ## 2026-10-28 — ETI-63: cancelar anúncio antes da escolha
 
 `POST /anuncios/{anuncioId}/cancelar`. O card deixava uma decisão pendente (status `CANCELADO` novo vs.
-gravar o motivo) — resolvida gravando o motivo: `Anuncio` ganhou `motivoEncerramento` (migration V21),
+gravar o motivo) — resolvida gravando o motivo: `Anuncio` ganhou `motivoEncerramento` (migration V23),
 mesmo padrão que `Aplicacao.motivoEncerramento` já usa desde o TICKET-0049, em vez de um valor de enum
 por cenário de encerramento. `Anuncio.encerrarPorExclusaoDeConta` (TICKET-0049) foi retroativamente
 ajustado pra também gravar motivo (`"Cancelado por saída de conta"`), fechando a inconsistência de ter
@@ -107,12 +117,11 @@ existente (nenhum testava o motivo de `Anuncio`). O raciocínio completo, e por 
 futuro `ETI-66` (expiração) e `ETI-94`/`95` (cancelamento com/sem estorno), está em
 `docs/features/ETI-63-cancelar-anuncio-antes-da-escolha.md`.
 
-Reaproveitado do ETI-75 (candidatar-se, `PR #19`, ainda não mergeado quando este card começou):
-`AplicacaoService.temCandidaturaEscolhida` (mesmo finder) e `CodigoErro.ANUNCIO_ESTADO_INVALIDO` (mesmo
-valor, mensagem generalizada pra servir os dois usecases). Como as duas branches tocam os mesmos
-arquivos (`CodigoErro.java`, `AplicacaoService`/`AplicacaoRepository`, a exceção
-`AnuncioEstadoInvalidoException`), um conflito de merge trivial é esperado entre elas — resolve mantendo
-os dois lados (`ANUNCIO_NAO_ENCONTRADO` deste card + os nomes do ETI-75).
+Reaproveitado da develop (#18), sem duplicar: `AplicacaoService.existeEscolhida`, `Anuncio.pertenceA`,
+`AnuncioNaoEncontradoException` e os códigos `ANUNCIO_NAO_ENCONTRADO`/`ANUNCIO_ESTADO_INVALIDO`. A regra "só
+`PUBLICADO` e sem escolhido" virou um método de domínio só, `Anuncio.permiteAlteracao` (antes `aceitaFotos`),
+usado pelo anexar fotos e pelo cancelar. `AnuncioEstadoInvalidoException` é idêntica à da #19 (ETI-75) pra
+não conflitar no merge.
 
 Dono errado e anúncio inexistente respondem o mesmo 404 `ANUNCIO_NAO_ENCONTRADO` — quem não é dono não
 descobre se o id existe, mesmo critério que `ConsultarPainelEmpregadorUseCase` já segue (só lista os

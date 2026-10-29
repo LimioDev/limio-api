@@ -2,7 +2,7 @@ package com.limio.api.modulos.perfil.actions.mapper;
 
 import org.springframework.stereotype.Component;
 
-import com.limio.api.modulos.perfil.midia.LinkTemporario;
+import com.limio.api.comum.midia.LinkTemporario;
 import com.limio.api.modulos.perfil.records.FotoPerfilResponse;
 
 @Component
