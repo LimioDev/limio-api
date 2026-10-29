@@ -40,6 +40,8 @@ public enum CodigoErro {
     DATA_NO_PASSADO("A data e a hora do serviço precisam estar no futuro."),
     ANUNCIO_NAO_ENCONTRADO("Anúncio não encontrado."),
     ANUNCIO_ESTADO_INVALIDO("O anúncio não permite esta ação no estado atual."),
+    CHAT_NAO_ENCONTRADO("Conversa não encontrada."),
+    CHAT_SOMENTE_LEITURA("Esta conversa está encerrada e não recebe novas mensagens."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;

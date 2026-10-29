@@ -58,23 +58,30 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     private void autenticar(String token) {
-        UsuarioAutenticado usuario;
-        try {
-            usuario = lerUsuario(jwtDecoder.decode(token));
-        } catch (JwtValidationException e) {
-            return; // expirado (ou fora da validade): uso normal do app, segue anônimo sem log
-        } catch (JwtException | IllegalArgumentException e) {
-            // assinatura inválida, token malformado ou claim inválida: segue anônimo, mas deixa rastro
-            // pra distinguir tentativa de forjar token de tráfego normal. Nunca logar o token.
-            log.debug("token de acesso recusado ({}): {}", e.getClass().getSimpleName(), e.getMessage());
-            return;
-        }
+        UsuarioAutenticado usuario = lerToken(jwtDecoder, token);
         if (usuario == null) {
             return;
         }
         SecurityContext contexto = SecurityContextHolder.createEmptyContext();
         contexto.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(usuario, null, List.of()));
         SecurityContextHolder.setContext(contexto);
+    }
+
+    /**
+     * Quem é o dono do token, ou {@code null} se ele é inválido, expirado ou não traz id e papel. Também usado no
+     * CONNECT do WebSocket ({@link WebSocketAuthInterceptor}), que não passa por este filtro.
+     */
+    public static UsuarioAutenticado lerToken(JwtDecoder jwtDecoder, String token) {
+        try {
+            return lerUsuario(jwtDecoder.decode(token));
+        } catch (JwtValidationException e) {
+            return null; // expirado (ou fora da validade): uso normal do app, segue anônimo sem log
+        } catch (JwtException | IllegalArgumentException e) {
+            // assinatura inválida, token malformado ou claim inválida: segue anônimo, mas deixa rastro
+            // pra distinguir tentativa de forjar token de tráfego normal. Nunca logar o token.
+            log.debug("token de acesso recusado ({}): {}", e.getClass().getSimpleName(), e.getMessage());
+            return null;
+        }
     }
 
     private static UsuarioAutenticado lerUsuario(Jwt jwt) {
