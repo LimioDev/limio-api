@@ -1,5 +1,6 @@
 package com.limio.api.modulos.perfil.categoria;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +35,11 @@ public class CategoriaService extends BaseService<Categoria, UUID, CategoriaRepo
     /** A categoria protegida "Outros" (seed da V11); vazio só se a base foi adulterada. */
     public Optional<Categoria> buscarOutros() {
         return repository.findFirstByProtegidaTrue();
+    }
+
+    /** Ativas ou não; id inexistente simplesmente não volta. Uma consulta só. */
+    public List<Categoria> buscarPorIds(Collection<UUID> ids) {
+        return repository.findAllById(ids);
     }
 
     /** Ativa ou não; vazio só se o id não existe. */
