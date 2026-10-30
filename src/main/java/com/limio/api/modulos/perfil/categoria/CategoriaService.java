@@ -31,6 +31,11 @@ public class CategoriaService extends BaseService<Categoria, UUID, CategoriaRepo
         return new HashSet<>(repository.findByIdInAndAtivaTrue(ids));
     }
 
+    /** A categoria protegida "Outros" (seed da V11); vazio só se a base foi adulterada. */
+    public Optional<Categoria> buscarOutros() {
+        return repository.findFirstByProtegidaTrue();
+    }
+
     /** Ativa ou não; vazio só se o id não existe. */
     public Optional<Categoria> buscarPorId(UUID id) {
         return repository.findById(id);

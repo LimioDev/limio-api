@@ -45,6 +45,7 @@ public enum CodigoErro {
     COTA_ESGOTADA("Você atingiu o limite de candidaturas escolhidas do plano gratuito neste mês."),
     CHAT_NAO_ENCONTRADO("Conversa não encontrada."),
     CHAT_SOMENTE_LEITURA("Esta conversa está encerrada e não recebe novas mensagens."),
+    PERFIL_INCOMPLETO("Complete seu perfil de atuação para ver os anúncios."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;
