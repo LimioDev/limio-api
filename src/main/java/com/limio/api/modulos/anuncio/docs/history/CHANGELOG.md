@@ -134,6 +134,13 @@ pra não deixar o Prestador se candidatar a algo que, escolhido, ele não teria 
 
 Detalhe completo em `docs/features/ETI-75-candidatar-se-a-um-anuncio.md`.
 
+## 2026-10-29 — ETI-101 (review da PR #21): foto dos candidatos pela porta `ConsultaFotoPerfil`
+
+`ConsultarMeuAnuncioUseCase` busca a foto de perfil dos primeiros candidatos pela porta `ConsultaFotoPerfil` (de
+`perfil`), em vez de usar `MidiaService` e `ArmazenamentoService` direto. A mesma lógica deixa de existir em dois
+módulos. As fotos do anúncio continuam pelo `comum/midia`. `ConsultaCandidaturaService` passou a mandar
+`anuncioId`, `contratanteId` e `prestadorId` no `ResumoCandidatura`, para o chat criar o chat que faltar.
+
 ## 2026-10-30 — ETI-63: cancelar anúncio antes da escolha
 
 `POST /anuncios/{anuncioId}/cancelar`. O card deixava uma decisão pendente (status `CANCELADO` novo vs.

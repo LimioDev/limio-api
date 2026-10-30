@@ -1,5 +1,6 @@
 package com.limio.api.comum.seguranca;
 
+import java.security.Principal;
 import java.util.UUID;
 
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
@@ -12,6 +13,13 @@ import com.limio.api.comum.seguranca.enums.PapelUsuario;
  *
  * O papel é o do momento em que o token foi emitido: depois de uma troca de
  * papel, só o próximo token (refresh ou login) traz o papel novo.
+ *
+ * É {@link Principal} com o id como nome: o WebSocket entrega em {@code /user/queue/...} pelo nome do usuário.
  */
-public record UsuarioAutenticado(UUID id, PapelUsuario papel) {
+public record UsuarioAutenticado(UUID id, PapelUsuario papel) implements Principal {
+
+    @Override
+    public String getName() {
+        return id.toString();
+    }
 }

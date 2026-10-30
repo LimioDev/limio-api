@@ -43,6 +43,8 @@ public enum CodigoErro {
     ANUNCIO_PROPRIO("Você não pode se candidatar ao próprio anúncio."),
     CANDIDATURA_DUPLICADA("Você já tem uma candidatura em aberto para este anúncio."),
     COTA_ESGOTADA("Você atingiu o limite de candidaturas escolhidas do plano gratuito neste mês."),
+    CHAT_NAO_ENCONTRADO("Conversa não encontrada."),
+    CHAT_SOMENTE_LEITURA("Esta conversa está encerrada e não recebe novas mensagens."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;

@@ -3,6 +3,7 @@ package com.limio.api.modulos.anuncio.aplicacao;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.hibernate.exception.ConstraintViolationException;
@@ -38,6 +39,11 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     /** Candidaturas ainda sem resposta do Empregador, da mais antiga pra mais nova. */
     public List<Aplicacao> buscarEnviadasDoAnuncio(UUID anuncioId) {
         return repository.findByAnuncioIdAndStatusOrderByDataAplicacaoAscIdAsc(anuncioId, StatusAplicacao.ENVIADA);
+    }
+
+    /** Busca que não lança: quem consulta por fora do módulo ({@code ConsultaCandidatura}) decide o que fazer. */
+    public Optional<Aplicacao> buscarPorId(UUID id) {
+        return repository.findById(id);
     }
 
     /** Candidaturas ainda abertas (não recusadas/concluídas/encerradas) em que {@code usuarioId} é o prestador. */

@@ -25,6 +25,7 @@ import com.limio.api.comum.midia.MidiaService;
 import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
 import com.limio.api.comum.portas.ConsultaCategoria;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
+import com.limio.api.comum.portas.ConsultaFotoPerfil;
 import com.limio.api.comum.portas.DadosUsuario;
 import com.limio.api.comum.portas.ResumoCategoria;
 import com.limio.api.modulos.anuncio.Anuncio;
@@ -65,12 +66,15 @@ class ConsultarMeuAnuncioUseCaseTest {
     @Mock
     private ConsultaDadosUsuario consultaDadosUsuario;
 
+    @Mock
+    private ConsultaFotoPerfil consultaFotoPerfil;
+
     private ConsultarMeuAnuncioUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
         useCase = new ConsultarMeuAnuncioUseCase(anuncioService, aplicacaoService, midiaService, armazenamentoService,
-                consultaCategoria, consultaDadosUsuario);
+                consultaCategoria, consultaDadosUsuario, consultaFotoPerfil);
         Anuncio anuncio = Anuncio.builder()
                 .contratanteId(DONO_ID)
                 .categoriaId(CATEGORIA_ID)
@@ -130,9 +134,7 @@ class ConsultarMeuAnuncioUseCaseTest {
         prestador(bruno, "Bruno da Costa");
         prestador(carla, "Carla");
         prestador(diego, "Diego Souza");
-        when(midiaService.buscarFotoPerfilAtiva(ana)).thenReturn(
-                Optional.of(Midia.fotoPerfil(ana, "fotos-perfil/ana.jpg", "image/jpeg", 10, 10, 100)));
-        when(armazenamentoService.gerarLink("fotos-perfil/ana.jpg")).thenReturn(LINK);
+        when(consultaFotoPerfil.buscarFoto(ana)).thenReturn(Optional.of(LINK));
 
         MeuAnuncio meu = useCase.executar(DONO_ID, ANUNCIO_ID);
 

@@ -11,11 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.midia.ArmazenamentoService;
 import com.limio.api.comum.midia.LinkTemporario;
-import com.limio.api.comum.midia.Midia;
 import com.limio.api.comum.midia.MidiaService;
 import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
 import com.limio.api.comum.portas.ConsultaCategoria;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
+import com.limio.api.comum.portas.ConsultaFotoPerfil;
 import com.limio.api.comum.portas.DadosUsuario;
 import com.limio.api.comum.portas.ResumoCategoria;
 import com.limio.api.modulos.anuncio.Anuncio;
@@ -49,19 +49,22 @@ public class ConsultarMeuAnuncioUseCase {
     private final ArmazenamentoService armazenamentoService;
     private final ConsultaCategoria consultaCategoria;
     private final ConsultaDadosUsuario consultaDadosUsuario;
+    private final ConsultaFotoPerfil consultaFotoPerfil;
 
     public ConsultarMeuAnuncioUseCase(AnuncioService anuncioService,
             AplicacaoService aplicacaoService,
             MidiaService midiaService,
             ArmazenamentoService armazenamentoService,
             ConsultaCategoria consultaCategoria,
-            ConsultaDadosUsuario consultaDadosUsuario) {
+            ConsultaDadosUsuario consultaDadosUsuario,
+            ConsultaFotoPerfil consultaFotoPerfil) {
         this.anuncioService = anuncioService;
         this.aplicacaoService = aplicacaoService;
         this.midiaService = midiaService;
         this.armazenamentoService = armazenamentoService;
         this.consultaCategoria = consultaCategoria;
         this.consultaDadosUsuario = consultaDadosUsuario;
+        this.consultaFotoPerfil = consultaFotoPerfil;
     }
 
     @Transactional(readOnly = true)
@@ -90,14 +93,8 @@ public class ConsultarMeuAnuncioUseCase {
         UUID prestadorId = aplicacao.getPrestadorId();
         return consultaDadosUsuario.buscarPorId(prestadorId)
                 .map(DadosUsuario::nomeCompleto)
-                .map(nome -> new CandidatoResumido(NomeHelper.abreviar(nome), fotoDePerfil(prestadorId)));
-    }
-
-    private LinkTemporario fotoDePerfil(UUID usuarioId) {
-        return midiaService.buscarFotoPerfilAtiva(usuarioId)
-                .map(Midia::getUrlS3)
-                .flatMap(this::link)
-                .orElse(null);
+                .map(nome -> new CandidatoResumido(NomeHelper.abreviar(nome),
+                        consultaFotoPerfil.buscarFoto(prestadorId).orElse(null)));
     }
 
     private Optional<LinkTemporario> link(String chave) {
