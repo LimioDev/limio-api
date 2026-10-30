@@ -48,6 +48,11 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
         return repository.findByAnuncioIdAndStatusOrderByDataAplicacaoAscIdAsc(anuncioId, StatusAplicacao.ENVIADA);
     }
 
+    /** Busca que não lança: quem consulta por fora do módulo ({@code ConsultaCandidatura}) decide o que fazer. */
+    public Optional<Aplicacao> buscarPorId(UUID id) {
+        return repository.findById(id);
+    }
+
     /** Candidaturas ainda abertas (não recusadas/concluídas/encerradas) em que {@code usuarioId} é o prestador. */
     public List<Aplicacao> buscarAbertasDoPrestador(UUID usuarioId) {
         return repository.findByPrestadorIdAndStatusIn(usuarioId, STATUS_ABERTOS);

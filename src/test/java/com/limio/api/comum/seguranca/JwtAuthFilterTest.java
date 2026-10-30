@@ -26,7 +26,7 @@ import com.limio.api.comum.seguranca.enums.PapelUsuario;
 class JwtAuthFilterTest {
 
     private final JwtConfig jwtConfig = new JwtConfig("segredo-de-teste-com-pelo-menos-32-bytes");
-    private final JwtAuthFilter filtro = new JwtAuthFilter(jwtConfig.jwtDecoder());
+    private final JwtAuthFilter filtro = new JwtAuthFilter(new LeitorTokenAcesso(jwtConfig.jwtDecoder()));
 
     @AfterEach
     void limparContexto() {

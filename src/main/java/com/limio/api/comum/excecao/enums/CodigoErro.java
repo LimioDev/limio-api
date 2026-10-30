@@ -46,6 +46,8 @@ public enum CodigoErro {
     CANDIDATURA_NAO_ENCONTRADA("Candidatura não encontrada."),
     CANDIDATURA_ESTADO_INVALIDO("Esta candidatura já foi encerrada."),
     USE_CANCELAMENTO_SERVICO("Você já foi escolhido para este serviço. Para desistir, cancele o serviço combinado."),
+    CHAT_NAO_ENCONTRADO("Conversa não encontrada."),
+    CHAT_SOMENTE_LEITURA("Esta conversa está encerrada e não recebe novas mensagens."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;

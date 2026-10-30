@@ -48,6 +48,17 @@ public class PerfilEmpregadorService extends BaseService<PerfilEmpregador, UUID,
         return repository.findByUsuarioId(usuarioId);
     }
 
+    /**
+     * Nome de exibição sem criar o perfil: quem nunca abriu o perfil de Empregador aparece com o nome inicial que
+     * ganharia ao abrir. Vazio se a conta não existe ou foi encerrada.
+     */
+    public Optional<String> nomeExibicaoSemCriar(UUID usuarioId) {
+        return consultaDadosUsuario.buscarPorId(usuarioId)
+                .map(dados -> repository.findByUsuarioId(usuarioId)
+                        .map(PerfilEmpregador::getNomeExibicao)
+                        .orElseGet(() -> PerfilEmpregador.nomeExibicaoInicialDe(dados.nomeCompleto())));
+    }
+
     private PerfilEmpregador buscarOuCriar(UUID usuarioId, String nomeInicial) {
         return repository.findByUsuarioId(usuarioId).orElseGet(() -> {
             repository.inserirSeAusente(usuarioId, nomeInicial);
