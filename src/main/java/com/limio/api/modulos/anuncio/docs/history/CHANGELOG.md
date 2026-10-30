@@ -173,3 +173,9 @@ pra marcar os chats em somente leitura.
 `anuncio` implementa a porta `comum/portas/ConsultaEscolhasDoPrestador` (`actions/service/ConsultaEscolhasDoPrestadorService`):
 candidaturas com `escolhidaEm` no período, com título e data do anúncio, para a lista "Onde você usou sua cota" do
 `perfil`. Só leitura; nada muda no fluxo do anúncio. Ver `perfil/docs/features/US24-consultar-cota-do-mes-e-virada.md`.
+
+## 2026-10-30 — US24: bloqueio da candidatura conta o mês de São Paulo
+
+`CandidatarSeUseCase.cotaEsgotada` passou de mês civil UTC para `America/Sao_Paulo`, o mesmo critério da cota do
+mês (US24). Em UTC, das 21:00 do último dia até 00:00 do dia 1, o bloqueio já considerava o mês seguinte e a tela de
+cota não. O fuso fica numa constante do usecase porque `anuncio` não importa `CotaMensal` (ADR-0001).

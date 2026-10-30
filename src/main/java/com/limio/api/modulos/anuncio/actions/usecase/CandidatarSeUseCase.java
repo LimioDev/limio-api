@@ -1,7 +1,7 @@
 package com.limio.api.modulos.anuncio.actions.usecase;
 
 import java.time.Instant;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
@@ -51,6 +51,8 @@ import com.limio.api.modulos.anuncio.excecao.SomentePrestadorCandidataException;
  */
 @Service
 public class CandidatarSeUseCase {
+
+    private static final ZoneId FUSO_DA_COTA = ZoneId.of("America/Sao_Paulo");
 
     private final AnuncioService anuncioService;
     private final AplicacaoService aplicacaoService;
@@ -127,11 +129,11 @@ public class CandidatarSeUseCase {
 
     /**
      * {@code financeiro} (plano/assinatura GOLD) ainda é só o esqueleto do ADR-0001 (TICKET-0044) — até
-     * existir, todo Prestador é tratado como FREE, então o limite sempre vale. Mês civil UTC: mesmo
+     * existir, todo Prestador é tratado como FREE, então o limite sempre vale. Mês civil de São Paulo: mesmo
      * critério da tela "Cota do mês" do Figma (reinicia no dia 1, 00:00).
      */
     private boolean cotaEsgotada(UUID prestadorId, Instant agora) {
-        ZonedDateTime inicioDoMes = agora.atZone(ZoneOffset.UTC).toLocalDate().withDayOfMonth(1).atStartOfDay(ZoneOffset.UTC);
+        ZonedDateTime inicioDoMes = agora.atZone(FUSO_DA_COTA).toLocalDate().withDayOfMonth(1).atStartOfDay(FUSO_DA_COTA);
         Instant inicio = inicioDoMes.toInstant();
         Instant fimExclusivo = inicioDoMes.plusMonths(1).toInstant();
         return aplicacaoService.contarEscolhidasNoPeriodo(prestadorId, inicio, fimExclusivo) >= maxEscolhasGratuitas;

@@ -5,7 +5,7 @@
 `feature/us24-cota-mensal` — [perfil] [BACK-END] Consultar a cota do mês e zerar na virada do mês. Origem: Backlog
 US24 · [prestador] Controlar a cota mensal FREE (sem card original no Jira). Card par: [perfil] [FRONT-END] Faixa de
 cota no mural e tela "Cota do mês". Relacionados: consumo na escolha (ETI-69/ETI-70), bloqueio da candidatura
-(ETI-75/ETI-76, PR #19), estorno no cancelamento do Empregador (ETI-94/ETI-95, Sprint 7). Insumos: Figma LIMIO
+(ETI-75/ETI-76), estorno no cancelamento do Empregador (ETI-94/ETI-95, Sprint 7). Insumos: Figma LIMIO
 (28-mural, 33-cota-esgotada, 33b-cota-do-mes-parcial), DER, planilha de casos de uso.
 
 ## User Story
@@ -37,7 +37,7 @@ que ele saiba quando pode se candidatar e o GOLD tenha valor.
 | Prestador sem perfil salvo → cota zerada, sem erro | Não há o que consumir sem perfil; 404 obrigaria o front a tratar um caso que não é erro. |
 | Plano pela porta `ConsultaPlanoPrestador`, implementada no `financeiro` devolvendo sempre FREE | A assinatura GOLD ainda não existe. Quando o card dela entrar, muda só `ConsultaPlanoPrestadorService`. O story do GOLD troca a porta. |
 | Lista pela porta `ConsultaEscolhasDoPrestador`, implementada no `anuncio` | ADR-0003 (porta pra consulta). `status` vai como texto porque `StatusAplicacao` é interno do `anuncio`. |
-| 403 `ACESSO_NEGADO` em vez de `PAPEL_INVALIDO` (nome sugerido no card) | `PAPEL_INVALIDO` não existe na develop. A PR #19 o cria com mensagem de candidatura ("Troque para o papel de Prestador para se candidatar"). O precedente da develop (endereços, publicar anúncio) é `ACESSO_NEGADO`. Se a #19 entrar e o grupo preferir, a troca é só na `SomentePrestadorConsultaCotaException`. |
+| 403 `ACESSO_NEGADO` em vez de `PAPEL_INVALIDO` (nome sugerido no card) | `PAPEL_INVALIDO` não existe na develop, e a candidatura (#19) e os endereços também respondem `ACESSO_NEGADO`. |
 | Rota `GET /perfil/prestador/cota` | O card deixa "a definir". Segue `/perfil/prestador/atuacao`, do mesmo módulo. |
 
 ## Contrato da API (compartilhado com o card [FRONT-END])
@@ -82,12 +82,11 @@ que ele saiba quando pode se candidatar e o GOLD tenha valor.
 
 ## Pendências e compatibilidade com PRs abertas
 
-- **PR #19 (ETI-75, candidatar-se)** conta escolhas direto em `aplicacao.escolhida_em` e usa o mês **UTC**. Pelo card,
-  o mês é o de São Paulo: entre 21:00 do último dia e 00:00 do dia 1 (horário de Brasília) a #19 já considera o mês
-  seguinte, e a tela de cota não. Quando a escolha (ETI-69) passar a gravar `cota_mensal`, a #19 deveria ler a cota
-  daqui (porta) em vez de contar candidaturas; até lá, ao menos trocar `ZoneOffset.UTC` por `America/Sao_Paulo`. O teto
-  também está duplicado: `anuncio.candidatura.max-escolhas-gratuitas` (#19) e `perfil.cota.teto-free` (aqui).
-- **Migração V27**: V22 e V23 são da #19 e da #20, V24 é do chat (PR #21), V25 e V26 são da #23. Quem entrar
+- **Bloqueio da candidatura (ETI-75)** conta escolhas direto em `aplicacao.escolhida_em`, no mês de São Paulo
+  (corrigido nesta entrega: era UTC, e das 21:00 do último dia até 00:00 do dia 1 divergia da tela de cota). Quando a
+  escolha (ETI-69) passar a gravar `cota_mensal`, o bloqueio deveria ler a cota daqui (porta) em vez de contar
+  candidaturas. O teto também está duplicado: `anuncio.candidatura.max-escolhas-gratuitas` e `perfil.cota.teto-free`.
+- **Migração V27**: V22 e V23 são da #19 e da #20, V24 é do chat (#21), V25 e V26 são da #23. Quem entrar
   depois usa V28. O Flyway roda com `out-of-order=true`, então só número repetido quebra.
 - **Figma** (33b) não foi visto no detalhe: se a tela mostrar a data da escolha em vez da data do serviço, os dois
   campos já vêm.
