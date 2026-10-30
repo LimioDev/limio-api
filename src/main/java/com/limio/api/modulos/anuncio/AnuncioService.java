@@ -42,7 +42,7 @@ public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository
         return repository.findById(id);
     }
 
-    /** Busca em lote (uma query) — pra montar listas sem N+1. Ids inexistentes ficam de fora. */
+    /** Mesma busca que {@link #buscarPorId}, em lote (evita N+1). Id sem anúncio fica de fora. */
     public List<Anuncio> buscarPorIds(Collection<UUID> ids) {
         if (ids.isEmpty()) {
             return List.of();

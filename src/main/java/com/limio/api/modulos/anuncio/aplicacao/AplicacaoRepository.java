@@ -20,6 +20,10 @@ public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
 
     List<Aplicacao> findByPrestadorIdAndStatusIn(UUID prestadorId, List<StatusAplicacao> status);
 
+    /** @param fimExclusivo limite superior do período, não incluso */
+    List<Aplicacao> findByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThanOrderByEscolhidaEmDesc(
+            UUID prestadorId, Instant inicio, Instant fimExclusivo);
+
     List<Aplicacao> findByAnuncioIdAndStatusIn(UUID anuncioId, List<StatusAplicacao> status);
 
     List<Aplicacao> findByAnuncioIdInAndStatusIn(List<UUID> anuncioIds, List<StatusAplicacao> status);
