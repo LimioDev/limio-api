@@ -31,6 +31,8 @@ import lombok.Setter;
 @Builder
 public class Aplicacao extends BaseEntity {
 
+    private static final String MOTIVO_DESISTENCIA = "Desistência do Prestador";
+
     @Column(name = "anuncio_id", nullable = false)
     private UUID anuncioId;
 
@@ -55,8 +57,6 @@ public class Aplicacao extends BaseEntity {
 
     @Column(name = "motivo_encerramento")
     private String motivoEncerramento;
-
-    private static final String MOTIVO_DESISTENCIA = "Desistência do Prestador";
 
     /** Prestador já escolhido pelo contratante: combinado ou aguardando validação (TICKET-0052). */
     public boolean isEscolhida() {

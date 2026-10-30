@@ -9,6 +9,7 @@ import com.limio.api.comum.excecao.enums.CodigoErro;
 public class CandidaturaNaoEncontradaException extends NegocioException {
 
     public CandidaturaNaoEncontradaException() {
-        super(CodigoErro.CANDIDATURA_NAO_ENCONTRADA, HttpStatus.NOT_FOUND, CodigoErro.CANDIDATURA_NAO_ENCONTRADA.mensagemPadrao());
+        super(CodigoErro.CANDIDATURA_NAO_ENCONTRADA, HttpStatus.NOT_FOUND,
+                CodigoErro.CANDIDATURA_NAO_ENCONTRADA.mensagemPadrao());
     }
 }

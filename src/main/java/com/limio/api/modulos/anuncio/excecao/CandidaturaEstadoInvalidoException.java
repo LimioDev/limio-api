@@ -9,6 +9,7 @@ import com.limio.api.comum.excecao.enums.CodigoErro;
 public class CandidaturaEstadoInvalidoException extends NegocioException {
 
     public CandidaturaEstadoInvalidoException() {
-        super(CodigoErro.CANDIDATURA_ESTADO_INVALIDO, HttpStatus.CONFLICT, CodigoErro.CANDIDATURA_ESTADO_INVALIDO.mensagemPadrao());
+        super(CodigoErro.CANDIDATURA_ESTADO_INVALIDO, HttpStatus.CONFLICT,
+                CodigoErro.CANDIDATURA_ESTADO_INVALIDO.mensagemPadrao());
     }
 }

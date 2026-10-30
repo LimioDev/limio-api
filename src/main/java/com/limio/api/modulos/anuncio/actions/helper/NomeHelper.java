@@ -13,7 +13,7 @@ public final class NomeHelper {
      * pra não expor o nome completo no painel e na tela 16. Nome de uma palavra só sai como está.
      */
     public static String abreviar(String nomeCompleto) {
-        String[] partes = nomeCompleto.strip().split("\\s+");
+        String[] partes = partes(nomeCompleto);
         if (partes.length == 1)
             return partes[0];
         String ultimo = partes[partes.length - 1];
@@ -25,10 +25,14 @@ public final class NomeHelper {
      * foto (ETI-77). Nome de uma palavra só sai com uma letra.
      */
     public static String iniciais(String nomeCompleto) {
-        String[] partes = nomeCompleto.strip().split("\\s+");
+        String[] partes = partes(nomeCompleto);
         if (partes.length == 1)
             return inicial(partes[0]);
         return inicial(partes[0]) + inicial(partes[partes.length - 1]);
+    }
+
+    private static String[] partes(String nomeCompleto) {
+        return nomeCompleto.strip().split("\\s+");
     }
 
     private static String inicial(String palavra) {
