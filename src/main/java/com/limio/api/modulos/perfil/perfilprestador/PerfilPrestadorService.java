@@ -1,5 +1,7 @@
 package com.limio.api.modulos.perfil.perfilprestador;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,6 +36,14 @@ public class PerfilPrestadorService extends BaseService<PerfilPrestador, UUID, P
         Optional<PerfilPrestador> perfil = repository.findByUsuarioId(usuarioId);
         perfil.ifPresent(encontrado -> Hibernate.initialize(encontrado.getJanelas()));
         return perfil;
+    }
+
+    @Transactional(readOnly = true)
+    public List<PerfilPrestador> buscarPorUsuarios(Collection<UUID> usuarioIds) {
+        if (usuarioIds.isEmpty()) {
+            return List.of();
+        }
+        return repository.findByUsuarioIdIn(usuarioIds);
     }
 
     /** Id do perfil do usuário, sem carregar o resto. Vazio: o Prestador ainda não salvou o perfil. */
