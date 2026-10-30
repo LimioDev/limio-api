@@ -50,7 +50,7 @@ class PublicarAnuncioUseCaseTest {
     private static final UUID CATEGORIA_ID = UUID.randomUUID();
     private static final UUID ENDERECO_SALVO_ID = UUID.randomUUID();
     private static final int PRAZO_VALIDACAO_HORAS = 24;
-    private static final EnderecoLocalizado LOCALIZADO = new EnderecoLocalizado("Pinheiros", Uf.SP,
+    private static final EnderecoLocalizado LOCALIZADO = new EnderecoLocalizado("Pinheiros", "São Paulo", Uf.SP,
             "Rua dos Pinheiros, 100, Pinheiros, São Paulo - SP", -23.56, -46.68);
     private static final EnderecoInformado AVULSO = new EnderecoInformado("05422000", "Rua dos Pinheiros", "100",
             null, "Pinheiros", "São Paulo", Uf.SP);
@@ -122,6 +122,7 @@ class PublicarAnuncioUseCaseTest {
         assertThat(publicado.getContratanteId()).isEqualTo(USUARIO_ID);
         assertThat(publicado.getEnderecoSalvoId()).isEqualTo(ENDERECO_SALVO_ID);
         assertThat(publicado.getBairroRegiaoSnapshot()).isEqualTo("Pinheiros");
+        assertThat(publicado.getCidadeSnapshot()).isEqualTo("São Paulo");
         assertThat(publicado.getEnderecoCompletoSnapshot()).isEqualTo(LOCALIZADO.enderecoCompleto());
         assertThat(publicado.getLatitudeSnapshot()).isEqualTo(-23.56);
         assertThat(publicado.getLongitudeSnapshot()).isEqualTo(-46.68);

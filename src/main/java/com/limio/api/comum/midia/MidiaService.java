@@ -1,8 +1,12 @@
 package com.limio.api.comum.midia;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
@@ -23,6 +27,23 @@ public class MidiaService extends BaseService<Midia, UUID, MidiaRepository> {
 
     public Optional<Midia> buscarFotoPerfilAtiva(UUID usuarioId) {
         return repository.findByUsuarioIdAndTipoAndExpurgoEmIsNull(usuarioId, TipoMidia.FOTO_PERFIL);
+    }
+
+    /** Fotos de perfil ativas de vários usuários numa consulta; quem não tem foto não vem no mapa. */
+    public Map<UUID, Midia> buscarFotosPerfilAtivas(Collection<UUID> usuarioIds) {
+        if (usuarioIds.isEmpty()) {
+            return Map.of();
+        }
+        return repository.findByUsuarioIdInAndTipoAndExpurgoEmIsNull(usuarioIds, TipoMidia.FOTO_PERFIL).stream()
+                .collect(Collectors.toMap(Midia::getUsuarioId, Function.identity()));
+    }
+
+    public Map<UUID, Midia> buscarPrimeirasFotosDosAnuncios(Collection<UUID> anuncioIds) {
+        if (anuncioIds.isEmpty()) {
+            return Map.of();
+        }
+        return repository.findPrimeirasFotosDosAnuncios(anuncioIds).stream()
+                .collect(Collectors.toMap(Midia::getAnuncioId, Function.identity()));
     }
 
     /** Serializa trocas simultâneas da foto do mesmo usuário até o fim da transação. */

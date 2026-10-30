@@ -162,6 +162,17 @@ o resumo sai sem foto em vez de 503 — a foto não derruba o painel.
 5. O usecase devolve `CotaDoMes` (plano + cota + escolhas; `teto()` nulo e `isEsgotada()` falso no GOLD), e o
    `CotaDoMesMapper` monta `CotaDoMesResponse`, com `renovaEm` no offset de São Paulo.
 
+## Portas do mural do Prestador (ETI-73, mural em `anuncio`)
+
+1. `ConsultaPerfilPrestadorService.buscarCompleto(usuarioId)` → `PerfilPrestadorService.buscarPorUsuario`; só devolve
+   `ResumoPerfilPrestador` (ids das especialidades, id da categoria protegida "Outros", raio, base) se o perfil existe
+   e `completo`. Inexistente ou incompleto → vazio (o mural responde `PERFIL_INCOMPLETO`).
+2. `ConsultaPerfilEmpregadorService.buscarResumosEmLote(ids)` → `PerfilEmpregadorService.buscarPerfisOuIniciais` +
+   `MidiaService.buscarFotosPerfilAtivas`: 2 consultas para N Empregadores, sem criar perfil (quem nunca abriu o perfil
+   sai com o nome inicial). O resumo agora traz `mediaAvaliacoes` e `qtdAvaliacoes`.
+3. `ConsultaCategoriaService.buscarPorIdsEmLote(ids)` → `CategoriaService.buscarPorIds`: id inexistente não vem no mapa.
+4. `EnderecoLocalizado` ganhou `cidade` (vem do endereço salvo ou do avulso), para o retrato `cidade_snapshot` do anúncio.
+
 ## Classes envolvidas
 
 | Classe | Papel |
@@ -206,8 +217,9 @@ o resumo sai sem foto em vez de 503 — a foto não derruba o painel.
 | `comum/portas/ConsultaPerfilEmpregador`, `ResumoPerfilEmpregador` | porta de leitura de nome de exibição + foto, pra outros módulos |
 | `actions/service/ConsultaPerfilEmpregadorService` | implementação da porta (TICKET-0052) |
 | `actions/service/ConsultaCategoriaService` | implementa `comum/portas/ConsultaCategoria` (ETI-59): categoria por id, ativa ou não |
+| `comum/portas/ConsultaPerfilPrestador`, `ResumoPerfilPrestador` | porta de leitura da atuação do Prestador (especialidades, "Outros", raio, base) — ETI-73 |
+| `actions/service/ConsultaPerfilPrestadorService` | implementação da porta (ETI-73): só perfil completo |
 | `actions/service/ConsultaEnderecoService` | implementa `comum/portas/ConsultaEndereco` (ETI-59): endereço salvo do usuário ou avulso geocodificado, sempre com o texto de uma linha do retrato do anúncio |
-
 | `perfilprestador/cotamensal/CotaMensal`, `CotaMensalRepository`, `CotaMensalService`, `AnoMesConverter` | subentidade de `PerfilPrestador` (uma linha por mês, `FUSO`, `mesDe`, `inicio`, `renovaEm`, `isEsgotada`), persistência e `YearMonth` ↔ `'AAAA-MM'` (ETI-79) |
 | `perfilprestador/cotamensal/CotaDoMes` | tipo de domínio: plano + cota do mês + escolhas; teto e esgotada por plano (ETI-79) |
 | `actions/usecase/ConsultarCotaDoMesUseCase`, `actions/mapper/CotaDoMesMapper`, `actions/controller/CotaDoMesController`, `records/CotaDoMesResponse`, `EscolhaDoMesResponse` | consulta da cota do mês (ETI-79) |

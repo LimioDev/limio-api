@@ -1,5 +1,8 @@
 package com.limio.api.modulos.perfil.empregador;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -57,6 +60,25 @@ public class PerfilEmpregadorService extends BaseService<PerfilEmpregador, UUID,
                 .map(dados -> repository.findByUsuarioId(usuarioId)
                         .map(PerfilEmpregador::getNomeExibicao)
                         .orElseGet(() -> PerfilEmpregador.nomeExibicaoInicialDe(dados.nomeCompleto())));
+    }
+
+    /**
+     * Perfis de vários usuários numa consulta, sem criar nada. Quem nunca abriu o perfil volta com um
+     * {@link PerfilEmpregador} transitório (nome inicial, sem avaliações, não persistido); conta
+     * inexistente ou encerrada fica de fora do mapa.
+     */
+    public Map<UUID, PerfilEmpregador> buscarPerfisOuIniciais(Collection<UUID> usuarioIds) {
+        Map<UUID, PerfilEmpregador> perfis = new HashMap<>();
+        if (usuarioIds.isEmpty()) {
+            return perfis;
+        }
+        repository.findByUsuarioIdIn(usuarioIds).forEach(perfil -> perfis.put(perfil.getUsuarioId(), perfil));
+        usuarioIds.stream().distinct().filter(id -> !perfis.containsKey(id)).forEach(id ->
+                consultaDadosUsuario.buscarPorId(id).ifPresent(dados -> perfis.put(id, PerfilEmpregador.builder()
+                        .usuarioId(id)
+                        .nomeExibicao(PerfilEmpregador.nomeExibicaoInicialDe(dados.nomeCompleto()))
+                        .build())));
+        return perfis;
     }
 
     private PerfilEmpregador buscarOuCriar(UUID usuarioId, String nomeInicial) {

@@ -69,6 +69,9 @@ public class Anuncio extends BaseEntity {
     @Column(name = "bairro_regiao_snapshot")
     private String bairroRegiaoSnapshot;
 
+    @Column(name = "cidade_snapshot", length = 50)
+    private String cidadeSnapshot;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "uf_snapshot", length = 2)
     private Uf ufSnapshot;
@@ -129,6 +132,7 @@ public class Anuncio extends BaseEntity {
         this.contratanteId = contratanteId;
         this.enderecoSalvoId = enderecoSalvoId;
         this.bairroRegiaoSnapshot = endereco.bairroRegiao();
+        this.cidadeSnapshot = endereco.cidade();
         this.ufSnapshot = endereco.uf();
         this.enderecoCompletoSnapshot = endereco.enderecoCompleto();
         this.latitudeSnapshot = endereco.latitude();
