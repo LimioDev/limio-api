@@ -9,6 +9,8 @@ import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -249,6 +251,23 @@ class CandidatarSeUseCaseTest {
         Aplicacao resultado = useCase.executar(ANUNCIO_ID, PRESTADOR_ID, PapelUsuario.PRESTADOR);
 
         assertThat(resultado.getStatus()).isEqualTo(StatusAplicacao.ENVIADA);
+    }
+
+    @Test
+    void dadoCandidatura_quandoCandidatarSe_entaoContaAsEscolhasDoMesCivilDeSaoPaulo() {
+        prepararCaminhoFeliz();
+        when(aplicacaoService.contarEscolhidasNoPeriodo(any(), any(), any())).thenReturn(0L);
+
+        useCase.executar(ANUNCIO_ID, PRESTADOR_ID, PapelUsuario.PRESTADOR);
+
+        ArgumentCaptor<Instant> inicio = ArgumentCaptor.forClass(Instant.class);
+        ArgumentCaptor<Instant> fim = ArgumentCaptor.forClass(Instant.class);
+        verify(aplicacaoService).contarEscolhidasNoPeriodo(any(), inicio.capture(), fim.capture());
+        ZoneId saoPaulo = ZoneId.of("America/Sao_Paulo");
+        ZonedDateTime inicioDoMes = inicio.getValue().atZone(saoPaulo);
+        assertThat(inicioDoMes.getDayOfMonth()).isEqualTo(1);
+        assertThat(inicioDoMes.toLocalTime().toSecondOfDay()).isZero();
+        assertThat(fim.getValue()).isEqualTo(inicioDoMes.plusMonths(1).toInstant());
     }
 
     private void verifyNoInteractionsComAsDependencias() {

@@ -36,6 +36,11 @@ public class PerfilPrestadorService extends BaseService<PerfilPrestador, UUID, P
         return perfil;
     }
 
+    /** Id do perfil do usuário, sem carregar o resto. Vazio: o Prestador ainda não salvou o perfil. */
+    public Optional<UUID> buscarIdDoUsuario(UUID usuarioId) {
+        return repository.findIdByUsuarioId(usuarioId);
+    }
+
     /**
      * Coordenadas que algum perfil já gravou pra este município/UF (inclusive o do próprio Prestador, num
      * novo salvamento). Funciona como cache da geocodificação.

@@ -52,6 +52,15 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     }
 
     /**
+     * Candidaturas de {@code prestadorId} escolhidas no período ({@code escolhidaEm} entre {@code inicio}, incluso, e
+     * {@code fimExclusivo}), qualquer que seja o status atual, da escolha mais recente pra mais antiga.
+     */
+    public List<Aplicacao> buscarEscolhidasDoPrestadorEntre(UUID prestadorId, Instant inicio, Instant fimExclusivo) {
+        return repository.findByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThanOrderByEscolhidaEmDesc(
+                prestadorId, inicio, fimExclusivo);
+    }
+
+    /**
      * Todas as candidaturas ainda abertas de um anúncio (inclui {@code
      * ENVIADA} e {@code AGUARDANDO_VALIDACAO}, não só {@code ESCOLHIDA}) —
      * pra fechar e avisar todo mundo quando o anúncio encerra.
