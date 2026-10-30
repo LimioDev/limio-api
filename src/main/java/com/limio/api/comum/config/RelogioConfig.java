@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * Relógio da aplicação. Regra que depende do "agora" de um jeito que o teste precisa controlar (ex.: virada do mês
- * da cota, US24) recebe este {@link Clock} em vez de chamar {@code Instant.now()}; o story troca o bean.
+ * da cota, ETI-79) recebe este {@link Clock} em vez de chamar {@code Instant.now()}; o story troca o bean.
  */
 @Configuration
 public class RelogioConfig {

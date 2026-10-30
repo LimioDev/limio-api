@@ -6,7 +6,7 @@ import com.limio.api.comum.portas.enums.Plano;
 
 /**
  * Porta de leitura do plano do Prestador para módulos que não podem importar {@code modulos.financeiro} (hoje o
- * {@code perfil}, na consulta da cota do mês — US24). Só consulta; quem implementa é o {@code financeiro}, dono
+ * {@code perfil}, na consulta da cota do mês — ETI-79). Só consulta; quem implementa é o {@code financeiro}, dono
  * da assinatura GOLD.
  */
 public interface ConsultaPlanoPrestador {

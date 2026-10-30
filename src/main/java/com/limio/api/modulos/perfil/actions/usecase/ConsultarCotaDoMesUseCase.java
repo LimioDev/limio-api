@@ -21,7 +21,7 @@ import com.limio.api.modulos.perfil.perfilprestador.cotamensal.CotaMensal;
 import com.limio.api.modulos.perfil.perfilprestador.cotamensal.CotaMensalService;
 
 /**
- * Regra de negócio do US24 (consultar a cota do mês). Só lê: o mês corrente vem do {@link Clock} no fuso de
+ * Regra de negócio do ETI-79 (consultar a cota do mês). Só lê: o mês corrente vem do {@link Clock} no fuso de
  * {@link CotaMensal#FUSO}, e um mês sem linha em {@code cota_mensal} é devolvido zerado, com o teto FREE em vigor —
  * é isso que faz a cota recomeçar do zero no dia 1, 00:00, sem job de virada.
  *

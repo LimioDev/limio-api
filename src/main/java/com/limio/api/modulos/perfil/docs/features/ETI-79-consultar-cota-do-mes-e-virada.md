@@ -1,8 +1,8 @@
-# US24 — Consultar a cota do mês e zerar na virada do mês
+# ETI-79 — Consultar a cota do mês e zerar na virada do mês
 
 ## Link do ticket
 
-`feature/us24-cota-mensal` — [perfil] [BACK-END] Consultar a cota do mês e zerar na virada do mês. Origem: Backlog
+`feature/79` — [perfil] [BACK-END] Consultar a cota do mês e zerar na virada do mês. Origem: Backlog
 US24 · [prestador] Controlar a cota mensal FREE (sem card original no Jira). Card par: [perfil] [FRONT-END] Faixa de
 cota no mural e tela "Cota do mês". Relacionados: consumo na escolha (ETI-69/ETI-70), bloqueio da candidatura
 (ETI-75/ETI-76), estorno no cancelamento do Empregador (ETI-94/ETI-95, Sprint 7). Insumos: Figma LIMIO

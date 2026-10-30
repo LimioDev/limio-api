@@ -19,7 +19,7 @@ import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
 
 /**
  * Implementa {@link ConsultaEscolhasDoPrestador} para a lista "Onde você usou sua cota" ({@code modulos.perfil},
- * US24). Candidatura cujo anúncio sumiu ({@code anuncio_id} sem FK, ADR-0001 §1.6) fica de fora.
+ * ETI-79). Candidatura cujo anúncio sumiu ({@code anuncio_id} sem FK, ADR-0001 §1.6) fica de fora.
  */
 @Component
 public class ConsultaEscolhasDoPrestadorService implements ConsultaEscolhasDoPrestador {

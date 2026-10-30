@@ -6,7 +6,7 @@ import com.limio.api.comum.portas.EscolhaDoPrestador;
 import com.limio.api.comum.portas.enums.Plano;
 
 /**
- * O que a tela "Cota do mês" mostra (US24): o plano, a cota do mês corrente e os serviços em que o Prestador foi
+ * O que a tela "Cota do mês" mostra (ETI-79): o plano, a cota do mês corrente e os serviços em que o Prestador foi
  * escolhido nele. No GOLD a cota ainda vem (escolhas consumidas enquanto era FREE), mas o teto não se aplica.
  */
 public record CotaDoMes(Plano plano, CotaMensal cota, List<EscolhaDoPrestador> escolhas) {

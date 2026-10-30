@@ -17,7 +17,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * Quantas escolhas o Prestador FREE já consumiu num mês (US24). Subentidade de {@link PerfilPrestador}, uma linha
+ * Quantas escolhas o Prestador FREE já consumiu num mês (ETI-79). Subentidade de {@link PerfilPrestador}, uma linha
  * por perfil e mês civil de {@link #FUSO}. Mês sem linha é um mês sem escolha consumida — é assim que a cota
  * "zera" na virada: nada é apagado, a contagem do mês novo só começa quando a primeira escolha a cria.
  *

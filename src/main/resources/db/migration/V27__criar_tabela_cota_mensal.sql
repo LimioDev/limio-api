@@ -1,4 +1,4 @@
--- Cota mensal do Prestador FREE (US24, card "Consultar a cota do mês e zerar na virada do mês").
+-- Cota mensal do Prestador FREE (ETI-79, card "Consultar a cota do mês e zerar na virada do mês").
 -- Uma linha por perfil e mês (ano_mes 'AAAA-MM', mês civil de America/Sao_Paulo). Mês sem linha = nenhuma
 -- escolha consumida: a virada do mês não apaga nem zera nada, a contagem do mês novo só ainda não existe.
 --

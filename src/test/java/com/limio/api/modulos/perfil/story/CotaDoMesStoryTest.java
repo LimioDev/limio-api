@@ -40,7 +40,7 @@ import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestadorService;
 
 /**
- * BDD ponta a ponta da consulta da cota do mês (US24): controller → use case → {@code cota_mensal} e, pela porta,
+ * BDD ponta a ponta da consulta da cota do mês (ETI-79): controller → use case → {@code cota_mensal} e, pela porta,
  * {@code aplicacao}/{@code anuncio} no banco real. A escolha (ETI-69/ETI-70) ainda não existe, então as escolhas
  * consumidas e as candidaturas escolhidas entram por SQL. O relógio é trocado pra testar a virada do mês e o plano
  * pra testar o GOLD (a assinatura ainda não existe). O token é emitido com o {@link JwtEncoder}, no formato lido

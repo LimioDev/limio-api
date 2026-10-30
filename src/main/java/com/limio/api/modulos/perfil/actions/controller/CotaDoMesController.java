@@ -12,7 +12,7 @@ import com.limio.api.modulos.perfil.actions.usecase.ConsultarCotaDoMesUseCase;
 import com.limio.api.modulos.perfil.records.CotaDoMesResponse;
 
 /**
- * Cota do mês do Prestador logado (US24). O dono vem sempre do token ({@link UsuarioAutenticado}): ninguém consulta
+ * Cota do mês do Prestador logado (ETI-79). O dono vem sempre do token ({@link UsuarioAutenticado}): ninguém consulta
  * a cota de outro.
  */
 @RestController

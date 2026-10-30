@@ -8,7 +8,7 @@ import com.limio.api.comum.portas.ConsultaPlanoPrestador;
 import com.limio.api.comum.portas.enums.Plano;
 
 /**
- * Implementa {@link ConsultaPlanoPrestador} para a cota do mês ({@code modulos.perfil}, US24).
+ * Implementa {@link ConsultaPlanoPrestador} para a cota do mês ({@code modulos.perfil}, ETI-79).
  *
  * <p>A assinatura GOLD ({@code assinatura_gold}) ainda não existe: até o card de assinar o GOLD entrar, todo
  * Prestador é FREE. Quando entrar, a mudança é só aqui — quem consulta já trata os dois planos.

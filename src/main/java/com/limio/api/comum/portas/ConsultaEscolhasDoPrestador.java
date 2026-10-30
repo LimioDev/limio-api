@@ -6,7 +6,7 @@ import java.util.UUID;
 
 /**
  * Porta de leitura das escolhas de um Prestador para módulos que não podem importar {@code modulos.anuncio} (hoje
- * o {@code perfil}, na lista "Onde você usou sua cota" — US24). Só consulta; quem implementa é o {@code anuncio}.
+ * o {@code perfil}, na lista "Onde você usou sua cota" — ETI-79). Só consulta; quem implementa é o {@code anuncio}.
  */
 public interface ConsultaEscolhasDoPrestador {
 
