@@ -1,6 +1,7 @@
 package com.limio.api.modulos.anuncio;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,5 +45,13 @@ public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository
     /** Mesma busca que {@link #buscarPorId}, com a linha travada até o fim da transação. */
     public Optional<Anuncio> buscarPorIdParaAtualizar(UUID id) {
         return repository.findByIdParaAtualizar(id);
+    }
+
+    /** Mesma busca que {@link #buscarPorId}, em lote (evita N+1). Id sem anúncio fica de fora. */
+    public List<Anuncio> buscarPorIds(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return repository.findAllById(ids);
     }
 }
