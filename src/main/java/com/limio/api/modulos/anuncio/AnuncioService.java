@@ -40,4 +40,9 @@ public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository
     public Optional<Anuncio> buscarPorId(UUID id) {
         return repository.findById(id);
     }
+
+    /** Mesma busca que {@link #buscarPorId}, com a linha travada até o fim da transação. */
+    public Optional<Anuncio> buscarPorIdParaAtualizar(UUID id) {
+        return repository.findByIdParaAtualizar(id);
+    }
 }

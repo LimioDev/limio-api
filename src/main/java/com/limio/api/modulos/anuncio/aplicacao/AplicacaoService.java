@@ -36,6 +36,11 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
         return repository.existsByAnuncioIdAndStatusIn(anuncioId, STATUS_ESCOLHIDA);
     }
 
+    /** {@code prestadorId} é o escolhido deste anúncio (ver {@link Aplicacao#isEscolhida()}). */
+    public boolean foiEscolhido(UUID anuncioId, UUID prestadorId) {
+        return repository.existsByAnuncioIdAndPrestadorIdAndStatusIn(anuncioId, prestadorId, STATUS_ESCOLHIDA);
+    }
+
     /** Candidaturas ainda sem resposta do Empregador, da mais antiga pra mais nova. */
     public List<Aplicacao> buscarEnviadasDoAnuncio(UUID anuncioId) {
         return repository.findByAnuncioIdAndStatusOrderByDataAplicacaoAscIdAsc(anuncioId, StatusAplicacao.ENVIADA);

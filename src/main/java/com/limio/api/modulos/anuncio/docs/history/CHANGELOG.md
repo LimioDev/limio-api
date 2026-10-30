@@ -167,3 +167,15 @@ anúncios do próprio contratante).
 `chat` (ETI-101, ainda não existe em código) vai guardar `anuncioId` cru em cada chat (recebido no
 `CandidaturaCriadaEvent` de cada candidatura, ETI-75), então não precisa da lista de candidaturas aqui
 pra marcar os chats em somente leitura.
+
+## 2026-10-30 — ETI-88: iniciar o serviço
+
+`POST /anuncios/{anuncioId}/iniciar`: `IniciarServicoUseCase` leva o anúncio de `PUBLICADO` para
+`EM_ANDAMENTO`, grava `iniciadoEm`, encerra a proposta de reagendamento pendente e publica
+`ServicoIniciadoEvent` (novo, `comum/eventos/`), que o ETI-112 vai escutar. Sem migration.
+
+Quem não é o Prestador escolhido recebe o mesmo 404 `SERVICO_NAO_ENCONTRADO` de um id inexistente. A busca
+trava a linha do anúncio (`findByIdParaAtualizar`), porque `BaseEntity` não tem `@Version`: no clique duplo
+só uma requisição passa, a outra recebe 409 `SERVICO_ESTADO_INVALIDO`.
+
+Detalhe em `docs/features/ETI-88-iniciar-o-servico.md`.
