@@ -37,6 +37,9 @@ import lombok.Setter;
 @Builder
 public class Anuncio extends BaseEntity {
 
+    private static final String MOTIVO_EXCLUSAO_DE_CONTA = "Cancelado por saída de conta";
+    private static final String MOTIVO_CANCELAMENTO_PELO_EMPREGADOR = "Cancelado pelo Empregador";
+
     @Column(name = "contratante_id", nullable = false)
     private UUID contratanteId;
 
@@ -103,6 +106,15 @@ public class Anuncio extends BaseEntity {
     @Column(name = "encerrado_em")
     private Instant encerradoEm;
 
+    /**
+     * Por que o anúncio foi pra {@code ENCERRADO} — não existe status próprio pra "cancelado" nem
+     * "expirado" (ETI-63: decisão pendente do card, resolvida assim). Texto livre, não enum: cada
+     * caminho (exclusão de conta, cancelamento pelo Empregador, expiração futura — ETI-66) grava o
+     * próprio motivo sem precisar de um valor novo em {@link StatusAnuncio} a cada card.
+     */
+    @Column(name = "motivo_encerramento")
+    private String motivoEncerramento;
+
     /** Status ainda "vivo" — ainda não chegou num estado final (TICKET-0049: candidato a encerramento). */
     public boolean isAberto() {
         return status.isAberto();
@@ -129,18 +141,31 @@ public class Anuncio extends BaseEntity {
         return contratanteId.equals(usuarioId);
     }
 
-    /** UC "Anexar fotos ao anúncio": só enquanto está publicado e ninguém foi escolhido. */
-    public boolean aceitaFotos(boolean temCandidaturaEscolhida) {
+    /**
+     * O Empregador ainda pode mexer no anúncio: só enquanto está publicado e ninguém foi escolhido. Regra única
+     * de "Anexar fotos ao anúncio" (ETI-59) e "Cancelar anúncio antes da escolha" (ETI-63).
+     */
+    public boolean permiteAlteracao(boolean existeEscolhida) {
         return switch (status) {
-            case PUBLICADO -> !temCandidaturaEscolhida;
+            case PUBLICADO -> !existeEscolhida;
             case EM_ANDAMENTO, AGUARDANDO_VALIDACAO, CONCLUIDO, ENCERRADO -> false;
         };
     }
 
     /** UC16 (encerrar conta do contratante): tira do mural, não conclui. */
     public void encerrarPorExclusaoDeConta(Instant agora) {
+        encerrar(agora, MOTIVO_EXCLUSAO_DE_CONTA);
+    }
+
+    /** ETI-63: Empregador cancela antes de escolher alguém. Quem chama já validou o estado do anúncio. */
+    public void cancelarPeloEmpregador(Instant agora) {
+        encerrar(agora, MOTIVO_CANCELAMENTO_PELO_EMPREGADOR);
+    }
+
+    private void encerrar(Instant agora, String motivo) {
         this.status = StatusAnuncio.ENCERRADO;
         this.encerradoEm = agora;
+        this.motivoEncerramento = motivo;
     }
 
     /**
