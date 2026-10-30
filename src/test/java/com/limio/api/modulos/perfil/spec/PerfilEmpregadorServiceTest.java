@@ -153,4 +153,31 @@ class PerfilEmpregadorServiceTest {
 
         verify(repository, never()).findByIdParaAtualizar(any());
     }
+
+    @Test
+    void nomeExibicaoSemCriarDeveUsarOPerfilExistente() {
+        when(consultaDadosUsuario.buscarPorId(USUARIO_ID)).thenReturn(Optional.of(dados("Maria da Silva")));
+        when(repository.findByUsuarioId(USUARIO_ID)).thenReturn(Optional.of(perfil("Mari")));
+
+        assertThat(service.nomeExibicaoSemCriar(USUARIO_ID)).contains("Mari");
+    }
+
+    @Test
+    void nomeExibicaoSemCriarDeveCairNoNomeInicialSemInserirQuandoNaoHaPerfil() {
+        when(consultaDadosUsuario.buscarPorId(USUARIO_ID)).thenReturn(Optional.of(dados("  Maria da Silva  ")));
+        when(repository.findByUsuarioId(USUARIO_ID)).thenReturn(Optional.empty());
+
+        assertThat(service.nomeExibicaoSemCriar(USUARIO_ID)).contains("Maria da Silva");
+
+        verify(repository, never()).inserirSeAusente(any(), any());
+    }
+
+    @Test
+    void nomeExibicaoSemCriarDeveSerVazioQuandoAContaFoiEncerrada() {
+        when(consultaDadosUsuario.buscarPorId(USUARIO_ID)).thenReturn(Optional.empty());
+
+        assertThat(service.nomeExibicaoSemCriar(USUARIO_ID)).isEmpty();
+
+        verifyNoInteractions(repository);
+    }
 }

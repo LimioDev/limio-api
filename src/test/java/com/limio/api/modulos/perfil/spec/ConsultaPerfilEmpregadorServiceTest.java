@@ -2,6 +2,8 @@ package com.limio.api.modulos.perfil.spec;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -22,6 +24,7 @@ import com.limio.api.comum.midia.MidiaService;
 import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
 import com.limio.api.comum.portas.DadosUsuario;
 import com.limio.api.comum.portas.ResumoPerfilEmpregador;
+import com.limio.api.modulos.perfil.actions.service.ConsultaFotoPerfilService;
 import com.limio.api.modulos.perfil.actions.service.ConsultaPerfilEmpregadorService;
 import com.limio.api.modulos.perfil.empregador.MeuPerfilEmpregador;
 import com.limio.api.modulos.perfil.empregador.PerfilEmpregador;
@@ -46,7 +49,8 @@ class ConsultaPerfilEmpregadorServiceTest {
 
     @BeforeEach
     void montarService() {
-        service = new ConsultaPerfilEmpregadorService(perfilEmpregadorService, midiaService, armazenamentoService);
+        service = new ConsultaPerfilEmpregadorService(perfilEmpregadorService,
+                new ConsultaFotoPerfilService(midiaService, armazenamentoService));
     }
 
     private void comPerfil(String nomeExibicao) {
@@ -94,6 +98,24 @@ class ConsultaPerfilEmpregadorServiceTest {
 
         assertThatThrownBy(() -> service.buscarResumo(USUARIO_ID))
                 .isInstanceOf(PerfilEmpregadorNaoEncontradoException.class);
+        verifyNoInteractions(midiaService, armazenamentoService);
+    }
+
+    @Test
+    void dadoUsuarioSemPerfil_quandoBuscaResumoSemCriar_entaoNomeInicialSemCriarPerfil() {
+        when(perfilEmpregadorService.nomeExibicaoSemCriar(USUARIO_ID)).thenReturn(Optional.of("Maria da Silva"));
+        when(midiaService.buscarFotoPerfilAtiva(USUARIO_ID)).thenReturn(Optional.empty());
+
+        assertThat(service.buscarResumoSemCriar(USUARIO_ID))
+                .contains(new ResumoPerfilEmpregador("Maria da Silva", null, null));
+        verify(perfilEmpregadorService, never()).garantirPerfil(USUARIO_ID);
+    }
+
+    @Test
+    void dadaContaEncerrada_quandoBuscaResumoSemCriar_entaoVazioSemConsultarFoto() {
+        when(perfilEmpregadorService.nomeExibicaoSemCriar(USUARIO_ID)).thenReturn(Optional.empty());
+
+        assertThat(service.buscarResumoSemCriar(USUARIO_ID)).isEmpty();
         verifyNoInteractions(midiaService, armazenamentoService);
     }
 }

@@ -190,6 +190,14 @@ TICKET-0054 (Nominatim público com cache; DER = V11; `DiaSemana`) e TICKET-0056
 privado com link temporário). Decimal em campo inteiro passa a ser recusado na API toda
 (`spring.jackson.deserialization.accept-float-as-int=false`): raio `10.7` responde 400 em vez de virar `10`.
 
+## 2026-10-29 — ETI-101 (review da PR #21): foto de perfil num caminho só e resumo do Empregador sem criar perfil
+
+A porta `ConsultaFotoPerfil` (implementada aqui, em `ConsultaFotoPerfilService`) passou a devolver `LinkTemporario`
+e virou o único lugar que busca a foto ativa, gera o link e tolera o storage fora do ar. O
+`ConsultaPerfilEmpregadorService` usa essa porta em vez de repetir a lógica. Nova operação
+`ConsultaPerfilEmpregador.buscarResumoSemCriar` (`PerfilEmpregadorService.nomeExibicaoSemCriar`): mostra o Empregador
+a outra pessoa (cabeçalho do chat) com o nome de exibição inicial, sem gravar o perfil dele.
+
 ## 2026-10-29 — US24: cota do mês e virada sem job
 
 Nova tabela `cota_mensal` (V27), subentidade de `perfil_prestador`, e `GET /perfil/prestador/cota`. A virada do mês

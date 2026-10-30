@@ -1,0 +1,37 @@
+package com.limio.api.modulos.anuncio.actions.controller;
+
+import java.util.UUID;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.limio.api.comum.seguranca.UsuarioAutenticado;
+import com.limio.api.modulos.anuncio.actions.mapper.CandidaturaMapper;
+import com.limio.api.modulos.anuncio.actions.usecase.CandidatarSeUseCase;
+import com.limio.api.modulos.anuncio.records.CandidaturaResponse;
+
+/** Candidatar-se a um anúncio (ETI-75). */
+@RestController
+@RequestMapping("/anuncios/{anuncioId}/candidaturas")
+public class CandidaturaController {
+
+    private final CandidatarSeUseCase candidatarSeUseCase;
+    private final CandidaturaMapper candidaturaMapper;
+
+    public CandidaturaController(CandidatarSeUseCase candidatarSeUseCase, CandidaturaMapper candidaturaMapper) {
+        this.candidatarSeUseCase = candidatarSeUseCase;
+        this.candidaturaMapper = candidaturaMapper;
+    }
+
+    @PostMapping
+    public ResponseEntity<CandidaturaResponse> candidatarSe(@PathVariable UUID anuncioId,
+            @AuthenticationPrincipal UsuarioAutenticado usuario) {
+        var aplicacao = candidatarSeUseCase.executar(anuncioId, usuario.id(), usuario.papel());
+        return ResponseEntity.status(HttpStatus.CREATED).body(candidaturaMapper.toResponse(aplicacao));
+    }
+}
