@@ -149,6 +149,19 @@ o resumo sai sem foto em vez de 503 — a foto não derruba o painel.
 4. Os dois devolvem `EnderecoLocalizado` com `"Rua, número - complemento, bairro, cidade - UF"` (cabe nos 255 do
    `anuncio.endereco_completo_snapshot`).
 
+## `GET /perfil/prestador/cota` (US24)
+
+1. `CotaDoMesController.consultar` chama `ConsultarCotaDoMesUseCase.executar(usuario.id(), usuario.papel())`. Papel
+   Empregador → `SomentePrestadorConsultaCotaException` (403 `ACESSO_NEGADO`), antes de qualquer leitura.
+2. O mês corrente é `CotaMensal.mesDe(relogio.instant())`, no fuso `CotaMensal.FUSO` (America/Sao_Paulo). O `Clock`
+   vem de `comum/config/RelogioConfig`.
+3. `PerfilPrestadorService.buscarIdDoUsuario` (só o id) → `CotaMensalService.buscarDoMes(perfilId, mes)`. Sem perfil
+   ou sem linha no mês → `CotaMensal.zerada(...)` com `perfil.cota.teto-free` (não persiste). É a virada do mês.
+4. Plano pela porta `ConsultaPlanoPrestador` (`financeiro`, hoje sempre FREE); escolhas do período
+   `[cota.inicio(), cota.renovaEm())` pela porta `ConsultaEscolhasDoPrestador` (`anuncio`).
+5. O usecase devolve `CotaDoMes` (plano + cota + escolhas; `teto()` nulo e `isEsgotada()` falso no GOLD), e o
+   `CotaDoMesMapper` monta `CotaDoMesResponse`, com `renovaEm` no offset de São Paulo.
+
 ## Classes envolvidas
 
 | Classe | Papel |
@@ -194,5 +207,11 @@ o resumo sai sem foto em vez de 503 — a foto não derruba o painel.
 | `actions/service/ConsultaPerfilEmpregadorService` | implementação da porta (TICKET-0052) |
 | `actions/service/ConsultaCategoriaService` | implementa `comum/portas/ConsultaCategoria` (ETI-59): categoria por id, ativa ou não |
 | `actions/service/ConsultaEnderecoService` | implementa `comum/portas/ConsultaEndereco` (ETI-59): endereço salvo do usuário ou avulso geocodificado, sempre com o texto de uma linha do retrato do anúncio |
+
+| `perfilprestador/cotamensal/CotaMensal`, `CotaMensalRepository`, `CotaMensalService`, `AnoMesConverter` | subentidade de `PerfilPrestador` (uma linha por mês, `FUSO`, `mesDe`, `inicio`, `renovaEm`, `isEsgotada`), persistência e `YearMonth` ↔ `'AAAA-MM'` (US24) |
+| `perfilprestador/cotamensal/CotaDoMes` | tipo de domínio: plano + cota do mês + escolhas; teto e esgotada por plano (US24) |
+| `actions/usecase/ConsultarCotaDoMesUseCase`, `actions/mapper/CotaDoMesMapper`, `actions/controller/CotaDoMesController`, `records/CotaDoMesResponse`, `EscolhaDoMesResponse` | consulta da cota do mês (US24) |
+| `excecao/SomentePrestadorConsultaCotaException` | 403 `ACESSO_NEGADO` da cota (US24) |
+| `comum/portas/ConsultaPlanoPrestador`, `enums/Plano` / `ConsultaEscolhasDoPrestador`, `EscolhaDoPrestador` | portas de leitura do plano (`financeiro`) e das escolhas do Prestador (`anuncio`), US24 |
 
 Atualize esta página sempre que uma classe mudar de responsabilidade.

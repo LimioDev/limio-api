@@ -1,5 +1,6 @@
 package com.limio.api.modulos.anuncio.aplicacao;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -37,6 +38,15 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     /** Candidaturas ainda abertas (não recusadas/concluídas/encerradas) em que {@code usuarioId} é o prestador. */
     public List<Aplicacao> buscarAbertasDoPrestador(UUID usuarioId) {
         return repository.findByPrestadorIdAndStatusIn(usuarioId, STATUS_ABERTOS);
+    }
+
+    /**
+     * Candidaturas de {@code prestadorId} escolhidas no período ({@code escolhidaEm} entre {@code inicio}, incluso, e
+     * {@code fimExclusivo}), qualquer que seja o status atual, da escolha mais recente pra mais antiga.
+     */
+    public List<Aplicacao> buscarEscolhidasDoPrestadorEntre(UUID prestadorId, Instant inicio, Instant fimExclusivo) {
+        return repository.findByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThanOrderByEscolhidaEmDesc(
+                prestadorId, inicio, fimExclusivo);
     }
 
     /**

@@ -13,5 +13,8 @@
  *   <li>{@code cobranca}, {@code documento_fiscal} — subentidade de {@code assinatura_gold}</li>
  *   <li>{@code meio_pagamento} — token de gateway por usuário</li>
  * </ul>
+ *
+ * <p>Hoje só implementa a porta {@code comum/portas/ConsultaPlanoPrestador} (US24), sempre FREE até a
+ * assinatura GOLD existir.
  */
 package com.limio.api.modulos.financeiro;

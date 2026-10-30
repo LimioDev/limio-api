@@ -104,3 +104,9 @@ Categoria, endereço salvo e geocodificação do endereço avulso vêm de `perfi
 `StatusAplicacao.isEscolhida()` virou a fonte única de "prestador escolhido" (`Aplicacao.isEscolhida()` delega). Contrato alinhado ao front-end par (limio-app#17): `enderecoAvulso`, fotos
 respondidas como lista, `categoria.grupo` e `uf` na consulta. Detalhe
 em `docs/features/TICKET-0059-criar-e-publicar-anuncio-com-fotos.md`.
+
+## 2026-10-29 — US24: escolhas do Prestador para a cota do mês
+
+`anuncio` implementa a porta `comum/portas/ConsultaEscolhasDoPrestador` (`actions/service/ConsultaEscolhasDoPrestadorService`):
+candidaturas com `escolhidaEm` no período, com título e data do anúncio, para a lista "Onde você usou sua cota" do
+`perfil`. Só leitura; nada muda no fluxo do anúncio. Ver `perfil/docs/features/US24-consultar-cota-do-mes-e-virada.md`.

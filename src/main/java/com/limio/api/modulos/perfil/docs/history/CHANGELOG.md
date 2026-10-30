@@ -189,3 +189,13 @@ Aprovadas as decisões técnicas pendentes dos TICKET-0048 (rotas, porta, criaç
 TICKET-0054 (Nominatim público com cache; DER = V11; `DiaSemana`) e TICKET-0056 (envio multipart pela API, bucket
 privado com link temporário). Decimal em campo inteiro passa a ser recusado na API toda
 (`spring.jackson.deserialization.accept-float-as-int=false`): raio `10.7` responde 400 em vez de virar `10`.
+
+## 2026-10-29 — US24: cota do mês e virada sem job
+
+Nova tabela `cota_mensal` (V27), subentidade de `perfil_prestador`, e `GET /perfil/prestador/cota`. A virada do mês
+não apaga nem zera linha nenhuma: o mês corrente é calculado no fuso de São Paulo, e mês sem linha vale 0 escolhas.
+A contagem é a coluna `escolhas_consumidas` e não um `count` das candidaturas escolhidas, porque o GOLD (escolha
+que não conta) e o estorno (ETI-94) não cabem numa contagem derivada. O `perfil` lê o plano do `financeiro`
+(`ConsultaPlanoPrestador`, sempre FREE até a assinatura existir) e as escolhas do mês do `anuncio`
+(`ConsultaEscolhasDoPrestador`), por porta. Papel errado responde `ACESSO_NEGADO`, como nas outras rotas da develop;
+o card sugeria `PAPEL_INVALIDO`, que só existe na PR #19. Detalhe em `../features/US24-consultar-cota-do-mes-e-virada.md`.
