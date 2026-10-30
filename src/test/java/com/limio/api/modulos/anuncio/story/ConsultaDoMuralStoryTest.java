@@ -34,7 +34,7 @@ import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
 
 /**
- * Consulta do mural direto no Postgres real (ETI-79): compatibilidade, raio, filtros, ordem, total e
+ * Consulta do mural direto no Postgres real (ETI-73): compatibilidade, raio, filtros, ordem, total e
  * primeira foto. Sem HTTP — o endpoint entra no usecase/controller do mural.
  */
 @Import(TestcontainersConfiguration.class)

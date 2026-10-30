@@ -24,7 +24,7 @@ import com.limio.api.modulos.perfil.geo.Coordenadas;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestador;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestadorService;
 
-/** Porta de leitura da atuação do Prestador para o mural (ETI-79). */
+/** Porta de leitura da atuação do Prestador para o mural (ETI-73). */
 @ExtendWith(MockitoExtension.class)
 class ConsultaPerfilPrestadorServiceTest {
 

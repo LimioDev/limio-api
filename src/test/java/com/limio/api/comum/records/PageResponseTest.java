@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
-/** Contrato de paginação genérico (ETI-79). */
+/** Contrato de paginação genérico (ETI-73). */
 class PageResponseTest {
 
     @Test

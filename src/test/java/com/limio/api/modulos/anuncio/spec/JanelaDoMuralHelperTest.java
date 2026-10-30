@@ -11,7 +11,7 @@ import com.limio.api.modulos.anuncio.actions.helper.JanelaDoMuralHelper;
 import com.limio.api.modulos.anuncio.actions.helper.JanelaDoMuralHelper.Janela;
 import com.limio.api.modulos.anuncio.enums.QuandoMural;
 
-/** Filtro "Quando" do mural (ETI-79). 29/10/2026 é uma quinta-feira; semana de segunda a domingo, fuso de Brasília. */
+/** Filtro "Quando" do mural (ETI-73). 29/10/2026 é uma quinta-feira; semana de segunda a domingo, fuso de Brasília. */
 class JanelaDoMuralHelperTest {
 
     private static Instant sp(int ano, int mes, int dia, int hora) {

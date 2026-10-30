@@ -39,6 +39,7 @@ import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.DetalheDoMural;
+import com.limio.api.modulos.anuncio.MinhaCandidatura;
 import com.limio.api.modulos.anuncio.actions.usecase.ConsultarDetalheDoMuralUseCase;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
@@ -179,11 +180,14 @@ class ConsultarDetalheDoMuralUseCaseTest {
     void dadoCandidaturaDoPrestador_quandoDetalha_entaoDevolveASituacaoDela() {
         prestadorHabilitado();
         when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio(EMPREGADOR_ID, StatusAnuncio.PUBLICADO)));
-        when(aplicacaoService.buscarDoPrestadorNoAnuncio(ANUNCIO_ID, PRESTADOR_ID)).thenReturn(Optional.of(
-                Aplicacao.builder().anuncioId(ANUNCIO_ID).prestadorId(PRESTADOR_ID).status(StatusAplicacao.ENVIADA).build()));
+        Aplicacao minha = Aplicacao.builder().anuncioId(ANUNCIO_ID).prestadorId(PRESTADOR_ID)
+                .status(StatusAplicacao.ENVIADA).build();
+        UUID minhaId = UUID.randomUUID();
+        ReflectionTestUtils.setField(minha, "id", minhaId);
+        when(aplicacaoService.buscarDoPrestadorNoAnuncio(ANUNCIO_ID, PRESTADOR_ID)).thenReturn(Optional.of(minha));
         montarRelacionados();
 
-        assertThat(executar().minhaCandidatura()).isEqualTo(StatusAplicacao.ENVIADA);
+        assertThat(executar().minhaCandidatura()).isEqualTo(new MinhaCandidatura(minhaId, StatusAplicacao.ENVIADA));
     }
 
     @Test
@@ -194,7 +198,7 @@ class ConsultarDetalheDoMuralUseCaseTest {
                 Aplicacao.builder().anuncioId(ANUNCIO_ID).prestadorId(PRESTADOR_ID).status(StatusAplicacao.ENCERRADA).build()));
         montarRelacionados();
 
-        assertThat(executar().minhaCandidatura()).isEqualTo(StatusAplicacao.ENCERRADA);
+        assertThat(executar().minhaCandidatura().status()).isEqualTo(StatusAplicacao.ENCERRADA);
     }
 
     @Test

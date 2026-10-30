@@ -18,7 +18,6 @@ import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.EnderecoDoAnuncio;
-import com.limio.api.modulos.anuncio.actions.helper.ContatosHelper;
 import com.limio.api.modulos.anuncio.eventos.AnuncioPublicadoEvent;
 import com.limio.api.modulos.anuncio.excecao.CategoriaIndisponivelException;
 import com.limio.api.modulos.anuncio.excecao.ContatosNaoConfirmadosException;
@@ -90,7 +89,6 @@ public class PublicarAnuncioUseCase {
     private void exigirContatosConfirmados(UUID usuarioId) {
         boolean confirmados = consultaDadosUsuario.buscarPorId(usuarioId)
                 .map(DadosUsuario::contatosConfirmados)
-                .map(ContatosHelper::confirmados)
                 .orElse(false);
         if (!confirmados) {
             throw new ContatosNaoConfirmadosException();

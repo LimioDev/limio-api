@@ -19,7 +19,9 @@ import com.limio.api.comum.records.PageResponse;
 import com.limio.api.modulos.anuncio.DetalheDoMural;
 import com.limio.api.modulos.anuncio.FotoDoAnuncio;
 import com.limio.api.modulos.anuncio.ItemDoMural;
+import com.limio.api.modulos.anuncio.MinhaCandidatura;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
+import com.limio.api.modulos.anuncio.records.CandidaturaResponse;
 import com.limio.api.modulos.anuncio.records.MuralDetalheResponse;
 import com.limio.api.modulos.anuncio.actions.mapper.MuralMapper;
 import com.limio.api.modulos.anuncio.records.MuralItemResponse;
@@ -60,13 +62,14 @@ class MuralMapperTest {
     void dadoDetalheComFotosECandidatura_quandoMapeia_entaoTrazTodasAsFotosCidadeUfEReputacao() {
         UUID fotoComLink = UUID.randomUUID();
         UUID fotoSemLink = UUID.randomUUID();
+        UUID candidaturaId = UUID.randomUUID();
         DetalheDoMural detalhe = new DetalheDoMural(UUID.randomUUID(), "Trocar chuveiro", "Descrição completa",
                 new ResumoCategoria(UUID.randomUUID(), "Elétrica", "Reparos", true),
                 List.of(new FotoDoAnuncio(fotoComLink, new LinkTemporario("https://bucket/1", Instant.now())),
                         new FotoDoAnuncio(fotoSemLink, null)),
                 Instant.parse("2026-11-05T13:00:00Z"), "Cambuí", "Campinas", Uf.SP, 9.96,
                 new ResumoPerfilEmpregador("Mari", "https://bucket/mari", Instant.now(), new BigDecimal("4.5"), 8),
-                StatusAplicacao.ENVIADA);
+                new MinhaCandidatura(candidaturaId, StatusAplicacao.ENVIADA));
 
         MuralDetalheResponse resposta = mapper.toResponse(detalhe);
 
@@ -78,6 +81,6 @@ class MuralMapperTest {
         assertThat(resposta.distanciaKm()).isEqualTo(10.0);
         assertThat(resposta.empregador().mediaAvaliacoes()).isEqualByComparingTo("4.5");
         assertThat(resposta.empregador().qtdAvaliacoes()).isEqualTo(8);
-        assertThat(resposta.minhaCandidatura()).isEqualTo(StatusAplicacao.ENVIADA);
+        assertThat(resposta.minhaCandidatura()).isEqualTo(new CandidaturaResponse(candidaturaId, StatusAplicacao.ENVIADA));
     }
 }

@@ -25,6 +25,7 @@ import com.limio.api.comum.portas.ConsultaCategoria;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.ConsultaPerfilEmpregador;
 import com.limio.api.comum.portas.ConsultaPerfilPrestador;
+import com.limio.api.comum.portas.DadosUsuario;
 import com.limio.api.comum.portas.ResumoCategoria;
 import com.limio.api.comum.portas.ResumoPerfilEmpregador;
 import com.limio.api.comum.portas.ResumoPerfilPrestador;
@@ -33,7 +34,6 @@ import com.limio.api.modulos.anuncio.AnuncioDoMuralProjecao;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.CriterioDoMural;
 import com.limio.api.modulos.anuncio.ItemDoMural;
-import com.limio.api.modulos.anuncio.actions.helper.ContatosHelper;
 import com.limio.api.modulos.anuncio.actions.helper.JanelaDoMuralHelper;
 import com.limio.api.modulos.anuncio.actions.helper.JanelaDoMuralHelper.Janela;
 import com.limio.api.modulos.anuncio.enums.QuandoMural;
@@ -141,7 +141,7 @@ public class ListarMuralUseCase {
 
     private void exigirContatosConfirmados(UUID usuarioId) {
         boolean confirmados = consultaDadosUsuario.buscarPorId(usuarioId)
-                .map(ContatosHelper::confirmados)
+                .map(DadosUsuario::contatosConfirmados)
                 .orElse(false);
         if (!confirmados) {
             throw new ContatosNaoConfirmadosException("Confirme seu e-mail e seu telefone para ver os anúncios.");

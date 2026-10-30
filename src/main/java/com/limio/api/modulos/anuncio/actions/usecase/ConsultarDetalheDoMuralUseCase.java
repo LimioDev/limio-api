@@ -18,6 +18,7 @@ import com.limio.api.comum.portas.ConsultaCategoria;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.ConsultaPerfilEmpregador;
 import com.limio.api.comum.portas.ConsultaPerfilPrestador;
+import com.limio.api.comum.portas.DadosUsuario;
 import com.limio.api.comum.portas.ResumoCategoria;
 import com.limio.api.comum.portas.ResumoPerfilEmpregador;
 import com.limio.api.comum.portas.ResumoPerfilPrestador;
@@ -26,7 +27,7 @@ import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.DetalheDoMural;
 import com.limio.api.modulos.anuncio.FotoDoAnuncio;
-import com.limio.api.modulos.anuncio.actions.helper.ContatosHelper;
+import com.limio.api.modulos.anuncio.MinhaCandidatura;
 import com.limio.api.modulos.anuncio.actions.helper.DistanciaHelper;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
@@ -107,7 +108,7 @@ public class ConsultarDetalheDoMuralUseCase {
                 anuncio.getUfSnapshot(),
                 DistanciaHelper.haversineKm(perfil.latitudeBase(), perfil.longitudeBase(),
                         anuncio.getLatitudeSnapshot(), anuncio.getLongitudeSnapshot()),
-                empregador, minha.map(Aplicacao::getStatus).orElse(null));
+                empregador, minha.map(a -> new MinhaCandidatura(a.getId(), a.getStatus())).orElse(null));
     }
 
     private boolean visivel(Anuncio anuncio, UUID usuarioId, boolean jaCandidatou) {
@@ -130,7 +131,7 @@ public class ConsultarDetalheDoMuralUseCase {
 
     private void exigirContatosConfirmados(UUID usuarioId) {
         boolean confirmados = consultaDadosUsuario.buscarPorId(usuarioId)
-                .map(ContatosHelper::confirmados)
+                .map(DadosUsuario::contatosConfirmados)
                 .orElse(false);
         if (!confirmados) {
             throw new ContatosNaoConfirmadosException("Confirme seu e-mail e seu telefone para ver os anúncios.");

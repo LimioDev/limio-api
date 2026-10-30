@@ -1,4 +1,4 @@
-# ETI-79 — Listar o mural e o detalhe do anúncio para o Prestador
+# ETI-73 — Listar o mural e o detalhe do anúncio para o Prestador
 
 ## Status
 
@@ -6,7 +6,7 @@ Implementado. Pontos marcados **a confirmar** foram decididos aqui porque o card
 
 ## Link do card
 
-ETI-79 ([anuncio] [BACK-END] Listar o mural e o detalhe do anúncio para o Prestador). Backlog US19 (ver o mural) +
+ETI-73 ([anuncio] [BACK-END] Listar o mural e o detalhe do anúncio para o Prestador). Backlog US19 (ver o mural) +
 US20 (filtrar o mural): ficaram juntas porque a regra de compatibilidade da US20 é aplicada pela própria consulta do
 mural. Card par: [anuncio] [FRONT-END] Telas "Mural", "Filtros", "Mural vazio" e "Detalhe do anúncio".
 
@@ -72,8 +72,9 @@ Os dois exigem login e papel ativo `PRESTADOR`.
 }
 ```
 
-`minhaCandidatura` é o `StatusAplicacao` da candidatura do Prestador neste anúncio (`ENVIADA`, `RECUSADA`, …), ou
-`null` se ele ainda não se candidatou: aí a tela mostra "Candidatar-se". `mediaAvaliacoes` é `null` com
+`minhaCandidatura` é `{ "id": "…", "status": "ENVIADA" }` (a candidatura do Prestador neste anúncio; `status` é um
+`StatusAplicacao`: `ENVIADA`, `RECUSADA`, …), ou `null` se ele ainda não se candidatou: aí a tela mostra
+"Candidatar-se". O `id` é o da candidatura e serve para o app abrir o chat dela (`/chat/{aplicacaoId}`). `mediaAvaliacoes` é `null` com
 `qtdAvaliacoes` 0. `cidade` é `null` em anúncio antigo cujo endereço não pôde ser lido na migração.
 
 ### Respostas
@@ -159,8 +160,8 @@ consultas, permitiriam triangular o endereço).
 - **Cidade no retrato do anúncio**: coluna nova `cidade_snapshot` preenchida na publicação (`EnderecoLocalizado`
   ganhou `cidade`), em vez de extrair do endereço de uma linha na leitura — essa linha só o dono e o escolhido veem, e
   parsear texto formatado é frágil. Backfill por regex na migração; se não casar, fica `NULL`.
-- **Regra de contatos compartilhada**: `ContatosHelper` (extraído de `PublicarAnuncioUseCase`);
-  `ContatosNaoConfirmadosException` ganhou construtor com mensagem (a padrão fala em "publicar").
+- **Regra de contatos compartilhada**: `DadosUsuario.contatosConfirmados()` (de `comum/portas`), a mesma de
+  `PublicarAnuncioUseCase`; `ContatosNaoConfirmadosException` ganhou construtor com mensagem (a padrão fala em "publicar").
 - **Papel inválido reaproveita `ACESSO_NEGADO`**, como `SomenteEmpregadorPublicaException`; o card sugere
   `PAPEL_INVALIDO`, que não existe e foi descartado (**a confirmar** com o front).
 - **`PerfilIncompletoException` → 403** (mesma família de `CONTATOS_NAO_CONFIRMADOS`).

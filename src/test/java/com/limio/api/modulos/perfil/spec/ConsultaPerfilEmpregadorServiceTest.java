@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
@@ -54,7 +53,7 @@ class ConsultaPerfilEmpregadorServiceTest {
     @BeforeEach
     void montarService() {
         service = new ConsultaPerfilEmpregadorService(perfilEmpregadorService,
-                new ConsultaFotoPerfilService(midiaService, armazenamentoService));
+                new ConsultaFotoPerfilService(midiaService, armazenamentoService), midiaService, armazenamentoService);
     }
 
     private void comPerfil(String nomeExibicao) {
@@ -107,17 +106,19 @@ class ConsultaPerfilEmpregadorServiceTest {
 
     @Test
     void dadoUsuarioSemPerfil_quandoBuscaResumoSemCriar_entaoNomeInicialSemCriarPerfil() {
-        when(perfilEmpregadorService.nomeExibicaoSemCriar(USUARIO_ID)).thenReturn(Optional.of("Maria da Silva"));
+        PerfilEmpregador transitorio = PerfilEmpregador.builder().usuarioId(USUARIO_ID).nomeExibicao("Maria da Silva").build();
+        when(perfilEmpregadorService.buscarPerfisOuIniciais(List.of(USUARIO_ID)))
+                .thenReturn(Map.of(USUARIO_ID, transitorio));
         when(midiaService.buscarFotoPerfilAtiva(USUARIO_ID)).thenReturn(Optional.empty());
 
         assertThat(service.buscarResumoSemCriar(USUARIO_ID))
-                .contains(new ResumoPerfilEmpregador("Maria da Silva", null, null));
+                .contains(new ResumoPerfilEmpregador("Maria da Silva", null, null, null, 0));
         verify(perfilEmpregadorService, never()).garantirPerfil(USUARIO_ID);
     }
 
     @Test
     void dadaContaEncerrada_quandoBuscaResumoSemCriar_entaoVazioSemConsultarFoto() {
-        when(perfilEmpregadorService.nomeExibicaoSemCriar(USUARIO_ID)).thenReturn(Optional.empty());
+        when(perfilEmpregadorService.buscarPerfisOuIniciais(List.of(USUARIO_ID))).thenReturn(Map.of());
 
         assertThat(service.buscarResumoSemCriar(USUARIO_ID)).isEmpty();
         verifyNoInteractions(midiaService, armazenamentoService);

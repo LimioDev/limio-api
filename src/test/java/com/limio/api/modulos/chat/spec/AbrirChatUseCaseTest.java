@@ -119,7 +119,7 @@ class AbrirChatUseCaseTest {
         chatDaCandidatura();
         historicoVazio(null, 30);
         when(consultaPerfilEmpregador.buscarResumoSemCriar(CONTRATANTE_ID))
-                .thenReturn(Optional.of(new ResumoPerfilEmpregador("Marina Bertoldi", null, null)));
+                .thenReturn(Optional.of(new ResumoPerfilEmpregador("Marina Bertoldi", null, null, null, 0)));
 
         ChatAberto aberto = useCase.executar(APLICACAO_ID, PRESTADOR_ID, null, 30);
 

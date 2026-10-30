@@ -8,6 +8,7 @@ import com.limio.api.comum.records.PageResponse;
 import com.limio.api.modulos.anuncio.DetalheDoMural;
 import com.limio.api.modulos.anuncio.FotoDoAnuncio;
 import com.limio.api.modulos.anuncio.ItemDoMural;
+import com.limio.api.modulos.anuncio.records.CandidaturaResponse;
 import com.limio.api.modulos.anuncio.records.CategoriaAnuncioResponse;
 import com.limio.api.modulos.anuncio.records.EmpregadorNoDetalheResponse;
 import com.limio.api.modulos.anuncio.records.EmpregadorNoMuralResponse;
@@ -37,7 +38,8 @@ public class MuralMapper {
                 umaCasa(detalhe.distanciaKm()),
                 new EmpregadorNoDetalheResponse(detalhe.empregador().nomeExibicao(), detalhe.empregador().fotoUrl(),
                         detalhe.empregador().mediaAvaliacoes(), detalhe.empregador().qtdAvaliacoes()),
-                detalhe.minhaCandidatura());
+                detalhe.minhaCandidatura() == null ? null
+                        : new CandidaturaResponse(detalhe.minhaCandidatura().id(), detalhe.minhaCandidatura().status()));
     }
 
     private static FotoAnuncioResponse toResponse(FotoDoAnuncio foto) {

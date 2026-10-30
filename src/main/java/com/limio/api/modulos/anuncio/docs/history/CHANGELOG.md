@@ -180,4 +180,4 @@ fazer uma query por item. Decisões que o card não tomava e foram feitas aqui (
 detalhe, papel inválido como `ACESSO_NEGADO` em vez de `PAPEL_INVALIDO`. `anuncio` ganhou `cidade_snapshot`
 (`EnderecoLocalizado` passou a ter `cidade`). Migrations `V25` (índices do mural) e `V26` (cidade) — pulam V22–V24
 porque outras PRs abertas já usam V22/V23. Detalhe em
-`docs/features/ETI-79-mural-e-detalhe-do-anuncio-para-o-prestador.md`.
+`docs/features/ETI-73-mural-e-detalhe-do-anuncio-para-o-prestador.md`.

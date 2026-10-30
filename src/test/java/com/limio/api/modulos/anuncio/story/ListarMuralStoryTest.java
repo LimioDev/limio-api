@@ -60,7 +60,7 @@ import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestador;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestadorRepository;
 
 /**
- * BDD ponta a ponta (controller -> banco real) do mural do Prestador (ETI-79, US19/US20). Usuários e
+ * BDD ponta a ponta (controller -> banco real) do mural do Prestador (ETI-73, US19/US20). Usuários e
  * perfis nascem pelos repositories; o token é emitido com o {@link JwtEncoder} (mesmo formato lido pelo
  * {@link JwtAuthFilter}). Categorias vêm da carga inicial da migration; o storage não é tocado (sem foto,
  * ou foto cujo link o storage de teste gera localmente).

@@ -58,7 +58,7 @@ import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestador;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestadorRepository;
 
 /**
- * BDD ponta a ponta (controller -> banco real) do detalhe no mural do Prestador (ETI-79, US19): detalhe do anúncio. Usuários e
+ * BDD ponta a ponta (controller -> banco real) do detalhe no mural do Prestador (ETI-73, US19): detalhe do anúncio. Usuários e
  * perfis nascem pelos repositories; o token é emitido com o {@link JwtEncoder} (mesmo formato lido pelo
  * {@link JwtAuthFilter}). Categorias vêm da carga inicial da migration; o storage não é tocado (sem foto,
  * ou foto cujo link o storage de teste gera localmente).
@@ -182,8 +182,8 @@ class ConsultarDetalheDoMuralStoryTest {
         return mockMvc.perform(get(ROTA + id).header(HttpHeaders.AUTHORIZATION, "Bearer " + token(usuario)));
     }
 
-    private void candidatura(Anuncio anuncio, Usuario dono, StatusAplicacao status) {
-        aplicacaoRepository.save(Aplicacao.builder().anuncioId(anuncio.getId()).prestadorId(dono.getId())
+    private Aplicacao candidatura(Anuncio anuncio, Usuario dono, StatusAplicacao status) {
+        return aplicacaoRepository.save(Aplicacao.builder().anuncioId(anuncio.getId()).prestadorId(dono.getId())
                 .status(status).dataAplicacao(Instant.now()).build());
     }
 
@@ -225,9 +225,11 @@ class ConsultarDetalheDoMuralStoryTest {
         Usuario rafael = prestador();
         perfil(rafael, 10, "Elétrica");
         Anuncio anuncio = anuncio("com-candidatura", "Elétrica", 1);
-        candidatura(anuncio, rafael, StatusAplicacao.ENVIADA);
+        Aplicacao minha = candidatura(anuncio, rafael, StatusAplicacao.ENVIADA);
 
-        detalhar(rafael, anuncio.getId()).andExpect(jsonPath("$.minhaCandidatura", is("ENVIADA")));
+        detalhar(rafael, anuncio.getId())
+                .andExpect(jsonPath("$.minhaCandidatura.id", is(minha.getId().toString())))
+                .andExpect(jsonPath("$.minhaCandidatura.status", is("ENVIADA")));
     }
 
     @Test
@@ -294,11 +296,12 @@ class ConsultarDetalheDoMuralStoryTest {
         Usuario rafael = prestador();
         perfil(rafael, 10, "Elétrica");
         Anuncio anuncio = anuncio("escolhido-outro", "Elétrica", 1);
-        candidatura(anuncio, rafael, StatusAplicacao.RECUSADA);
+        Aplicacao minha = candidatura(anuncio, rafael, StatusAplicacao.RECUSADA);
         candidatura(anuncio, usuario("Joana Lima", "joana@example.com", "10433218100", PapelUsuario.PRESTADOR, true, true),
                 StatusAplicacao.ESCOLHIDA);
 
-        detalhar(rafael, anuncio.getId()).andExpect(status().isOk()).andExpect(jsonPath("$.minhaCandidatura", is("RECUSADA")));
+        detalhar(rafael, anuncio.getId()).andExpect(status().isOk()).andExpect(jsonPath("$.minhaCandidatura.id", is(minha.getId().toString())))
+                .andExpect(jsonPath("$.minhaCandidatura.status", is("RECUSADA")));
     }
 
     @Test
