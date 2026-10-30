@@ -179,3 +179,15 @@ candidaturas com `escolhidaEm` no período, com título e data do anúncio, para
 `CandidatarSeUseCase.cotaEsgotada` passou de mês civil UTC para `America/Sao_Paulo`, o mesmo critério da cota do
 mês (ETI-79). Em UTC, das 21:00 do último dia até 00:00 do dia 1, o bloqueio já considerava o mês seguinte e a tela de
 cota não. O fuso fica numa constante do usecase porque `anuncio` não importa `CotaMensal` (ADR-0001).
+
+## 2026-10-30 — ETI-88: iniciar o serviço
+
+`POST /anuncios/{anuncioId}/iniciar`: `IniciarServicoUseCase` leva o anúncio de `PUBLICADO` para
+`EM_ANDAMENTO`, grava `iniciadoEm`, encerra a proposta de reagendamento pendente e publica
+`ServicoIniciadoEvent` (novo, `comum/eventos/`), que o ETI-112 vai escutar. Sem migration.
+
+Quem não é o Prestador escolhido recebe o mesmo 404 `SERVICO_NAO_ENCONTRADO` de um id inexistente. A busca
+trava a linha do anúncio (`findByIdParaAtualizar`), porque `BaseEntity` não tem `@Version`: no clique duplo
+só uma requisição passa, a outra recebe 409 `SERVICO_ESTADO_INVALIDO`.
+
+Detalhe em `docs/features/ETI-88-iniciar-o-servico.md`.

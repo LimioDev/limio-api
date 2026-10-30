@@ -152,6 +152,23 @@ public class Anuncio extends BaseEntity {
         };
     }
 
+    /**
+     * ETI-88: o serviço só começa a partir de {@code PUBLICADO}. Quem chama já confirmou que existe candidatura
+     * escolhida. Passo opcional: validação presencial e check-out também partem de {@code PUBLICADO}.
+     */
+    public boolean permiteInicio() {
+        return switch (status) {
+            case PUBLICADO -> true;
+            case EM_ANDAMENTO, AGUARDANDO_VALIDACAO, CONCLUIDO, ENCERRADO -> false;
+        };
+    }
+
+    /** ETI-88: Prestador escolhido avisou que chegou. Quem chama já validou o estado do anúncio. */
+    public void iniciar(Instant agora) {
+        this.status = StatusAnuncio.EM_ANDAMENTO;
+        this.iniciadoEm = agora;
+    }
+
     /** UC16 (encerrar conta do contratante): tira do mural, não conclui. */
     public void encerrarPorExclusaoDeConta(Instant agora) {
         encerrar(agora, MOTIVO_EXCLUSAO_DE_CONTA);
@@ -171,9 +188,9 @@ public class Anuncio extends BaseEntity {
     /**
      * "Combinado a menos de {@code janela}": a data combinada ainda não
      * passou, mas está perto. Não depende de {@code status == EM_ANDAMENTO}
-     * — esse status só é setado no check-in, que acontece depois de {@code
-     * dataHoraPretendida}, então nunca coincidiria com "data ainda no
-     * futuro" (TICKET-0049, achado de review). Quem chama já sabe que existe
+     * — esse status só existe se o Prestador iniciar o serviço (ETI-88, passo
+     * opcional), então um combinado próximo costuma seguir {@code PUBLICADO}
+     * (TICKET-0049, achado de review). Quem chama já sabe que existe
      * candidatura escolhida/aguardando validação; aqui só a janela de tempo.
      */
     public boolean estaAMenosDe(Duration janela, Instant agora) {

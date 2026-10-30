@@ -42,6 +42,11 @@ public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository
         return repository.findById(id);
     }
 
+    /** Mesma busca que {@link #buscarPorId}, com a linha travada até o fim da transação. */
+    public Optional<Anuncio> buscarPorIdParaAtualizar(UUID id) {
+        return repository.findByIdParaAtualizar(id);
+    }
+
     /** Mesma busca que {@link #buscarPorId}, em lote (evita N+1). Id sem anúncio fica de fora. */
     public List<Anuncio> buscarPorIds(Collection<UUID> ids) {
         if (ids.isEmpty()) {
