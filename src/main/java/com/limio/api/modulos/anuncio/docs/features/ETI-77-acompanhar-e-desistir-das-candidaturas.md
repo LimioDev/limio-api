@@ -23,8 +23,7 @@ pendente, para que eu acompanhe meus serviços e libere minha agenda.
 - `POST /candidaturas/{candidaturaId}/desistir` — `ENVIADA` → `ENCERRADA`, 200 sem corpo (mesmo formato do
   `POST /anuncios/{id}/cancelar`, ETI-63).
 
-**Fora**: UI (card par), chat somente leitura (só o evento é publicado aqui), cancelamento depois de
-escolhido (ETI-96/ETI-97).
+**Fora**: UI (card par), cancelamento depois de escolhido (ETI-96/ETI-97).
 
 ## Regra de negócio
 
@@ -39,7 +38,7 @@ escolhido (ETI-96/ETI-97).
 | Desistir: `ENVIADA` → `ENCERRADA` com `encerradaEm` e motivo | `Aplicacao.desistir(agora)` → `encerrar(agora, "Desistência do Prestador")`. |
 | Não mexe na cota | Nada a fazer: a cota conta escolhas (`escolhidaEm`), não candidaturas. |
 | Some da lista do Empregador | Automático: painel e tela 16 só contam/listam `ENVIADA`. Coberto no story pelo painel do Empregador. |
-| Evento `CandidaturaEncerrada` | `comum/eventos/CandidaturaEncerradaEvent(candidaturaId, anuncioId, prestadorId, ocorridoEm)`. Consumidor (`chat`) ainda não existe. |
+| Evento `CandidaturaEncerrada` | `comum/eventos/CandidaturaEncerradaEvent(candidaturaId, anuncioId, prestadorId, ocorridoEm)`. Chat da candidatura fica somente leitura (`DeixarChatSomenteLeituraUseCase`, ETI-101 já na develop). |
 | Desistir já escolhido | 409 `USE_CANCELAMENTO_SERVICO` pra `ESCOLHIDA`/`AGUARDANDO_VALIDACAO`. |
 | Desistir de candidatura já finalizada | 409 `CANDIDATURA_ESTADO_INVALIDO` pra `RECUSADA`/`CONCLUIDA`/`ENCERRADA`. |
 

@@ -48,6 +48,9 @@ import com.limio.api.modulos.auth.records.LoginResponse;
 import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioRepository;
 import com.limio.api.modulos.auth.usuario.enums.StatusConta;
+import com.limio.api.modulos.chat.Chat;
+import com.limio.api.modulos.chat.ChatRepository;
+import com.limio.api.modulos.chat.enums.MotivoSomenteLeitura;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -86,6 +89,9 @@ class MinhasCandidaturasStoryTest {
     private AplicacaoRepository aplicacaoRepository;
 
     @Autowired
+    private ChatRepository chatRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -111,6 +117,8 @@ class MinhasCandidaturasStoryTest {
     }
 
     private void limparBase() {
+        jdbc.execute("delete from mensagem");
+        chatRepository.deleteAll();
         aplicacaoRepository.deleteAll();
         anuncioRepository.deleteAll();
         jdbc.execute("delete from perfil_empregador");
@@ -332,6 +340,24 @@ class MinhasCandidaturasStoryTest {
 
         listar("?aba=PENDENTES").andExpect(jsonPath("$.itens", hasSize(0)));
         listar("?aba=HISTORICO").andExpect(jsonPath("$.itens[0].status", is("ENCERRADA")));
+    }
+
+    @Test
+    void dadoChatDaCandidatura_quandoDesiste_entaoChatFicaSomenteLeitura() throws Exception {
+        Anuncio anuncio = anuncio("Faxina", StatusAnuncio.PUBLICADO);
+        Aplicacao enviada = aplicacao(anuncio, StatusAplicacao.ENVIADA);
+        Chat chat = chatRepository.save(Chat.builder()
+                .aplicacaoId(enviada.getId())
+                .anuncioId(anuncio.getId())
+                .contratanteId(empregador.getId())
+                .prestadorId(prestador.getId())
+                .build());
+
+        desistir(enviada.getId()).andExpect(status().isOk());
+
+        Chat salvo = chatRepository.findById(chat.getId()).orElseThrow();
+        assertThat(salvo.isSomenteLeitura()).isTrue();
+        assertThat(salvo.getMotivoSomenteLeitura()).isEqualTo(MotivoSomenteLeitura.CANDIDATO_DESISTIU);
     }
 
     @Test
