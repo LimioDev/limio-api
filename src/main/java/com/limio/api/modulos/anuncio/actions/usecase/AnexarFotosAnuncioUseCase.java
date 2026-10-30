@@ -72,7 +72,7 @@ public class AnexarFotosAnuncioUseCase {
                 .orElseThrow(AnuncioNaoEncontradoException::new);
 
         midiaService.travarFotosAnuncio(anuncioId);
-        if (!anuncio.aceitaFotos(aplicacaoService.existeEscolhida(anuncioId))) {
+        if (!anuncio.permiteAlteracao(aplicacaoService.existeEscolhida(anuncioId))) {
             throw new FotosNaoPermitidasException();
         }
         if (midiaService.buscarFotosAtivasDoAnuncio(anuncioId).size() + arquivos.size() > quantidadeMaxima) {

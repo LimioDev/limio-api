@@ -96,7 +96,7 @@ vai precisar de rota própria quando o card dele vier.
 | Publica `AnuncioPublicado` | `eventos/AnuncioPublicadoEvent(anuncioId)`, dentro da transação. Ninguém escuta ainda (ETI-65) |
 | Só com telefone e e-mail confirmados e papel `EMPREGADOR` | `PublicarAnuncioUseCase`: papel do token e `ConsultaDadosUsuario` |
 | Fotos: mesma estrutura da foto de perfil, sem EXIF, `Midia` `FOTO_ANUNCIO` ligada ao anúncio | `AnexarFotosAnuncioUseCase` com `comum/midia` (`ImagemHelper`, `ArmazenamentoService`, `Midia.fotoAnuncio`) |
-| Fotos só em `PUBLICADO` sem `ESCOLHIDA` | `Anuncio.aceitaFotos` + `AplicacaoService.existeEscolhida` (`ESCOLHIDA`/`AGUARDANDO_VALIDACAO`, via `StatusAplicacao.isEscolhida()`) |
+| Fotos só em `PUBLICADO` sem `ESCOLHIDA` | `Anuncio.permiteAlteracao` + `AplicacaoService.existeEscolhida` (`ESCOLHIDA`/`AGUARDANDO_VALIDACAO`, via `StatusAplicacao.isEscolhida()`) |
 | Mural mostra só bairro | Nada daqui vai pro mural; `GET /anuncios/{id}` é só do dono e nem ele recebe lat/long |
 | Só o dono anexa e consulta; outra pessoa → 404 | `Anuncio.pertenceA` nos dois usecases |
 | Migração nova com `categoria_id` obrigatória, sem alterar a V13 | `V20` (ver Banco) |

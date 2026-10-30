@@ -133,3 +133,30 @@ consome cota (card explícito: "Não mexe na cota") — só bloqueia se a cota d
 pra não deixar o Prestador se candidatar a algo que, escolhido, ele não teria como aceitar.
 
 Detalhe completo em `docs/features/ETI-75-candidatar-se-a-um-anuncio.md`.
+
+## 2026-10-30 — ETI-63: cancelar anúncio antes da escolha
+
+`POST /anuncios/{anuncioId}/cancelar`. O card deixava uma decisão pendente (status `CANCELADO` novo vs.
+gravar o motivo) — resolvida gravando o motivo: `Anuncio` ganhou `motivoEncerramento` (migration V23),
+mesmo padrão que `Aplicacao.motivoEncerramento` já usa desde o TICKET-0049, em vez de um valor de enum
+por cenário de encerramento. `Anuncio.encerrarPorExclusaoDeConta` (TICKET-0049) foi retroativamente
+ajustado pra também gravar motivo (`"Cancelado por saída de conta"`), fechando a inconsistência de ter
+`ENCERRADO` com motivo às vezes sim, às vezes não — sem mudar a assinatura pública nem quebrar teste
+existente (nenhum testava o motivo de `Anuncio`). O raciocínio completo, e por que serve também pro
+futuro `ETI-66` (expiração) e `ETI-94`/`95` (cancelamento com/sem estorno), está em
+`docs/features/ETI-63-cancelar-anuncio-antes-da-escolha.md`.
+
+Reaproveitado da develop (#18), sem duplicar: `AplicacaoService.existeEscolhida`, `Anuncio.pertenceA`,
+`AnuncioNaoEncontradoException` e os códigos `ANUNCIO_NAO_ENCONTRADO`/`ANUNCIO_ESTADO_INVALIDO`. A regra "só
+`PUBLICADO` e sem escolhido" virou um método de domínio só, `Anuncio.permiteAlteracao` (antes `aceitaFotos`),
+usado pelo anexar fotos e pelo cancelar. `AnuncioEstadoInvalidoException` é idêntica à da #19 (ETI-75) pra
+não conflitar no merge.
+
+Dono errado e anúncio inexistente respondem o mesmo 404 `ANUNCIO_NAO_ENCONTRADO` — quem não é dono não
+descobre se o id existe, mesmo critério que `ConsultarPainelEmpregadorUseCase` já segue (só lista os
+anúncios do próprio contratante).
+
+`AnuncioCanceladoEvent(anuncioId, ocorridoEm)` — novo em `comum/eventos/`, só o id do anúncio: o módulo
+`chat` (ETI-101, ainda não existe em código) vai guardar `anuncioId` cru em cada chat (recebido no
+`CandidaturaCriadaEvent` de cada candidatura, ETI-75), então não precisa da lista de candidaturas aqui
+pra marcar os chats em somente leitura.
