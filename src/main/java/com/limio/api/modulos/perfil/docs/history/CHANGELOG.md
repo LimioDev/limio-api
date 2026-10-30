@@ -197,3 +197,13 @@ e virou o único lugar que busca a foto ativa, gera o link e tolera o storage fo
 `ConsultaPerfilEmpregadorService` usa essa porta em vez de repetir a lógica. Nova operação
 `ConsultaPerfilEmpregador.buscarResumoSemCriar` (`PerfilEmpregadorService.nomeExibicaoSemCriar`): mostra o Empregador
 a outra pessoa (cabeçalho do chat) com o nome de exibição inicial, sem gravar o perfil dele.
+
+## 2026-10-29 — ETI-79: cota do mês e virada sem job
+
+Nova tabela `cota_mensal` (V27), subentidade de `perfil_prestador`, e `GET /perfil/prestador/cota`. A virada do mês
+não apaga nem zera linha nenhuma: o mês corrente é calculado no fuso de São Paulo, e mês sem linha vale 0 escolhas.
+A contagem é a coluna `escolhas_consumidas` e não um `count` das candidaturas escolhidas, porque o GOLD (escolha
+que não conta) e o estorno (ETI-94) não cabem numa contagem derivada. O `perfil` lê o plano do `financeiro`
+(`ConsultaPlanoPrestador`, sempre FREE até a assinatura existir) e as escolhas do mês do `anuncio`
+(`ConsultaEscolhasDoPrestador`), por porta. Papel errado responde `ACESSO_NEGADO`, como nas outras rotas da develop;
+o card sugeria `PAPEL_INVALIDO`, que só existe na PR #19. Detalhe em `../features/ETI-79-consultar-cota-do-mes-e-virada.md`.

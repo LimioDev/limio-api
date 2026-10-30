@@ -52,6 +52,14 @@ public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository
         return repository.findById(id);
     }
 
+    /** Mesma busca que {@link #buscarPorId}, em lote (evita N+1). Id sem anúncio fica de fora. */
+    public List<Anuncio> buscarPorIds(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return repository.findAllById(ids);
+    }
+
     /**
      * Página do mural: anúncios PUBLICADO, sem candidatura ESCOLHIDA, de outro contratante, compatíveis com
      * o {@code criterio} (especialidade/"Outros" e raio) e dentro dos filtros opcionais. Distância, filtros,

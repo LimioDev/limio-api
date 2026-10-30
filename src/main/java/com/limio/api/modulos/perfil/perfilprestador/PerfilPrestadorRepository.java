@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.Query;
 
 import com.limio.api.comum.base.BaseRepository;
 import com.limio.api.comum.localizacao.enums.Uf;
@@ -19,4 +20,8 @@ public interface PerfilPrestadorRepository extends BaseRepository<PerfilPrestado
     Optional<PerfilPrestador> findByUsuarioId(UUID usuarioId);
 
     Optional<PerfilPrestador> findFirstByUfBaseAndMunicipioBaseIgnoreCase(Uf ufBase, String municipioBase);
+
+    /** Só o id, sem carregar especialidades nem janelas. */
+    @Query("select p.id from PerfilPrestador p where p.usuarioId = :usuarioId")
+    Optional<UUID> findIdByUsuarioId(UUID usuarioId);
 }
