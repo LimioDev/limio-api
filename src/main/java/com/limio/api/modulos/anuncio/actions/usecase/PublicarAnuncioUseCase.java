@@ -88,15 +88,11 @@ public class PublicarAnuncioUseCase {
 
     private void exigirContatosConfirmados(UUID usuarioId) {
         boolean confirmados = consultaDadosUsuario.buscarPorId(usuarioId)
-                .map(PublicarAnuncioUseCase::contatosConfirmados)
+                .map(DadosUsuario::contatosConfirmados)
                 .orElse(false);
         if (!confirmados) {
             throw new ContatosNaoConfirmadosException();
         }
-    }
-
-    private static boolean contatosConfirmados(DadosUsuario dados) {
-        return dados.emailConfirmadoEm() != null && dados.telefoneConfirmadoEm() != null;
     }
 
     private void exigirCategoriaAtiva(UUID categoriaId) {

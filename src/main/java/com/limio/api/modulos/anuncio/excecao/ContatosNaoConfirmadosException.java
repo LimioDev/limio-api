@@ -6,8 +6,8 @@ import com.limio.api.comum.excecao.NegocioException;
 import com.limio.api.comum.excecao.enums.CodigoErro;
 
 /**
- * Quem publica precisa ter e-mail e telefone confirmados (UC "Criar anúncio de serviço"). Conta
- * encerrada também cai aqui.
+ * E-mail e/ou telefone ainda não confirmados: pré-condição de publicar anúncio (ETI-59) e de se candidatar
+ * (ETI-75). Conta encerrada também cai aqui.
  */
 public class ContatosNaoConfirmadosException extends NegocioException {
 
