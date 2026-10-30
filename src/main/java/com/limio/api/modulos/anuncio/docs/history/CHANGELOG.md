@@ -168,6 +168,20 @@ anúncios do próprio contratante).
 `CandidaturaCriadaEvent` de cada candidatura, ETI-75), então não precisa da lista de candidaturas aqui
 pra marcar os chats em somente leitura.
 
+## 2026-10-29 — ETI-77: acompanhar minhas candidaturas e desistir de uma pendente
+
+Primeira tela do lado do Prestador: `GET /candidaturas/minhas` (abas Pendentes/Combinadas/Histórico, paginada) e
+`POST /candidaturas/{id}/desistir`. A classificação status → aba mora em `AbaCandidatura.de` (`switch` sem
+`default`), pra status novo não cair em aba nenhuma sem o compilador avisar. Combinadas inclui
+`AGUARDANDO_VALIDACAO`: o Prestador foi escolhido e o serviço ainda não terminou.
+
+Desistir encerra a candidatura (`ENCERRADA`, motivo "Desistência do Prestador") e publica
+`CandidaturaEncerradaEvent` pro `chat`. A leitura usa `PESSIMISTIC_WRITE` — o card de escolha do Empregador
+precisa travar a mesma linha, senão uma escolha e uma desistência simultâneas podem se sobrescrever.
+
+`PageResponse<T>` entrou em `comum/records/` (já previsto no ADR-0001). Detalhe em
+`docs/features/ETI-77-acompanhar-e-desistir-das-candidaturas.md`.
+
 ## 2026-10-30 — ETI-79: escolhas do Prestador para a cota do mês
 
 `anuncio` implementa a porta `comum/portas/ConsultaEscolhasDoPrestador` (`actions/service/ConsultaEscolhasDoPrestadorService`):
