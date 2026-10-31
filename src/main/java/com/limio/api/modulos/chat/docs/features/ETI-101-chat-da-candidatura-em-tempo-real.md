@@ -80,9 +80,8 @@ Card: [ETI-101](https://kaueamaral96.atlassian.net/browse/ETI-101) · Backlog US
 
 ## Pendências
 
-- **Listeners que faltam:** existem os do `AnuncioCanceladoEvent` (ETI-63) e do `ContaEncerradaEvent` (TICKET-0049).
-  Cada card dono de evento liga o seu em `DeixarChatSomenteLeituraUseCase`:
-  - recusa (ETI-67): `CANDIDATURA_RECUSADA`
+- **Listeners que faltam:** existem os do `AnuncioCanceladoEvent` (ETI-63), do `CandidaturaRecusadaEvent` (ETI-67) e
+  do `ContaEncerradaEvent` (TICKET-0049). Cada card dono de evento liga o seu em `DeixarChatSomenteLeituraUseCase`:
   - desistência (ETI-77): `CANDIDATO_DESISTIU`
   - escolha (ETI-69): `OUTRO_PRESTADOR_ESCOLHIDO`
   - serviço cancelado (ETI-94/ETI-96, Sprint 7): `SERVICO_CANCELADO`

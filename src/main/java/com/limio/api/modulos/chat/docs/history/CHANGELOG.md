@@ -33,3 +33,11 @@
 - O canal em tempo real (STOMP em `/ws`) entra em `comum/config` e `comum/seguranca`. É o primeiro uso de WebSocket
   na API.
 - Ver `docs/features/ETI-101-chat-da-candidatura-em-tempo-real.md`.
+
+## 2026-10-30 — ETI-67: chat somente leitura ao recusar candidatura
+
+`DeixarChatSomenteLeituraUseCase.aoRecusarCandidatura` escuta o novo `CandidaturaRecusadaEvent` (`comum/eventos/`) e
+deixa o chat da candidatura somente leitura com `CANDIDATURA_RECUSADA`. O chat também implementa a porta
+`comum/portas/ConsultaChat` (`actions/service/ConsultaChatService`), que devolve o id do chat por candidatura, em lote,
+para a lista de candidatos do `anuncio`. Só leitura: nunca cria o chat. Ver
+`anuncio/docs/features/ETI-67-listar-candidatos-e-recusar-candidato.md`.
