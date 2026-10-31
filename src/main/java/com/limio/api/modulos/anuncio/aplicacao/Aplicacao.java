@@ -61,6 +61,12 @@ public class Aplicacao extends BaseEntity {
         return status.isEscolhida();
     }
 
+    /** O Empregador recusou a candidatura (ETI-67). Quem chama garante que ela ainda está ENVIADA. */
+    public void recusar(Instant agora) {
+        this.status = StatusAplicacao.RECUSADA;
+        this.recusadaEm = agora;
+    }
+
     public void encerrar(Instant agora, String motivo) {
         this.status = StatusAplicacao.ENCERRADA;
         this.encerradaEm = agora;
