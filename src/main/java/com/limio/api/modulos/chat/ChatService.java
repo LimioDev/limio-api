@@ -1,5 +1,6 @@
 package com.limio.api.modulos.chat;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,6 +27,11 @@ public class ChatService extends BaseService<Chat, UUID, ChatRepository> {
 
     public Optional<Chat> buscarDaCandidatura(UUID aplicacaoId) {
         return repository.findByAplicacaoId(aplicacaoId);
+    }
+
+    /** Chats que já existem entre as candidaturas. */
+    public List<Chat> buscarDasCandidaturas(Collection<UUID> aplicacaoIds) {
+        return repository.findByAplicacaoIdIn(aplicacaoIds);
     }
 
     /**

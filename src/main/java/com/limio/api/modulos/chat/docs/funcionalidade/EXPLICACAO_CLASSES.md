@@ -11,6 +11,10 @@
 `anuncio` publica `AnuncioCanceladoEvent` → `DeixarChatSomenteLeituraUseCase.aoCancelarAnuncio` →
 `Chat.deixarSomenteLeitura(ANUNCIO_CANCELADO, ...)` em cada chat aberto do anúncio.
 
+**Candidatura recusada → chat somente leitura**
+`anuncio` publica `CandidaturaRecusadaEvent` → `DeixarChatSomenteLeituraUseCase.aoRecusarCandidatura` →
+`Chat.deixarSomenteLeitura(CANDIDATURA_RECUSADA, ...)` no chat daquela candidatura (nada, se ainda não existe).
+
 **Conta encerrada → chats somente leitura**
 `auth` publica `ContaEncerradaEvent` → `DeixarChatSomenteLeituraUseCase.aoEncerrarConta` →
 `Chat.deixarSomenteLeitura(CONTA_ENCERRADA, ...)` em cada chat aberto em que a pessoa é uma das partes.

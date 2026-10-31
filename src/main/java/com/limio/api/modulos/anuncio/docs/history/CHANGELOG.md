@@ -179,3 +179,17 @@ candidaturas com `escolhidaEm` no período, com título e data do anúncio, para
 `CandidatarSeUseCase.cotaEsgotada` passou de mês civil UTC para `America/Sao_Paulo`, o mesmo critério da cota do
 mês (ETI-79). Em UTC, das 21:00 do último dia até 00:00 do dia 1, o bloqueio já considerava o mês seguinte e a tela de
 cota não. O fuso fica numa constante do usecase porque `anuncio` não importa `CotaMensal` (ADR-0001).
+
+## 2026-10-30 — ETI-67: listar candidatos e recusar candidato
+
+`GET /anuncios/{anuncioId}/candidaturas` e `POST /anuncios/{anuncioId}/candidaturas/{candidaturaId}/recusar`
+(`CandidatoController`, `ListarCandidatosUseCase`, `RecusarCandidatoUseCase`). A recusa publica o novo
+`comum/eventos/CandidaturaRecusadaEvent`, que o `chat` escuta para deixar o chat somente leitura.
+
+Três portas de leitura novas em `comum/portas/`: `ConsultaEspecialidades` (`perfil`), `ConsultaChat` (`chat`) e
+`ConsultaAvaliacoes` (`perfil`, provisória: sem módulo de avaliações, devolve sempre "sem avaliações").
+
+Primeiro lock pessimista do módulo: `AnuncioRepository.findByIdParaAtualizar`, usado pela recusa. A escolha de
+candidato (ETI-69/70) deve travar o mesmo anúncio. Sem migration.
+
+Detalhe completo em `docs/features/ETI-67-listar-candidatos-e-recusar-candidato.md`.

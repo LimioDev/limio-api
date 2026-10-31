@@ -1,5 +1,7 @@
 package com.limio.api.modulos.perfil.perfilprestador;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,6 +20,10 @@ public interface PerfilPrestadorRepository extends BaseRepository<PerfilPrestado
      */
     @EntityGraph(attributePaths = "especialidades")
     Optional<PerfilPrestador> findByUsuarioId(UUID usuarioId);
+
+    /** Em lote, com as especialidades no fetch. */
+    @EntityGraph(attributePaths = "especialidades")
+    List<PerfilPrestador> findByUsuarioIdIn(Collection<UUID> usuarioIds);
 
     Optional<PerfilPrestador> findFirstByUfBaseAndMunicipioBaseIgnoreCase(Uf ufBase, String municipioBase);
 
