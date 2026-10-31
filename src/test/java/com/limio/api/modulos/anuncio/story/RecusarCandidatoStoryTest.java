@@ -49,7 +49,7 @@ import tools.jackson.databind.ObjectMapper;
 
 /**
  * BDD ponta a ponta (controller -> banco real) do UC "Recusar um candidato" (ETI-67). Anúncios e candidaturas nascem
- * direto pelo repository. O chat somente leitura depende do listener do {@code chat}, que tem teste próprio.
+ * direto pelo repository e os chats por SQL (o listener que cria o chat só roda no fluxo de candidatar-se).
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -149,6 +149,11 @@ class RecusarCandidatoStoryTest {
         return aplicacaoRepository.save(aplicacao);
     }
 
+    private void chat(Aplicacao aplicacao, UUID contratanteId) {
+        jdbc.update("insert into chat (aplicacao_id, anuncio_id, contratante_id, prestador_id) values (?, ?, ?, ?)",
+                aplicacao.getId(), aplicacao.getAnuncioId(), contratanteId, aplicacao.getPrestadorId());
+    }
+
     private ResultActions recusar(String token, UUID anuncioId, UUID candidaturaId) throws Exception {
         return mockMvc.perform(post("/anuncios/{anuncioId}/candidaturas/{candidaturaId}/recusar", anuncioId,
                 candidaturaId).header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
@@ -188,6 +193,31 @@ class RecusarCandidatoStoryTest {
         assertThat(evento.anuncioTitulo()).isEqualTo("Instalar 3 tomadas");
         assertThat(evento.contratanteId()).isEqualTo(maria.getId());
         assertThat(evento.prestadorId()).isEqualTo(rafael.getId());
+    }
+
+    @Test
+    void dadaCandidaturaComChat_quandoRecusa_entaoSoOChatDelaFicaSomenteLeitura() throws Exception {
+        Usuario maria = usuario("Maria da Silva", "maria@example.com", "52998224725", PapelUsuario.EMPREGADOR);
+        Usuario rafael = usuario("Rafael Souza", "rafael@example.com", "39053344705", PapelUsuario.PRESTADOR);
+        Usuario ana = usuario("Ana Lima", "ana@example.com", "16899535009", PapelUsuario.PRESTADOR);
+        Anuncio anuncio = anuncio(maria.getId(), StatusAnuncio.PUBLICADO);
+        Aplicacao doRafael = aplicacao(anuncio.getId(), rafael.getId(), StatusAplicacao.ENVIADA);
+        Aplicacao daAna = aplicacao(anuncio.getId(), ana.getId(), StatusAplicacao.ENVIADA);
+        chat(doRafael, maria.getId());
+        chat(daAna, maria.getId());
+
+        recusar(logar("maria@example.com"), anuncio.getId(), doRafael.getId()).andExpect(status().isOk());
+
+        // o listener do chat roda logo depois do commit, ainda dentro da requisição
+        assertThat(jdbc.queryForMap("select somente_leitura, motivo_somente_leitura, somente_leitura_em "
+                + "from chat where aplicacao_id = ?", doRafael.getId()))
+                .containsEntry("somente_leitura", true)
+                .containsEntry("motivo_somente_leitura", "CANDIDATURA_RECUSADA")
+                .doesNotContainEntry("somente_leitura_em", null);
+        assertThat(jdbc.queryForMap("select somente_leitura, motivo_somente_leitura from chat where aplicacao_id = ?",
+                daAna.getId()))
+                .containsEntry("somente_leitura", false)
+                .containsEntry("motivo_somente_leitura", null);
     }
 
     @Test

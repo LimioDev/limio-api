@@ -11,6 +11,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.limio.api.comum.eventos.AnuncioCanceladoEvent;
+import com.limio.api.comum.eventos.CandidaturaRecusadaEvent;
 import com.limio.api.comum.eventos.ContaEncerradaEvent;
 import com.limio.api.modulos.chat.Chat;
 import com.limio.api.modulos.chat.ChatService;
@@ -20,9 +21,10 @@ import com.limio.api.modulos.chat.enums.MotivoSomenteLeitura;
  * Reação de {@code chat} ao fim da candidatura, do anúncio ou da conta de uma das partes (ETI-101): o chat para de
  * receber mensagens e o histórico continua. Roda depois do commit de quem publicou, em transação própria (ADR-0003).
  *
- * Hoje escuta {@code AnuncioCanceladoEvent} e {@code ContaEncerradaEvent}. Os cards de recusa (ETI-67), desistência
- * (ETI-77), escolha (ETI-69) e serviço cancelado (ETI-94/ETI-96) publicam seus eventos e ligam aqui um listener que
- * chama {@link #executarDaCandidatura} (ou {@link #executarDoAnuncio}) com o {@link MotivoSomenteLeitura} do cenário.
+ * Hoje escuta {@code AnuncioCanceladoEvent}, {@code CandidaturaRecusadaEvent} e {@code ContaEncerradaEvent}. Os cards
+ * de desistência (ETI-77), escolha (ETI-69) e serviço cancelado (ETI-94/ETI-96) publicam seus eventos e ligam aqui um
+ * listener que chama {@link #executarDaCandidatura} (ou {@link #executarDoAnuncio}) com o {@link MotivoSomenteLeitura}
+ * do cenário.
  */
 @Service
 public class DeixarChatSomenteLeituraUseCase {
@@ -37,6 +39,13 @@ public class DeixarChatSomenteLeituraUseCase {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void aoCancelarAnuncio(AnuncioCanceladoEvent evento) {
         executarDoAnuncio(evento.anuncioId(), MotivoSomenteLeitura.ANUNCIO_CANCELADO, evento.ocorridoEm());
+    }
+
+    /** Recusada pelo Empregador (ETI-67): o histórico fica, o Prestador não recebe nem manda mais mensagem. */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void aoRecusarCandidatura(CandidaturaRecusadaEvent evento) {
+        executarDaCandidatura(evento.candidaturaId(), MotivoSomenteLeitura.CANDIDATURA_RECUSADA, evento.ocorridoEm());
     }
 
     /** A outra parte não fica mandando mensagem para "Usuário excluído". */
