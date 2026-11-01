@@ -179,3 +179,16 @@ candidaturas com `escolhidaEm` no período, com título e data do anúncio, para
 `CandidatarSeUseCase.cotaEsgotada` passou de mês civil UTC para `America/Sao_Paulo`, o mesmo critério da cota do
 mês (ETI-79). Em UTC, das 21:00 do último dia até 00:00 do dia 1, o bloqueio já considerava o mês seguinte e a tela de
 cota não. O fuso fica numa constante do usecase porque `anuncio` não importa `CotaMensal` (ADR-0001).
+
+## 2026-11-01 — ETI-61: editar anúncio antes da escolha
+
+`PUT /anuncios/{id}` (`EditarAnuncioUseCase`) corrige título, categoria, descrição, data/hora e opcionais enquanto o
+anúncio está `PUBLICADO` e sem candidatura escolhida (`Anuncio.permiteAlteracao`, a mesma regra de anexar fotos e
+cancelar). `DELETE /anuncios/{id}/fotos/{fotoId}` (`RemoverFotoAnuncioUseCase`) expurga a `Midia` e apaga o objeto
+do storage em `AFTER_COMMIT` (`FotoAnuncioRemovidaEvent`). Adicionar foto continua em `POST /anuncios/{id}/fotos`.
+
+Data futura e categoria ativa saíram de `PublicarAnuncioUseCase` para `ValidacaoDoAnuncioService`, compartilhado
+com a edição. Novo `EscopoTrava.ANUNCIO`: editar, remover e anexar foto travam o anúncio antes de ler o estado; o
+usecase de escolher candidato (ETI-69/70) deve tomar a mesma trava. Sem `CodigoErro` novo, sem migration, sem
+`AnuncioEditado` nem `USE_REAGENDAMENTO` (pontos em aberto). O raciocínio completo está em
+`docs/features/ETI-61-editar-anuncio-antes-da-escolha.md`.
