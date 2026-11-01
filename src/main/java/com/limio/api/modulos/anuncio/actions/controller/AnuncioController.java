@@ -12,6 +12,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -23,16 +24,18 @@ import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.actions.mapper.AnuncioMapper;
 import com.limio.api.modulos.anuncio.actions.usecase.AnexarFotosAnuncioUseCase;
 import com.limio.api.modulos.anuncio.actions.usecase.ConsultarMeuAnuncioUseCase;
+import com.limio.api.modulos.anuncio.actions.usecase.EditarAnuncioUseCase;
 import com.limio.api.modulos.anuncio.actions.usecase.PublicarAnuncioUseCase;
 import com.limio.api.modulos.anuncio.records.CriarAnuncioRequest;
 import com.limio.api.modulos.anuncio.records.CriarAnuncioResponse;
+import com.limio.api.modulos.anuncio.records.EditarAnuncioRequest;
 import com.limio.api.modulos.anuncio.records.FotoAnuncioResponse;
 import com.limio.api.modulos.anuncio.records.MeuAnuncioResponse;
 
 import jakarta.validation.Valid;
 
 /**
- * Criar e publicar anúncio, anexar fotos e consultar o próprio anúncio (ETI-59). Só o dono anexa e consulta:
+ * Criar e publicar anúncio, anexar fotos e consultar o próprio anúncio (ETI-59) e editá-lo antes da escolha (ETI-61). Só o dono anexa, consulta e edita:
  * anúncio de outra pessoa responde 404. O anúncio visto do mural (sem endereço completo) vai ter rota própria.
  */
 @RestController
@@ -42,15 +45,18 @@ public class AnuncioController {
     private final PublicarAnuncioUseCase publicarAnuncioUseCase;
     private final AnexarFotosAnuncioUseCase anexarFotosAnuncioUseCase;
     private final ConsultarMeuAnuncioUseCase consultarMeuAnuncioUseCase;
+    private final EditarAnuncioUseCase editarAnuncioUseCase;
     private final AnuncioMapper anuncioMapper;
 
     public AnuncioController(PublicarAnuncioUseCase publicarAnuncioUseCase,
             AnexarFotosAnuncioUseCase anexarFotosAnuncioUseCase,
             ConsultarMeuAnuncioUseCase consultarMeuAnuncioUseCase,
+            EditarAnuncioUseCase editarAnuncioUseCase,
             AnuncioMapper anuncioMapper) {
         this.publicarAnuncioUseCase = publicarAnuncioUseCase;
         this.anexarFotosAnuncioUseCase = anexarFotosAnuncioUseCase;
         this.consultarMeuAnuncioUseCase = consultarMeuAnuncioUseCase;
+        this.editarAnuncioUseCase = editarAnuncioUseCase;
         this.anuncioMapper = anuncioMapper;
     }
 
@@ -74,6 +80,13 @@ public class AnuncioController {
     @GetMapping("/{id}")
     public ResponseEntity<MeuAnuncioResponse> consultarMeu(@AuthenticationPrincipal UsuarioAutenticado usuario,
             @PathVariable UUID id) {
+        return ResponseEntity.ok(anuncioMapper.toResponse(consultarMeuAnuncioUseCase.executar(usuario.id(), id)));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<MeuAnuncioResponse> editar(@AuthenticationPrincipal UsuarioAutenticado usuario,
+            @PathVariable UUID id, @Valid @RequestBody EditarAnuncioRequest request) {
+        editarAnuncioUseCase.executar(usuario.id(), id, anuncioMapper.toEntity(request));
         return ResponseEntity.ok(anuncioMapper.toResponse(consultarMeuAnuncioUseCase.executar(usuario.id(), id)));
     }
 
