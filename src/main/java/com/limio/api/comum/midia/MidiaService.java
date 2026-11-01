@@ -36,6 +36,10 @@ public class MidiaService extends BaseService<Midia, UUID, MidiaRepository> {
                 TipoMidia.FOTO_ANUNCIO);
     }
 
+    public Optional<Midia> buscarFotoAtivaDoAnuncio(UUID anuncioId, UUID fotoId) {
+        return repository.findByIdAndAnuncioIdAndTipoAndExpurgoEmIsNull(fotoId, anuncioId, TipoMidia.FOTO_ANUNCIO);
+    }
+
     /** Serializa envios simultâneos de fotos do mesmo anúncio até o fim da transação (limite de quantidade). */
     public void travarFotosAnuncio(UUID anuncioId) {
         travaTransacional.travar(EscopoTrava.FOTOS_ANUNCIO, anuncioId.toString());
