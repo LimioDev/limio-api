@@ -22,4 +22,9 @@ public class ReagendamentoService extends BaseService<Reagendamento, UUID, Reage
         }
         return repository.findByAnuncioIdInAndStatus(anuncioIds, StatusReagendamento.PENDENTE);
     }
+
+    /** Quantos reagendamentos já foram aceitos pro anúncio (ETI-86); conta contra o limite de 2 (ETI-99/ETI-100). */
+    public int contarAceitos(UUID anuncioId) {
+        return repository.findByAnuncioIdInAndStatus(List.of(anuncioId), StatusReagendamento.ACEITO).size();
+    }
 }

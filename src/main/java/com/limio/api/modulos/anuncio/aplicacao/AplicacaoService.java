@@ -123,4 +123,12 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     public Optional<Aplicacao> buscarDoPrestadorNoAnuncio(UUID anuncioId, UUID prestadorId) {
         return repository.findFirstByAnuncioIdAndPrestadorIdOrderByDataAplicacaoDescIdDesc(anuncioId, prestadorId);
     }
+
+    /**
+     * A candidatura que foi escolhida pro anúncio, se alguma já foi — vale mesmo depois do serviço concluir ou
+     * o anúncio cancelar (ETI-86): {@code escolhidaEm} é permanente, diferente do {@code status} atual.
+     */
+    public Optional<Aplicacao> buscarEscolhidaDoAnuncio(UUID anuncioId) {
+        return repository.findFirstByAnuncioIdAndEscolhidaEmIsNotNull(anuncioId);
+    }
 }
