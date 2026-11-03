@@ -25,6 +25,10 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     private static final List<StatusAplicacao> STATUS_ESCOLHIDA =
             Arrays.stream(StatusAplicacao.values()).filter(StatusAplicacao::isEscolhida).toList();
 
+    /** O escolhido continua sendo o Prestador do serviço depois de concluído. */
+    private static final List<StatusAplicacao> STATUS_DO_SERVICO = List.of(StatusAplicacao.ESCOLHIDA,
+            StatusAplicacao.AGUARDANDO_VALIDACAO, StatusAplicacao.CONCLUIDA);
+
     private static final String CONSTRAINT_PAR_ATIVO_UNICO = "uk_aplicacao_par_ativo";
 
     public AplicacaoService(AplicacaoRepository repository) {
@@ -34,6 +38,11 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     /** Algum prestador já foi escolhido pro anúncio (ver {@link Aplicacao#isEscolhida()}). */
     public boolean existeEscolhida(UUID anuncioId) {
         return repository.existsByAnuncioIdAndStatusIn(anuncioId, STATUS_ESCOLHIDA);
+    }
+
+    /** Prestador escolhido para o anúncio, mesmo depois de concluído. Vazio enquanto ninguém foi escolhido. */
+    public Optional<UUID> buscarPrestadorDoServico(UUID anuncioId) {
+        return repository.findFirstByAnuncioIdAndStatusIn(anuncioId, STATUS_DO_SERVICO).map(Aplicacao::getPrestadorId);
     }
 
     /** Candidaturas ainda sem resposta do Empregador, da mais antiga pra mais nova. */
