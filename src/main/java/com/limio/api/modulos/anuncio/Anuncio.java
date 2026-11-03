@@ -156,6 +156,18 @@ public class Anuncio extends BaseEntity {
         };
     }
 
+    /**
+     * Quando o serviço foi concluído, ou {@code null} se ainda não foi (ETI-107: abre a janela de avaliação). Não há
+     * coluna própria: a conclusão por validação grava {@code validadoEm}, e a por silêncio (fim do
+     * {@code prazoValidacaoHoras}) também precisa gravar, como validação tácita.
+     */
+    public Instant concluidoEm() {
+        return switch (status) {
+            case CONCLUIDO -> validadoEm;
+            case PUBLICADO, EM_ANDAMENTO, AGUARDANDO_VALIDACAO, ENCERRADO -> null;
+        };
+    }
+
     /** UC16 (encerrar conta do contratante): tira do mural, não conclui. */
     public void encerrarPorExclusaoDeConta(Instant agora) {
         encerrar(agora, MOTIVO_EXCLUSAO_DE_CONTA);

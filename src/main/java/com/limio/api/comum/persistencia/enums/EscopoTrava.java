@@ -19,5 +19,8 @@ public enum EscopoTrava {
     FOTO_PERFIL,
 
     /** Envio de fotos por anúncio, pro limite de quantidade (ETI-59). */
-    FOTOS_ANUNCIO
+    FOTOS_ANUNCIO,
+
+    /** Avaliações recebidas por usuário e papel, pro recálculo da média (ETI-107). */
+    AVALIACOES_RECEBIDAS
 }

@@ -18,6 +18,9 @@ public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
 
     List<Aplicacao> findByAnuncioIdAndStatusIn(UUID anuncioId, List<StatusAplicacao> status);
 
+    /** Com os status do serviço vem no máximo uma: só a candidatura escolhida chega a eles. */
+    Optional<Aplicacao> findFirstByAnuncioIdAndStatusIn(UUID anuncioId, List<StatusAplicacao> status);
+
     List<Aplicacao> findByAnuncioIdInAndStatusIn(List<UUID> anuncioIds, List<StatusAplicacao> status);
 
     boolean existsByAnuncioIdAndStatusIn(UUID anuncioId, List<StatusAplicacao> status);
