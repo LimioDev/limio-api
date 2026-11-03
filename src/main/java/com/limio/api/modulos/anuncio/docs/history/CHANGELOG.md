@@ -179,3 +179,17 @@ candidaturas com `escolhidaEm` no período, com título e data do anúncio, para
 `CandidatarSeUseCase.cotaEsgotada` passou de mês civil UTC para `America/Sao_Paulo`, o mesmo critério da cota do
 mês (ETI-79). Em UTC, das 21:00 do último dia até 00:00 do dia 1, o bloqueio já considerava o mês seguinte e a tela de
 cota não. O fuso fica numa constante do usecase porque `anuncio` não importa `CotaMensal` (ADR-0001).
+
+## 2026-10-29 — ETI-73: mural e detalhe do anúncio para o Prestador
+
+Primeiro consumo do anúncio por quem não é o dono: `GET /anuncios/mural` (paginado, com filtros) e
+`GET /anuncios/mural/{id}`. A compatibilidade (especialidade/"Outros" + raio) roda inteira no banco, numa query
+nativa com haversine — o projeto não tem PostGIS nem paginação antes disso; `PageResponse<T>` nasceu em
+`comum/records`. O que é do Prestador (especialidades, "Outros", raio, base) chega pela porta nova
+`ConsultaPerfilPrestador`; `ConsultaPerfilEmpregador` e `ConsultaCategoria` ganharam consulta em lote para não
+fazer uma query por item. Decisões que o card não tomava e foram feitas aqui (a confirmar com o PO): semântica de
+"esta semana"/"fim de semana" (segunda a domingo, Brasília), anúncio no passado não aparece, visibilidade do
+detalhe, papel inválido como `ACESSO_NEGADO` em vez de `PAPEL_INVALIDO`. `anuncio` ganhou `cidade_snapshot`
+(`EnderecoLocalizado` passou a ter `cidade`). Migrations `V25` (índices do mural) e `V26` (cidade) — pulam V22–V24
+porque outras PRs abertas já usam V22/V23. Detalhe em
+`docs/features/ETI-73-mural-e-detalhe-do-anuncio-para-o-prestador.md`.

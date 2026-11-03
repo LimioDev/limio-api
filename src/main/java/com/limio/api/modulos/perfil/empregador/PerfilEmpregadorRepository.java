@@ -1,5 +1,7 @@
 package com.limio.api.modulos.perfil.empregador;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,6 +17,8 @@ import jakarta.persistence.LockModeType;
 public interface PerfilEmpregadorRepository extends BaseRepository<PerfilEmpregador, UUID> {
 
     Optional<PerfilEmpregador> findByUsuarioId(UUID usuarioId);
+
+    List<PerfilEmpregador> findByUsuarioIdIn(Collection<UUID> usuarioIds);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from PerfilEmpregador p where p.id = :id")

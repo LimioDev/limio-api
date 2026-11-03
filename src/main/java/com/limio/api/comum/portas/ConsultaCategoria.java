@@ -1,5 +1,7 @@
 package com.limio.api.comum.portas;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,4 +19,12 @@ public interface ConsultaCategoria {
      * @return a categoria, ou vazio se o id não existe
      */
     Optional<ResumoCategoria> buscarPorId(UUID categoriaId);
+
+    /**
+     * Versão em lote de {@link #buscarPorId}, para listagens: uma consulta só. Id inexistente não vem no mapa.
+     *
+     * @param categoriaIds ids das categorias (repetidos são ignorados)
+     * @return categoria por id
+     */
+    Map<UUID, ResumoCategoria> buscarPorIdsEmLote(Collection<UUID> categoriaIds);
 }
