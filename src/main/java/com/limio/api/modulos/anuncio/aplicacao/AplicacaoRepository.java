@@ -2,6 +2,7 @@ package com.limio.api.modulos.anuncio.aplicacao;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.limio.api.comum.base.BaseRepository;
@@ -28,4 +29,7 @@ public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
     /** @param fimExclusivo limite superior do período, não contado (início do mês seguinte) */
     long countByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThan(UUID prestadorId, Instant inicio,
             Instant fimExclusivo);
+
+    Optional<Aplicacao> findFirstByAnuncioIdAndPrestadorIdOrderByDataAplicacaoDescIdDesc(UUID anuncioId,
+            UUID prestadorId);
 }

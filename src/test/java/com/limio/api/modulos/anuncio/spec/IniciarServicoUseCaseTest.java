@@ -76,7 +76,7 @@ class IniciarServicoUseCaseTest {
     }
 
     private void comAnuncioEPrestadorEscolhido(Anuncio anuncio) {
-        when(anuncioService.buscarPorIdParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
+        when(anuncioService.buscarParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
         when(aplicacaoService.foiEscolhido(ANUNCIO_ID, PRESTADOR_ID)).thenReturn(true);
     }
 
@@ -137,7 +137,7 @@ class IniciarServicoUseCaseTest {
     @Test
     void dadoPrestadorNaoEscolhido_quandoInicia_entao404() {
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO);
-        when(anuncioService.buscarPorIdParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
+        when(anuncioService.buscarParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
         when(aplicacaoService.foiEscolhido(ANUNCIO_ID, PRESTADOR_ID)).thenReturn(false);
 
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, PRESTADOR_ID))
@@ -150,7 +150,7 @@ class IniciarServicoUseCaseTest {
 
     @Test
     void dadoAnuncioInexistente_quandoInicia_entao404() {
-        when(anuncioService.buscarPorIdParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.empty());
+        when(anuncioService.buscarParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, PRESTADOR_ID))
                 .isInstanceOf(ServicoNaoEncontradoException.class);

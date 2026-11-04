@@ -46,7 +46,7 @@ public class IniciarServicoUseCase {
 
     @Transactional
     public Anuncio executar(UUID anuncioId, UUID prestadorId) {
-        Anuncio anuncio = anuncioService.buscarPorIdParaAtualizar(anuncioId)
+        Anuncio anuncio = anuncioService.buscarParaAtualizar(anuncioId)
                 .orElseThrow(ServicoNaoEncontradoException::new);
 
         if (!aplicacaoService.foiEscolhido(anuncioId, prestadorId)) {
