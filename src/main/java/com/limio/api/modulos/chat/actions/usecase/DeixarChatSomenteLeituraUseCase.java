@@ -11,6 +11,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.limio.api.comum.eventos.AnuncioCanceladoEvent;
+import com.limio.api.comum.eventos.CandidaturaEncerradaEvent;
 import com.limio.api.comum.eventos.ContaEncerradaEvent;
 import com.limio.api.modulos.chat.Chat;
 import com.limio.api.modulos.chat.ChatService;
@@ -20,9 +21,10 @@ import com.limio.api.modulos.chat.enums.MotivoSomenteLeitura;
  * Reação de {@code chat} ao fim da candidatura, do anúncio ou da conta de uma das partes (ETI-101): o chat para de
  * receber mensagens e o histórico continua. Roda depois do commit de quem publicou, em transação própria (ADR-0003).
  *
- * Hoje escuta {@code AnuncioCanceladoEvent} e {@code ContaEncerradaEvent}. Os cards de recusa (ETI-67), desistência
- * (ETI-77), escolha (ETI-69) e serviço cancelado (ETI-94/ETI-96) publicam seus eventos e ligam aqui um listener que
- * chama {@link #executarDaCandidatura} (ou {@link #executarDoAnuncio}) com o {@link MotivoSomenteLeitura} do cenário.
+ * Hoje escuta {@code AnuncioCanceladoEvent}, {@code ContaEncerradaEvent} e {@code CandidaturaEncerradaEvent}
+ * (desistência, ETI-77). Os cards de recusa (ETI-67), escolha (ETI-69) e serviço cancelado (ETI-94/ETI-96) publicam
+ * seus eventos e ligam aqui um listener que chama {@link #executarDaCandidatura} (ou {@link #executarDoAnuncio}) com
+ * o {@link MotivoSomenteLeitura} do cenário.
  */
 @Service
 public class DeixarChatSomenteLeituraUseCase {
@@ -45,6 +47,12 @@ public class DeixarChatSomenteLeituraUseCase {
     public void aoEncerrarConta(ContaEncerradaEvent evento) {
         deixarSomenteLeitura(chatService.buscarAbertosDoParticipante(evento.usuarioId()),
                 MotivoSomenteLeitura.CONTA_ENCERRADA, evento.ocorridoEm());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void aoDesistirCandidatura(CandidaturaEncerradaEvent evento) {
+        executarDaCandidatura(evento.candidaturaId(), MotivoSomenteLeitura.CANDIDATO_DESISTIU, evento.ocorridoEm());
     }
 
     /** O chat de uma candidatura; sem chat (candidatura anterior ao módulo), nada a fazer. */

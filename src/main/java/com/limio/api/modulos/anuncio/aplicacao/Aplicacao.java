@@ -31,6 +31,8 @@ import lombok.Setter;
 @Builder
 public class Aplicacao extends BaseEntity {
 
+    private static final String MOTIVO_DESISTENCIA = "Desistência do Prestador";
+
     @Column(name = "anuncio_id", nullable = false)
     private UUID anuncioId;
 
@@ -59,6 +61,15 @@ public class Aplicacao extends BaseEntity {
     /** Prestador já escolhido pelo contratante: combinado ou aguardando validação (TICKET-0052). */
     public boolean isEscolhida() {
         return status.isEscolhida();
+    }
+
+    public boolean pertenceA(UUID usuarioId) {
+        return prestadorId.equals(usuarioId);
+    }
+
+    /** UC "Desistir da aplicação" (ETI-77). Quem chama já validou que ainda está {@code ENVIADA}. */
+    public void desistir(Instant agora) {
+        encerrar(agora, MOTIVO_DESISTENCIA);
     }
 
     public void encerrar(Instant agora, String motivo) {
