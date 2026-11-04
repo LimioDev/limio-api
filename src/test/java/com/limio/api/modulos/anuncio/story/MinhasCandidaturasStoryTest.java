@@ -196,16 +196,16 @@ class MinhasCandidaturasStoryTest {
 
         listar("?aba=PENDENTES")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.itens", hasSize(1)))
-                .andExpect(jsonPath("$.itens[0].id", is(enviada.getId().toString())))
-                .andExpect(jsonPath("$.itens[0].anuncioId", is(faxina.getId().toString())))
-                .andExpect(jsonPath("$.itens[0].titulo", is("Faxina pós-obra")))
-                .andExpect(jsonPath("$.itens[0].dataHoraPretendida").exists())
-                .andExpect(jsonPath("$.itens[0].nomeEmpregador", is("Maria S.")))
-                .andExpect(jsonPath("$.itens[0].iniciaisEmpregador", is("MS")))
-                .andExpect(jsonPath("$.itens[0].status", is("ENVIADA")))
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].id", is(enviada.getId().toString())))
+                .andExpect(jsonPath("$.content[0].anuncioId", is(faxina.getId().toString())))
+                .andExpect(jsonPath("$.content[0].titulo", is("Faxina pós-obra")))
+                .andExpect(jsonPath("$.content[0].dataHoraPretendida").exists())
+                .andExpect(jsonPath("$.content[0].nomeEmpregador", is("Maria S.")))
+                .andExpect(jsonPath("$.content[0].iniciaisEmpregador", is("MS")))
+                .andExpect(jsonPath("$.content[0].status", is("ENVIADA")))
                 .andExpect(jsonPath("$.pagina", is(0)))
-                .andExpect(jsonPath("$.totalItens", is(1)))
+                .andExpect(jsonPath("$.totalElementos", is(1)))
                 .andExpect(jsonPath("$.totalPaginas", is(1)));
     }
 
@@ -217,8 +217,8 @@ class MinhasCandidaturasStoryTest {
 
         listar("?aba=COMBINADAS")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.itens", hasSize(2)))
-                .andExpect(jsonPath("$.itens[*].status").value(
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.content[*].status").value(
                         containsInAnyOrder("ESCOLHIDA", "AGUARDANDO_VALIDACAO")));
     }
 
@@ -231,8 +231,8 @@ class MinhasCandidaturasStoryTest {
 
         listar("?aba=HISTORICO")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.itens", hasSize(3)))
-                .andExpect(jsonPath("$.itens[*].status").value(
+                .andExpect(jsonPath("$.content", hasSize(3)))
+                .andExpect(jsonPath("$.content[*].status").value(
                         containsInAnyOrder("RECUSADA", "CONCLUIDA", "ENCERRADA")));
     }
 
@@ -244,8 +244,8 @@ class MinhasCandidaturasStoryTest {
 
         listar("?aba=PENDENTES")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.itens", hasSize(0)))
-                .andExpect(jsonPath("$.totalItens", is(0)));
+                .andExpect(jsonPath("$.content", hasSize(0)))
+                .andExpect(jsonPath("$.totalElementos", is(0)));
     }
 
     @Test
@@ -257,7 +257,7 @@ class MinhasCandidaturasStoryTest {
         for (String aba : List.of("PENDENTES", "HISTORICO")) {
             listar("?aba=" + aba)
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.itens", hasSize(1)))
+                    .andExpect(jsonPath("$.content", hasSize(1)))
                     .andExpect(content().string(not(containsString(ENDERECO_COMPLETO))))
                     .andExpect(content().string(not(containsString(EMAIL_EMPREGADOR))))
                     .andExpect(content().string(not(containsString(TELEFONE_EMPREGADOR))))
@@ -275,11 +275,11 @@ class MinhasCandidaturasStoryTest {
 
         listar("?aba=PENDENTES&pagina=1")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.itens", hasSize(1)))
-                .andExpect(jsonPath("$.itens[0].titulo", is("Serviço 0")))
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].titulo", is("Serviço 0")))
                 .andExpect(jsonPath("$.pagina", is(1)))
                 .andExpect(jsonPath("$.tamanho", is(20)))
-                .andExpect(jsonPath("$.totalItens", is(21)))
+                .andExpect(jsonPath("$.totalElementos", is(21)))
                 .andExpect(jsonPath("$.totalPaginas", is(2)));
     }
 
@@ -338,8 +338,8 @@ class MinhasCandidaturasStoryTest {
                 .andExpect(jsonPath("$.anuncios[0].candidatos", is(0)))
                 .andExpect(jsonPath("$.novosCandidatos", is(0)));
 
-        listar("?aba=PENDENTES").andExpect(jsonPath("$.itens", hasSize(0)));
-        listar("?aba=HISTORICO").andExpect(jsonPath("$.itens[0].status", is("ENCERRADA")));
+        listar("?aba=PENDENTES").andExpect(jsonPath("$.content", hasSize(0)));
+        listar("?aba=HISTORICO").andExpect(jsonPath("$.content[0].status", is("ENCERRADA")));
     }
 
     @Test

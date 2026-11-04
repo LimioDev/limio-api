@@ -43,4 +43,7 @@ public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from Aplicacao a where a.id = :id")
     Optional<Aplicacao> findByIdParaAtualizar(@Param("id") UUID id);
+
+    Optional<Aplicacao> findFirstByAnuncioIdAndPrestadorIdOrderByDataAplicacaoDescIdDesc(UUID anuncioId,
+            UUID prestadorId);
 }

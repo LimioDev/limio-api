@@ -1,18 +1,25 @@
 package com.limio.api.comum.records;
 
 import java.util.List;
+import java.util.function.Function;
 
 import org.springframework.data.domain.Page;
 
 /**
- * Lista paginada no contrato HTTP, sem expor o JSON interno do {@link Page} do Spring Data (que muda entre
- * versões). {@code pagina} começa em 0.
+ * Página de resultados no contrato HTTP. {@code totalElementos} é o total do filtro inteiro (não só da página)
  */
-public record PageResponse<T>(List<T> itens, int pagina, int tamanho, long totalItens, int totalPaginas) {
+public record PageResponse<T>(List<T> content, int pagina, int tamanho, long totalElementos, int totalPaginas) {
 
-    /** Recebe a página já convertida pro record de resposta (ex.: {@code page.map(mapper::toResponse)}). */
-    public static <T> PageResponse<T> de(Page<T> page) {
-        return new PageResponse<>(page.getContent(), page.getNumber(), page.getSize(), page.getTotalElements(),
+    public PageResponse {
+        content = List.copyOf(content);
+    }
+
+    public static <E, T> PageResponse<T> de(Page<E> page, Function<E, T> conversor) {
+        return new PageResponse<>(
+                page.getContent().stream().map(conversor).toList(),
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
                 page.getTotalPages());
     }
 }

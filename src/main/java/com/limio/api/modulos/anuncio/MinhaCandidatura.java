@@ -1,11 +1,9 @@
 package com.limio.api.modulos.anuncio;
 
-import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
+import java.util.UUID;
 
-/**
- * Uma linha da tela "Aplicações" do Prestador (ETI-77). {@code nomeEmpregador} vem abreviado ("Maria S.") e,
- * junto com {@code iniciaisEmpregador}, é {@code null} se a conta do Empregador já foi encerrada.
- */
-public record MinhaCandidatura(Aplicacao aplicacao, Anuncio anuncio, String nomeEmpregador,
-        String iniciaisEmpregador) {
+import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
+
+/** Candidatura do próprio Prestador no anúncio: o {@code id} dá o acesso ao chat dela (ETI-101). */
+public record MinhaCandidatura(UUID id, StatusAplicacao status) {
 }

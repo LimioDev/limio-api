@@ -28,7 +28,7 @@ import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.DadosUsuario;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
-import com.limio.api.modulos.anuncio.MinhaCandidatura;
+import com.limio.api.modulos.anuncio.ItemMinhaCandidatura;
 import com.limio.api.modulos.anuncio.actions.usecase.ListarMinhasCandidaturasUseCase;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
@@ -99,7 +99,7 @@ class ListarMinhasCandidaturasUseCaseTest {
         when(anuncioService.buscarPorIds(List.of(anuncio.getId()))).thenReturn(List.of(anuncio));
         when(consultaDadosUsuario.buscarPorId(EMPREGADOR_ID)).thenReturn(Optional.of(dados("Maria da Silva")));
 
-        Page<MinhaCandidatura> resultado = useCase.executar(PRESTADOR_ID, AbaCandidatura.PENDENTES, 0);
+        Page<ItemMinhaCandidatura> resultado = useCase.executar(PRESTADOR_ID, AbaCandidatura.PENDENTES, 0);
 
         assertThat(resultado.getContent()).singleElement().satisfies(item -> {
             assertThat(item.aplicacao()).isSameAs(aplicacao);
@@ -154,7 +154,7 @@ class ListarMinhasCandidaturasUseCaseTest {
         pagina(3, 40);
         when(anuncioService.buscarPorIds(List.of())).thenReturn(List.of());
 
-        Page<MinhaCandidatura> resultado = useCase.executar(PRESTADOR_ID, AbaCandidatura.PENDENTES, 3);
+        Page<ItemMinhaCandidatura> resultado = useCase.executar(PRESTADOR_ID, AbaCandidatura.PENDENTES, 3);
 
         assertThat(resultado.getContent()).isEmpty();
         assertThat(resultado.getNumber()).isEqualTo(3);

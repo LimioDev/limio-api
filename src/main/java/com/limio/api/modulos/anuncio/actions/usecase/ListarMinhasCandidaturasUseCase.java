@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
-import com.limio.api.modulos.anuncio.MinhaCandidatura;
+import com.limio.api.modulos.anuncio.ItemMinhaCandidatura;
 import com.limio.api.modulos.anuncio.actions.helper.NomeHelper;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
@@ -52,7 +52,7 @@ public class ListarMinhasCandidaturasUseCase {
     }
 
     @Transactional(readOnly = true)
-    public Page<MinhaCandidatura> executar(UUID prestadorId, AbaCandidatura aba, int pagina) {
+    public Page<ItemMinhaCandidatura> executar(UUID prestadorId, AbaCandidatura aba, int pagina) {
         Page<Aplicacao> aplicacoes = aplicacaoService.buscarDoPrestadorPorAba(prestadorId, aba, pagina,
                 TAMANHO_PAGINA);
         Map<UUID, Anuncio> anuncios = anuncioService
@@ -61,7 +61,7 @@ public class ListarMinhasCandidaturasUseCase {
                 .collect(toMap(Anuncio::getId, identity()));
         Map<UUID, String> nomesDosEmpregadores = nomesCompletos(anuncios.values());
 
-        List<MinhaCandidatura> itens = aplicacoes.stream()
+        List<ItemMinhaCandidatura> itens = aplicacoes.stream()
                 .map(aplicacao -> montar(aplicacao, anuncios, nomesDosEmpregadores))
                 .flatMap(Optional::stream)
                 .toList();
@@ -85,7 +85,7 @@ public class ListarMinhasCandidaturasUseCase {
      * (só encerrado), então isso é dado inconsistente — loga e segue com os outros itens. O total da página
      * continua contando o item pulado.
      */
-    private Optional<MinhaCandidatura> montar(Aplicacao aplicacao, Map<UUID, Anuncio> anuncios,
+    private Optional<ItemMinhaCandidatura> montar(Aplicacao aplicacao, Map<UUID, Anuncio> anuncios,
             Map<UUID, String> nomesDosEmpregadores) {
         Anuncio anuncio = anuncios.get(aplicacao.getAnuncioId());
         if (anuncio == null) {
@@ -93,7 +93,7 @@ public class ListarMinhasCandidaturasUseCase {
             return Optional.empty();
         }
         Optional<String> nome = Optional.ofNullable(nomesDosEmpregadores.get(anuncio.getContratanteId()));
-        return Optional.of(new MinhaCandidatura(aplicacao, anuncio,
+        return Optional.of(new ItemMinhaCandidatura(aplicacao, anuncio,
                 nome.map(NomeHelper::abreviar).orElse(null),
                 nome.map(NomeHelper::iniciais).orElse(null)));
     }

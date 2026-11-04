@@ -1,5 +1,7 @@
 package com.limio.api.comum.portas;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,5 +35,16 @@ public interface ConsultaPerfilEmpregador {
      * @return nome de exibição e link temporário da foto, ou vazio se a conta não existe ou foi encerrada
      */
     Optional<ResumoPerfilEmpregador> buscarResumoSemCriar(UUID usuarioId);
+
+    /**
+     * Versão em lote de {@link #buscarResumo}, para listagens (uma consulta por tabela, não uma por item).
+     * Só leitura: diferente de {@code buscarResumo}, não cria perfil — quem nunca abriu o perfil
+     * aparece com o nome de exibição inicial, calculado na hora. Conta inexistente ou encerrada simplesmente
+     * não vem no mapa (sem exceção). A foto segue a mesma regra: nunca derruba a consulta.
+     *
+     * @param usuarioIds ids dos usuários (repetidos são ignorados)
+     * @return resumo por id de usuário
+     */
+    Map<UUID, ResumoPerfilEmpregador> buscarResumosEmLote(Collection<UUID> usuarioIds);
 
 }

@@ -37,7 +37,7 @@ class ConsultarPainelEmpregadorUseCaseTest {
 
     private static final UUID CONTRATANTE_ID = UUID.randomUUID();
     private static final UUID PRESTADOR_ID = UUID.randomUUID();
-    private static final ResumoPerfilEmpregador PERFIL = new ResumoPerfilEmpregador("Maria", null, null);
+    private static final ResumoPerfilEmpregador PERFIL = new ResumoPerfilEmpregador("Maria", null, null, null, 0);
 
     @Mock
     private AnuncioService anuncioService;

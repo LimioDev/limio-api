@@ -63,7 +63,7 @@ pendente, para que eu acompanhe meus serviços e libere minha agenda.
 
 | Operação | Rota | Entrada | Saída |
 |---|---|---|---|
-| Listar minhas candidaturas | `GET /candidaturas/minhas` | `aba` (obrigatória), `pagina` (opcional, ≥ 0) | 200 `PageResponse<MinhaCandidaturaResponse>` (`itens`, `pagina`, `tamanho`, `totalItens`, `totalPaginas`) |
+| Listar minhas candidaturas | `GET /candidaturas/minhas` | `aba` (obrigatória), `pagina` (opcional, ≥ 0) | 200 `PageResponse<MinhaCandidaturaResponse>` (`content`, `pagina`, `tamanho`, `totalElementos`, `totalPaginas`) |
 | Desistir da candidatura | `POST /candidaturas/{candidaturaId}/desistir` | id no path | 200 sem corpo |
 
 `CodigoErro` novos: `CANDIDATURA_NAO_ENCONTRADA` (404), `CANDIDATURA_ESTADO_INVALIDO` (409),
