@@ -57,6 +57,15 @@ public class MidiaService extends BaseService<Midia, UUID, MidiaRepository> {
                 TipoMidia.FOTO_ANUNCIO);
     }
 
+    /**
+     * Fotos ativas do check-out do anúncio, na ordem em que foram enviadas (ETI-92). Vazio enquanto nenhum
+     * usecase grava {@code FOTO_CHECKOUT} — o check-out (ETI-90) ainda não existe.
+     */
+    public List<Midia> buscarFotosAtivasDoCheckout(UUID anuncioId) {
+        return repository.findByAnuncioIdAndTipoAndExpurgoEmIsNullOrderByCriadoEmAscIdAsc(anuncioId,
+                TipoMidia.FOTO_CHECKOUT);
+    }
+
     /** Serializa envios simultâneos de fotos do mesmo anúncio até o fim da transação (limite de quantidade). */
     public void travarFotosAnuncio(UUID anuncioId) {
         travaTransacional.travar(EscopoTrava.FOTOS_ANUNCIO, anuncioId.toString());
