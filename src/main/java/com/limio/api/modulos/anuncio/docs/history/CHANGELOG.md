@@ -207,3 +207,15 @@ detalhe, papel inválido como `ACESSO_NEGADO` em vez de `PAPEL_INVALIDO`. `anunc
 (`EnderecoLocalizado` passou a ter `cidade`). Migrations `V25` (índices do mural) e `V26` (cidade) — pulam V22–V24
 porque outras PRs abertas já usam V22/V23. Detalhe em
 `docs/features/ETI-73-mural-e-detalhe-do-anuncio-para-o-prestador.md`.
+
+## 2026-10-30 — ETI-88: iniciar o serviço
+
+`POST /anuncios/{anuncioId}/iniciar`: `IniciarServicoUseCase` leva o anúncio de `PUBLICADO` para
+`EM_ANDAMENTO`, grava `iniciadoEm`, encerra a proposta de reagendamento pendente e publica
+`ServicoIniciadoEvent` (novo, `comum/eventos/`), que o ETI-112 vai escutar. Sem migration.
+
+Quem não é o Prestador escolhido recebe o mesmo 404 `SERVICO_NAO_ENCONTRADO` de um id inexistente. A busca
+trava a linha do anúncio (`findByIdParaAtualizar`), porque `BaseEntity` não tem `@Version`: no clique duplo
+só uma requisição passa, a outra recebe 409 `SERVICO_ESTADO_INVALIDO`.
+
+Detalhe em `docs/features/ETI-88-iniciar-o-servico.md`.
