@@ -46,4 +46,6 @@ public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
 
     Optional<Aplicacao> findFirstByAnuncioIdAndPrestadorIdOrderByDataAplicacaoDescIdDesc(UUID anuncioId,
             UUID prestadorId);
+
+    Optional<Aplicacao> findFirstByAnuncioIdAndEscolhidaEmIsNotNull(UUID anuncioId);
 }

@@ -173,6 +173,46 @@ public class Anuncio extends BaseEntity {
         this.iniciadoEm = agora;
     }
 
+    /**
+     * ETI-92: validação presencial, sem check-out — a partir de {@code PUBLICADO} (o passo opcional "iniciar"
+     * nunca rodou) ou {@code EM_ANDAMENTO}. Quem chama já confirmou que existe candidatura escolhida.
+     */
+    public boolean permiteValidacaoPresencial() {
+        return switch (status) {
+            case PUBLICADO, EM_ANDAMENTO -> true;
+            case AGUARDANDO_VALIDACAO, CONCLUIDO, ENCERRADO -> false;
+        };
+    }
+
+    /** ETI-92: validação pela foto exige o check-out do Prestador feito antes (ETI-90). */
+    public boolean permiteValidacaoPelaFoto() {
+        return switch (status) {
+            case AGUARDANDO_VALIDACAO -> true;
+            case PUBLICADO, EM_ANDAMENTO, CONCLUIDO, ENCERRADO -> false;
+        };
+    }
+
+    /**
+     * ETI-92: só pra escolher o {@code CodigoErro} certo quando {@link #permiteValidacaoPelaFoto} nega — o
+     * anúncio ainda não passou pelo check-out (sem foto pra validar), diferente de já ter concluído ou
+     * encerrado (aí o problema é outro, {@code SERVICO_ESTADO_INVALIDO}).
+     */
+    public boolean aindaNaoTeveCheckout() {
+        return switch (status) {
+            case PUBLICADO, EM_ANDAMENTO -> true;
+            case AGUARDANDO_VALIDACAO, CONCLUIDO, ENCERRADO -> false;
+        };
+    }
+
+    /**
+     * ETI-92: Empregador validou o serviço, presencial ou pela foto. Quem chama já validou o estado do
+     * anúncio. Não registra nem confere pagamento (UC) — só encerra o ciclo do anúncio.
+     */
+    public void validar(Instant agora) {
+        this.status = StatusAnuncio.CONCLUIDO;
+        this.validadoEm = agora;
+    }
+
     /** UC16 (encerrar conta do contratante): tira do mural, não conclui. */
     public void encerrarPorExclusaoDeConta(Instant agora) {
         encerrar(agora, MOTIVO_EXCLUSAO_DE_CONTA);
