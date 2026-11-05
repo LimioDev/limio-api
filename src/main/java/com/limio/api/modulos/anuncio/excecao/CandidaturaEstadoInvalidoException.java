@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 import com.limio.api.comum.excecao.NegocioException;
 import com.limio.api.comum.excecao.enums.CodigoErro;
 
-/** Candidatura que não está mais ENVIADA (já recusada, escolhida ou encerrada) — não aceita a ação pedida. */
+/** Candidatura já recusada, concluída ou encerrada — não há mais do que desistir (ETI-77). */
 public class CandidaturaEstadoInvalidoException extends NegocioException {
 
     public CandidaturaEstadoInvalidoException() {

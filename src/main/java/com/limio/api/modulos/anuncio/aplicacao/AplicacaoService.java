@@ -8,9 +8,13 @@ import java.util.UUID;
 
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import com.limio.api.comum.base.BaseService;
+import com.limio.api.modulos.anuncio.enums.AbaCandidatura;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
 import com.limio.api.modulos.anuncio.excecao.CandidaturaDuplicadaException;
 
@@ -25,6 +29,9 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     private static final List<StatusAplicacao> STATUS_ESCOLHIDA =
             Arrays.stream(StatusAplicacao.values()).filter(StatusAplicacao::isEscolhida).toList();
 
+    /** Mais recente primeiro; {@code id} desempata pra paginação estável. */
+    private static final Sort MAIS_RECENTES = Sort.by(Sort.Order.desc("dataAplicacao"), Sort.Order.desc("id"));
+
     private static final String CONSTRAINT_PAR_ATIVO_UNICO = "uk_aplicacao_par_ativo";
 
     public AplicacaoService(AplicacaoRepository repository) {
@@ -34,6 +41,11 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     /** Algum prestador já foi escolhido pro anúncio (ver {@link Aplicacao#isEscolhida()}). */
     public boolean existeEscolhida(UUID anuncioId) {
         return repository.existsByAnuncioIdAndStatusIn(anuncioId, STATUS_ESCOLHIDA);
+    }
+
+    /** {@code prestadorId} é o escolhido deste anúncio (ver {@link Aplicacao#isEscolhida()}). */
+    public boolean foiEscolhido(UUID anuncioId, UUID prestadorId) {
+        return repository.existsByAnuncioIdAndPrestadorIdAndStatusIn(anuncioId, prestadorId, STATUS_ESCOLHIDA);
     }
 
     /** Candidaturas ainda sem resposta do Empregador, da mais antiga pra mais nova. */
@@ -114,5 +126,28 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
             }
         }
         return false;
+    }
+
+    /** Candidaturas do Prestador que caem na {@code aba} (ETI-77), mais recentes primeiro. */
+    public Page<Aplicacao> buscarDoPrestadorPorAba(UUID prestadorId, AbaCandidatura aba, int pagina, int tamanho) {
+        return repository.findByPrestadorIdAndStatusIn(prestadorId, aba.status(),
+                PageRequest.of(pagina, tamanho, MAIS_RECENTES));
+    }
+
+    /**
+     * Busca com {@code SELECT ... FOR UPDATE}: quem muda o status (desistir, ETI-77) segura a linha até o fim
+     * da transação. A escolha do Empregador (card futuro) precisa usar esta mesma busca pra esperar e reler o
+     * status atualizado — sem isso as duas gravações podem se sobrescrever.
+     */
+    public Optional<Aplicacao> buscarParaAtualizar(UUID id) {
+        return repository.findByIdParaAtualizar(id);
+    }
+
+    /**
+     * A candidatura de {@code prestadorId} ao anúncio, de qualquer status. O banco não impede duas para o mesmo
+     * par (só uma ESCOLHIDA por anúncio); com mais de uma vale a mais recente.
+     */
+    public Optional<Aplicacao> buscarDoPrestadorNoAnuncio(UUID anuncioId, UUID prestadorId) {
+        return repository.findFirstByAnuncioIdAndPrestadorIdOrderByDataAplicacaoDescIdDesc(anuncioId, prestadorId);
     }
 }

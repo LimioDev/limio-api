@@ -35,7 +35,7 @@ public class ConsultaEnderecoService implements ConsultaEndereco {
     @Transactional(readOnly = true)
     public EnderecoLocalizado buscarSalvo(UUID usuarioId, UUID enderecoSalvoId) {
         EnderecoSalvo salvo = enderecoSalvoService.buscarEnderecoAtivoDoUsuarioOuFalhar(enderecoSalvoId, usuarioId);
-        return new EnderecoLocalizado(salvo.getBairroRegiao(), salvo.getUf(),
+        return new EnderecoLocalizado(salvo.getBairroRegiao(), salvo.getCidade(), salvo.getUf(),
                 emUmaLinha(salvo.getRua(), salvo.getNumero(), salvo.getComplemento(), salvo.getBairroRegiao(),
                         salvo.getCidade(), salvo.getUf()),
                 salvo.getLatitude(), salvo.getLongitude());
@@ -47,7 +47,7 @@ public class ConsultaEnderecoService implements ConsultaEndereco {
         Coordenadas coordenadas = geocodificador.localizarEndereco(new EnderecoParaGeocodificar(endereco.rua(),
                 endereco.numero(), endereco.cidade(), endereco.uf()))
                 .orElseThrow(EnderecoNaoLocalizadoException::new);
-        return new EnderecoLocalizado(endereco.bairroRegiao(), endereco.uf(),
+        return new EnderecoLocalizado(endereco.bairroRegiao(), endereco.cidade(), endereco.uf(),
                 emUmaLinha(endereco.rua(), endereco.numero(), endereco.complemento(), endereco.bairroRegiao(),
                         endereco.cidade(), endereco.uf()),
                 coordenadas.latitude(), coordenadas.longitude());
