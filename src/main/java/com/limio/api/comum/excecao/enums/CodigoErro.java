@@ -44,8 +44,6 @@ public enum CodigoErro {
     SERVICO_ESTADO_INVALIDO("O serviço não permite esta ação no estado atual."),
     ANUNCIO_PROPRIO("Você não pode se candidatar ao próprio anúncio."),
     CANDIDATURA_DUPLICADA("Você já tem uma candidatura em aberto para este anúncio."),
-    CANDIDATURA_NAO_ENCONTRADA("Candidatura não encontrada."),
-    CANDIDATURA_ESTADO_INVALIDO("A candidatura não permite esta ação no estado atual."),
     COTA_ESGOTADA("Você atingiu o limite de candidaturas escolhidas do plano gratuito neste mês."),
     CANDIDATURA_NAO_ENCONTRADA("Candidatura não encontrada."),
     CANDIDATURA_ESTADO_INVALIDO("Esta candidatura já foi encerrada."),

@@ -229,7 +229,7 @@ Detalhe em `docs/features/ETI-88-iniciar-o-servico.md`.
 Três portas de leitura novas em `comum/portas/`: `ConsultaEspecialidades` (`perfil`), `ConsultaChat` (`chat`) e
 `ConsultaAvaliacoes` (`perfil`, provisória: sem módulo de avaliações, devolve sempre "sem avaliações").
 
-Primeiro lock pessimista do módulo: `AnuncioRepository.findByIdParaAtualizar`, usado pela recusa. A escolha de
-candidato (ETI-69/70) deve travar o mesmo anúncio. Sem migration.
+A recusa trava o anúncio com `EscopoTrava.ANUNCIO` (advisory lock), o mesmo mecanismo da edição (ETI-61). A escolha de
+candidato (ETI-69/70) deve tomar a mesma trava. Sem migration.
 
 Detalhe completo em `docs/features/ETI-67-listar-candidatos-e-recusar-candidato.md`.

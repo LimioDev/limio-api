@@ -10,8 +10,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,9 +34,12 @@ import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.limio.api.TestcontainersConfiguration;
 import com.limio.api.comum.eventos.CandidaturaRecusadaEvent;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioRepository;
@@ -50,6 +59,8 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * BDD ponta a ponta (controller -> banco real) do UC "Recusar um candidato" (ETI-67). Anúncios e candidaturas nascem
  * direto pelo repository e os chats por SQL (o listener que cria o chat só roda no fluxo de candidatar-se).
+ * Não existe usecase de escolher candidato: a escolha concorrente é simulada gravando a candidatura
+ * {@code ESCOLHIDA} sob {@link EscopoTrava#ANUNCIO}, a trava que o usecase de escolha vai tomar.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -85,6 +96,12 @@ class RecusarCandidatoStoryTest {
 
     @Autowired
     private ApplicationEvents eventos;
+
+    @Autowired
+    private TransactionTemplate transacao;
+
+    @Autowired
+    private TravaTransacional trava;
 
     @BeforeEach
     void limparBase() {
@@ -348,5 +365,105 @@ class RecusarCandidatoStoryTest {
                         UUID.randomUUID()))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.codigo", is("NAO_AUTENTICADO")));
+    }
+
+    /**
+     * A "escolha" segura a trava do anúncio, grava a candidatura {@code ESCOLHIDA} e só então confirma. A recusa
+     * chega no meio, espera a trava e, quando entra, já enxerga a escolha: responde 409 e não sobrescreve nada.
+     * Sem a trava ela leria {@code ENVIADA} e responderia 200.
+     */
+    @Test
+    void dadaEscolhaEmAndamento_quandoRecusaAoMesmoTempo_entaoRecusaEsperaEVeEscolhida() throws Exception {
+        Usuario maria = usuario("Maria da Silva", "maria@example.com", "52998224725", PapelUsuario.EMPREGADOR);
+        Usuario rafael = usuario("Rafael Souza", "rafael@example.com", "39053344705", PapelUsuario.PRESTADOR);
+        Anuncio anuncio = anuncio(maria.getId(), StatusAnuncio.PUBLICADO);
+        Aplicacao candidatura = aplicacao(anuncio.getId(), rafael.getId(), StatusAplicacao.ENVIADA);
+        String token = logar("maria@example.com");
+        CountDownLatch escolhaComTrava = new CountDownLatch(1);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            Future<?> escolha = executor.submit(() -> transacao.executeWithoutResult(tx -> {
+                trava.travar(EscopoTrava.ANUNCIO, anuncio.getId().toString());
+                escolhaComTrava.countDown();
+                pausa(Duration.ofMillis(700));
+                Aplicacao escolhida = recarregar(candidatura);
+                escolhida.setStatus(StatusAplicacao.ESCOLHIDA);
+                escolhida.setEscolhidaEm(Instant.now());
+                aplicacaoRepository.save(escolhida);
+            }));
+            assertThat(escolhaComTrava.await(10, TimeUnit.SECONDS)).isTrue();
+
+            recusar(token, anuncio.getId(), candidatura.getId())
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.codigo", is("CANDIDATURA_ESTADO_INVALIDO")));
+
+            escolha.get(10, TimeUnit.SECONDS);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        assertThat(recarregar(candidatura).getStatus()).isEqualTo(StatusAplicacao.ESCOLHIDA);
+        assertThat(recarregar(candidatura).getRecusadaEm()).isNull();
+    }
+
+    /**
+     * Com a trava do anúncio segurada, duas recusas da mesma candidatura ficam bloqueadas (nenhuma termina antes de
+     * soltar). Soltando, entram em fila: uma recusa (200) e a outra já vê {@code RECUSADA} (409).
+     */
+    @Test
+    void dadasDuasRecusasSimultaneas_quandoTravaSolta_entaoUmaRecusaEAOutraRecebe409() throws Exception {
+        Usuario maria = usuario("Maria da Silva", "maria@example.com", "52998224725", PapelUsuario.EMPREGADOR);
+        Usuario rafael = usuario("Rafael Souza", "rafael@example.com", "39053344705", PapelUsuario.PRESTADOR);
+        Anuncio anuncio = anuncio(maria.getId(), StatusAnuncio.PUBLICADO);
+        Aplicacao candidatura = aplicacao(anuncio.getId(), rafael.getId(), StatusAplicacao.ENVIADA);
+        String token = logar("maria@example.com");
+        CountDownLatch comTrava = new CountDownLatch(1);
+        CountDownLatch soltar = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(3);
+        try {
+            Future<?> segurando = executor.submit(() -> transacao.executeWithoutResult(tx -> {
+                trava.travar(EscopoTrava.ANUNCIO, anuncio.getId().toString());
+                comTrava.countDown();
+                aguardar(soltar);
+            }));
+            assertThat(comTrava.await(10, TimeUnit.SECONDS)).isTrue();
+
+            List<Future<Integer>> recusas = new ArrayList<>();
+            for (int i = 0; i < 2; i++) {
+                recusas.add(executor.submit(
+                        () -> recusar(token, anuncio.getId(), candidatura.getId()).andReturn().getResponse().getStatus()));
+            }
+            pausa(Duration.ofMillis(700));
+            assertThat(recusas).noneMatch(Future::isDone);
+
+            soltar.countDown();
+            segurando.get(10, TimeUnit.SECONDS);
+            List<Integer> codigos = new ArrayList<>();
+            for (Future<Integer> recusa : recusas) {
+                codigos.add(recusa.get(10, TimeUnit.SECONDS));
+            }
+            assertThat(codigos).containsExactlyInAnyOrder(200, 409);
+        } finally {
+            soltar.countDown();
+            executor.shutdownNow();
+        }
+
+        assertThat(recarregar(candidatura).getStatus()).isEqualTo(StatusAplicacao.RECUSADA);
+    }
+
+    private static void pausa(Duration duracao) {
+        try {
+            Thread.sleep(duracao);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private static void aguardar(CountDownLatch latch) {
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

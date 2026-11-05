@@ -24,6 +24,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.limio.api.comum.eventos.CandidaturaRecusadaEvent;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.actions.usecase.RecusarCandidatoUseCase;
@@ -53,11 +55,14 @@ class RecusarCandidatoUseCaseTest {
     @Mock
     private ApplicationEventPublisher eventos;
 
+    @Mock
+    private TravaTransacional trava;
+
     private RecusarCandidatoUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new RecusarCandidatoUseCase(anuncioService, aplicacaoService, eventos);
+        useCase = new RecusarCandidatoUseCase(anuncioService, aplicacaoService, eventos, trava);
     }
 
     private void anuncio(StatusAnuncio status) {
@@ -70,7 +75,7 @@ class RecusarCandidatoUseCaseTest {
                 .status(status)
                 .build();
         ReflectionTestUtils.setField(anuncio, "id", ANUNCIO_ID);
-        when(anuncioService.buscarParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
     }
 
     private Aplicacao candidatura(UUID anuncioId, StatusAplicacao status) {
@@ -88,6 +93,7 @@ class RecusarCandidatoUseCaseTest {
 
         useCase.executar(DONO_ID, ANUNCIO_ID, CANDIDATURA_ID);
 
+        verify(trava).travar(EscopoTrava.ANUNCIO, ANUNCIO_ID.toString());
         assertThat(aplicacao.getStatus()).isEqualTo(StatusAplicacao.RECUSADA);
         assertThat(aplicacao.getRecusadaEm()).isNotNull();
         verify(aplicacaoService).salvar(aplicacao);
@@ -114,7 +120,7 @@ class RecusarCandidatoUseCaseTest {
 
     @Test
     void dadoAnuncioInexistente_quandoRecusa_entao404() {
-        when(anuncioService.buscarParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.empty());
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.executar(DONO_ID, ANUNCIO_ID, CANDIDATURA_ID))
                 .isInstanceOf(AnuncioNaoEncontradoException.class);

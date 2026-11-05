@@ -29,7 +29,7 @@ desistir (ETI-77).
 
 | Regra | Implementação |
 |---|---|
-| Só o dono lista ou recusa; anúncio de outra pessoa é 404 | `anuncioService.buscarPorId(...).filter(pertenceA)` na listagem e `buscarParaAtualizar(...).filter(pertenceA)` na recusa; anúncio inexistente e de outro usuário respondem igual (`ANUNCIO_NAO_ENCONTRADO`). |
+| Só o dono lista ou recusa; anúncio de outra pessoa é 404 | `anuncioService.buscarPorId(...).filter(pertenceA)` na listagem e `buscarPorId(...).filter(pertenceA)` na recusa, depois da trava; anúncio inexistente e de outro usuário respondem igual (`ANUNCIO_NAO_ENCONTRADO`). |
 | Lista só candidaturas `ENVIADA` | `AplicacaoService.buscarEnviadasDoAnuncio`: recusadas, escolhidas e encerradas ficam fora. |
 | Sem candidatos não é erro | 200 com `candidatos: []`. |
 | Média só com ao menos uma avaliação | `ResumoAvaliacoes` zera a média quando `quantidade = 0`; o JSON sai com `mediaAvaliacoes: null`. |
@@ -64,10 +64,16 @@ desistir (ETI-77).
 - **`ConsultaAvaliacoes` é provisória.** Não existe módulo nem tabela de avaliações, então a implementação, em
   `perfil`, devolve sempre "sem avaliações". Quando o módulo chegar, só `ConsultaAvaliacoesService` muda.
 - **GOLD** vem de `ConsultaPlanoPrestador`, que hoje é um stub do `financeiro` e devolve sempre `FREE`.
-- **Concorrência:** `RecusarCandidatoUseCase` é `@Transactional` e trava o anúncio com `PESSIMISTIC_WRITE`
-  (`AnuncioRepository.findByIdParaAtualizar`, mesmo padrão do `UsuarioRepository.findByIdParaAtualizar`) antes de ler a
-  candidatura. Duas recusas simultâneas ficam em fila e a segunda recebe 409. A escolha de candidato (ETI-69/70) deve
-  travar o mesmo anúncio. Não há lock na listagem.
+- **Follow-up (N+1 na listagem):** `ListarCandidatosUseCase` busca em lote especialidades, avaliações e chat, mas
+  ainda chama por candidato `ConsultaDadosUsuario.buscarPorId`, `ConsultaFotoPerfil.buscarFoto` e
+  `ConsultaPlanoPrestador.planoAtual` (3 consultas por item). Portas pré-existentes, fora do escopo desta PR. Pra
+  fechar: criar variantes em lote nas três portas (`Collection<UUID>` → `Map<UUID, ...>`), implementar em `auth`,
+  `perfil` e `financeiro`, e trocar as chamadas do `montar` por mapas lidos antes do loop.
+- **Concorrência:** `RecusarCandidatoUseCase` é `@Transactional` e trava o anúncio com `EscopoTrava.ANUNCIO`
+  (`TravaTransacional`, advisory lock por id) antes de ler o anúncio e a candidatura. É a mesma trava de editar e de
+  anexar/remover foto (ETI-61): advisory lock e `SELECT ... FOR UPDATE` não se bloqueiam no Postgres, então o
+  agregado usa um mecanismo só. Duas recusas simultâneas, ou recusa e edição, ficam em fila e a segunda recebe 409.
+  A escolha de candidato (ETI-69/70) deve tomar `EscopoTrava.ANUNCIO`. Não há lock na listagem.
 - **"Lista atualizada":** o controller chama `RecusarCandidatoUseCase` e depois `ListarCandidatosUseCase`, cada um na
   sua transação. A recusa já commitou quando a lista é lida. O usecase de recusa não devolve record, em linha com a
   regra de que `usecase` não conhece o contrato HTTP.
