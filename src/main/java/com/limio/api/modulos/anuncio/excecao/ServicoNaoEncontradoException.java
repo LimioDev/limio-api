@@ -6,8 +6,10 @@ import com.limio.api.comum.excecao.NegocioException;
 import com.limio.api.comum.excecao.enums.CodigoErro;
 
 /**
- * Serviço inexistente, ou de quem não é o Prestador escolhido: as duas situações respondem igual, pra não
- * revelar que o serviço existe (ETI-88).
+ * Anúncio inexistente, sem candidatura escolhida, ou de quem não é uma das duas partes do combinado (ETI-86);
+ * também usada por quem não é o Prestador escolhido tentando iniciar o serviço (ETI-88). Todas as situações
+ * respondem igual, pra não revelar se o anúncio/serviço existe. Compartilhada entre as duas features, que
+ * tratam {@code Anuncio} como "o serviço" do ponto de vista pós-escolha.
  */
 public class ServicoNaoEncontradoException extends NegocioException {
 
