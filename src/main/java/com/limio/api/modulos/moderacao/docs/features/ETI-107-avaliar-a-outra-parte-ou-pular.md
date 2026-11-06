@@ -31,6 +31,8 @@ Tela "Avaliação" (telas 44, 45, 45b a 45e).
 - O "serviço" é o anúncio, como no ETI-88: `servico.id` é o id do anúncio.
 - `podeAvaliar` é `false` antes da conclusão, a partir de `avaliarAte` e depois que quem consulta já avaliou. Serviço
   não concluído responde 200 na consulta, com `concluidoEm` e `avaliarAte` nulos. Só o `POST` recusa.
+- Anúncio ainda sem Prestador escolhido: o Empregador dono consulta e recebe 200 com `outraParte` nulo (não há outro
+  lado), além de `concluidoEm` e `avaliarAte` nulos e `podeAvaliar = false`.
 - `outraParte.papel`: `PRESTADOR` para o Empregador e `EMPREGADOR` para o Prestador. O Empregador aparece pelo nome de
   exibição do perfil, e o Prestador pelo nome do cadastro, como no cabeçalho do chat. Conta encerrada aparece como
   "Usuário excluído", sem foto.

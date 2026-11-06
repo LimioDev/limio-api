@@ -24,7 +24,8 @@ import com.limio.api.modulos.moderacao.excecao.ServicoNaoEncontradoException;
 /**
  * Consultar avaliação pendente (ETI-107): a outra parte, o serviço e se ainda dá pra avaliar. Serviço não concluído não
  * é erro aqui, só {@code podeAvaliar = false}: quem recusa é {@link AvaliarUseCase}. "Pular" (UC "Pular avaliação") não
- * tem rota: não grava nada, e esta consulta continua respondendo enquanto a janela estiver aberta.
+ * tem rota: não grava nada, e esta consulta continua respondendo enquanto a janela estiver aberta. Anúncio ainda sem
+ * Prestador escolhido responde com {@code outraParte = null}: o Empregador dono participa, mas não há outro lado.
  */
 @Service
 public class ConsultarAvaliacaoPendenteUseCase {
@@ -53,7 +54,7 @@ public class ConsultarAvaliacaoPendenteUseCase {
                 .filter(encontrado -> encontrado.participa(usuarioId))
                 .orElseThrow(ServicoNaoEncontradoException::new);
         UUID outraParteId = servico.outraParte(usuarioId);
-        OutraParte outraParte = outraParte(outraParteId, servico.papelDe(outraParteId));
+        OutraParte outraParte = outraParteId == null ? null : outraParte(outraParteId, servico.papelDe(outraParteId));
         if (!servico.concluido()) {
             return new AvaliacaoPendente(servico, outraParte, null, false);
         }

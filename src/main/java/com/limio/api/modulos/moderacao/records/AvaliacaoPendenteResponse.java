@@ -8,7 +8,8 @@ import com.limio.api.comum.seguranca.enums.PapelUsuario;
 /**
  * Resposta de {@code GET /anuncios/{anuncioId}/avaliacao-pendente} (tela 45). {@code servico.concluidoEm} e
  * {@code avaliarAte} são {@code null} enquanto o serviço não foi concluído. {@code podeAvaliar} é {@code false} antes da
- * conclusão, depois de {@code avaliarAte} e depois que quem consulta já avaliou.
+ * conclusão, depois de {@code avaliarAte} e depois que quem consulta já avaliou. {@code outraParte} é {@code null}
+ * enquanto nenhum Prestador foi escolhido (só o Empregador dono consegue consultar nesse estado).
  */
 public record AvaliacaoPendenteResponse(
         Servico servico,

@@ -17,8 +17,9 @@ public class AvaliacaoMapper {
         OutraParte outraParte = pendente.outraParte();
         return new AvaliacaoPendenteResponse(
                 new AvaliacaoPendenteResponse.Servico(servico.anuncioId(), servico.titulo(), servico.concluidoEm()),
-                new AvaliacaoPendenteResponse.OutraParte(outraParte.nome(), outraParte.fotoUrl(),
-                        outraParte.fotoExpiraEm(), outraParte.papel()),
+                outraParte == null ? null
+                        : new AvaliacaoPendenteResponse.OutraParte(outraParte.nome(), outraParte.fotoUrl(),
+                                outraParte.fotoExpiraEm(), outraParte.papel()),
                 pendente.podeAvaliar(),
                 pendente.avaliarAte());
     }

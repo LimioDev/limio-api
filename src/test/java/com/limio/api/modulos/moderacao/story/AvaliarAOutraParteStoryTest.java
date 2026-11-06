@@ -208,6 +208,21 @@ class AvaliarAOutraParteStoryTest {
     }
 
     @Test
+    void anuncioSemPrestadorEscolhidoRespondeSemOutraParte() throws Exception {
+        Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO, null);
+
+        consultarPendente(maria, anuncio)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.servico.concluidoEm", nullValue()))
+                .andExpect(jsonPath("$.outraParte", nullValue()))
+                .andExpect(jsonPath("$.avaliarAte", nullValue()))
+                .andExpect(jsonPath("$.podeAvaliar", is(false)));
+        avaliar(maria, anuncio, Map.of("nota", 5))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo", is("SERVICO_NAO_CONCLUIDO")));
+    }
+
+    @Test
     void terceiroNaoAvaliaNemConsulta() throws Exception {
         Anuncio servico = servicoConcluidoHa(Duration.ofDays(1));
         Usuario intruso = usuario("Joana Lima", "joana@example.com", "39053344705", PapelUsuario.PRESTADOR);
@@ -263,15 +278,7 @@ class AvaliarAOutraParteStoryTest {
 
     /** Anúncio de Maria com Carlos escolhido; {@code validadoEm} é quando o serviço foi concluído. */
     private Anuncio servico(StatusAnuncio status, Instant validadoEm) {
-        Anuncio anuncio = anuncioRepository.save(Anuncio.builder()
-                .titulo("Instalar 3 tomadas")
-                .categoriaId(jdbc.queryForObject("select id from categoria where protegida", UUID.class))
-                .contratanteId(maria.getId())
-                .descricao("Trocar três tomadas da cozinha")
-                .dataHoraPretendida(Instant.now().minus(Duration.ofDays(10)))
-                .status(status)
-                .validadoEm(validadoEm)
-                .build());
+        Anuncio anuncio = anuncio(status, validadoEm);
         aplicacaoRepository.save(Aplicacao.builder()
                 .anuncioId(anuncio.getId())
                 .prestadorId(carlos.getId())
@@ -281,6 +288,19 @@ class AvaliarAOutraParteStoryTest {
                 .escolhidaEm(Instant.now().minus(Duration.ofDays(11)))
                 .build());
         return anuncio;
+    }
+
+    /** Anúncio de Maria ainda sem ninguém escolhido. */
+    private Anuncio anuncio(StatusAnuncio status, Instant validadoEm) {
+        return anuncioRepository.save(Anuncio.builder()
+                .titulo("Instalar 3 tomadas")
+                .categoriaId(jdbc.queryForObject("select id from categoria where protegida", UUID.class))
+                .contratanteId(maria.getId())
+                .descricao("Trocar três tomadas da cozinha")
+                .dataHoraPretendida(Instant.now().minus(Duration.ofDays(10)))
+                .status(status)
+                .validadoEm(validadoEm)
+                .build());
     }
 
     private Map<String, Object> mediaDoPrestador(Usuario prestador) {
