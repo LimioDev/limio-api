@@ -233,3 +233,22 @@ A recusa trava o anúncio com `EscopoTrava.ANUNCIO` (advisory lock), o mesmo mec
 candidato (ETI-69/70) deve tomar a mesma trava. Sem migration.
 
 Detalhe completo em `docs/features/ETI-67-listar-candidatos-e-recusar-candidato.md`.
+
+## 2026-11-03 — ETI-86: consultar o serviço combinado com os contatos liberados
+
+`GET /anuncios/{anuncioId}/servico` (`ConsultarServicoUseCase`): o Empregador dono e o Prestador da
+candidatura escolhida veem o anúncio com o contato um do outro liberado (nome e telefone completos, não
+abreviados), prazo de cancelamento, reagendamentos aceitos/limite, proposta pendente e o chat da candidatura
+com as mensagens não lidas. A candidatura escolhida é achada por `escolhidaEm != null`
+(`AplicacaoRepository.findFirstByAnuncioIdAndEscolhidaEmIsNotNull`), não pelo `status` atual, pra o acesso
+continuar valendo depois que o serviço conclui ou o anúncio cancela.
+
+Porta nova `comum/portas/ConsultaChatDoServico`, implementada em `chat` (id do chat + não lidas de uma
+candidatura, por quem consulta). `MensagemRepository` ganhou a contagem de não lidas.
+
+Nenhuma coluna nova: `iniciadoEm`, `checkoutEm` e `validadoEm` já existiam em `Anuncio` desde a V13, mas
+nenhum usecase os preenche ainda, então saem `null` na prática até ETI-88/90/91/92/93 entrarem. Reagendamento
+aceito e proposta pendente também já existem na tabela (TICKET-0049) sem usecase que crie (ETI-99/100).
+`CodigoErro.SERVICO_NAO_ENCONTRADO` é intencionalmente igual ao sugerido pela PR#26 (ETI-88): duplicação
+esperada, resolvida no merge. Detalhe completo em
+`docs/features/ETI-86-consultar-o-servico-combinado.md`.
