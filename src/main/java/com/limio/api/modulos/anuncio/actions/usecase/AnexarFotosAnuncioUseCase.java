@@ -16,6 +16,8 @@ import com.limio.api.comum.midia.ImagemHelper.ImagemProcessada;
 import com.limio.api.comum.midia.Midia;
 import com.limio.api.comum.midia.MidiaService;
 import com.limio.api.comum.midia.excecao.FotoInvalidaException;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.FotoDoAnuncio;
@@ -30,7 +32,8 @@ import com.limio.api.modulos.anuncio.excecao.FotosNaoPermitidasException;
  *
  * Tudo ou nada: todas as fotos são conferidas antes do primeiro upload, e se algo falhar depois dele a
  * transação desfaz e os objetos já enviados saem do bucket ({@link FotoAnuncioEnviadaEvent}). Envios
- * simultâneos ao mesmo anúncio se enfileiram, pra o limite de quantidade valer.
+ * simultâneos ao mesmo anúncio se enfileiram, pra o limite de quantidade valer. A trava do anúncio vem antes
+ * da de fotos (mesma ordem de editar e remover foto, ETI-61), pra a escolha do candidato barrar o envio.
  */
 @Service
 public class AnexarFotosAnuncioUseCase {
@@ -41,6 +44,7 @@ public class AnexarFotosAnuncioUseCase {
     private final AplicacaoService aplicacaoService;
     private final MidiaService midiaService;
     private final ArmazenamentoService armazenamentoService;
+    private final TravaTransacional trava;
     private final ApplicationEventPublisher eventos;
     private final long tamanhoMaximoBytes;
     private final int quantidadeMaxima;
@@ -49,6 +53,7 @@ public class AnexarFotosAnuncioUseCase {
             AplicacaoService aplicacaoService,
             MidiaService midiaService,
             ArmazenamentoService armazenamentoService,
+            TravaTransacional trava,
             ApplicationEventPublisher eventos,
             @Value("${anuncio.foto.tamanho-maximo}") DataSize tamanhoMaximo,
             @Value("${anuncio.foto.quantidade-maxima}") int quantidadeMaxima) {
@@ -56,6 +61,7 @@ public class AnexarFotosAnuncioUseCase {
         this.aplicacaoService = aplicacaoService;
         this.midiaService = midiaService;
         this.armazenamentoService = armazenamentoService;
+        this.trava = trava;
         this.eventos = eventos;
         this.tamanhoMaximoBytes = tamanhoMaximo.toBytes();
         this.quantidadeMaxima = quantidadeMaxima;
@@ -67,6 +73,7 @@ public class AnexarFotosAnuncioUseCase {
         if (arquivos.isEmpty()) {
             throw FotoInvalidaException.vazia();
         }
+        trava.travar(EscopoTrava.ANUNCIO, anuncioId.toString());
         Anuncio anuncio = anuncioService.buscarPorId(anuncioId)
                 .filter(encontrado -> encontrado.pertenceA(usuarioId))
                 .orElseThrow(AnuncioNaoEncontradoException::new);

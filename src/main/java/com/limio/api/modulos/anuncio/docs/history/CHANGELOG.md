@@ -252,3 +252,16 @@ aceito e proposta pendente também já existem na tabela (TICKET-0049) sem useca
 `CodigoErro.SERVICO_NAO_ENCONTRADO` é intencionalmente igual ao sugerido pela PR#26 (ETI-88): duplicação
 esperada, resolvida no merge. Detalhe completo em
 `docs/features/ETI-86-consultar-o-servico-combinado.md`.
+
+## 2026-11-01 — ETI-61: editar anúncio antes da escolha
+
+`PUT /anuncios/{id}` (`EditarAnuncioUseCase`) corrige título, categoria, descrição, data/hora e opcionais enquanto o
+anúncio está `PUBLICADO` e sem candidatura escolhida (`Anuncio.permiteAlteracao`, a mesma regra de anexar fotos e
+cancelar). `DELETE /anuncios/{id}/fotos/{fotoId}` (`RemoverFotoAnuncioUseCase`) expurga a `Midia` e apaga o objeto
+do storage em `AFTER_COMMIT` (`FotoAnuncioRemovidaEvent`). Adicionar foto continua em `POST /anuncios/{id}/fotos`.
+
+Data futura e categoria ativa saíram de `PublicarAnuncioUseCase` para `ValidacaoDoAnuncioService`, compartilhado
+com a edição. Novo `EscopoTrava.ANUNCIO`: editar, remover e anexar foto travam o anúncio antes de ler o estado; o
+usecase de escolher candidato (ETI-69/70) deve tomar a mesma trava. Sem `CodigoErro` novo, sem migration, sem
+`AnuncioEditado` nem `USE_REAGENDAMENTO` (pontos em aberto). O raciocínio completo está em
+`docs/features/ETI-61-editar-anuncio-antes-da-escolha.md`.
