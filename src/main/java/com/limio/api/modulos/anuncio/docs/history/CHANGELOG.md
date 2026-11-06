@@ -220,6 +220,20 @@ só uma requisição passa, a outra recebe 409 `SERVICO_ESTADO_INVALIDO`.
 
 Detalhe em `docs/features/ETI-88-iniciar-o-servico.md`.
 
+## 2026-10-30 — ETI-67: listar candidatos e recusar candidato
+
+`GET /anuncios/{anuncioId}/candidaturas` e `POST /anuncios/{anuncioId}/candidaturas/{candidaturaId}/recusar`
+(`CandidatoController`, `ListarCandidatosUseCase`, `RecusarCandidatoUseCase`). A recusa publica o novo
+`comum/eventos/CandidaturaRecusadaEvent`, que o `chat` escuta para deixar o chat somente leitura.
+
+Três portas de leitura novas em `comum/portas/`: `ConsultaEspecialidades` (`perfil`), `ConsultaChat` (`chat`) e
+`ConsultaAvaliacoes` (`perfil`, provisória: sem módulo de avaliações, devolve sempre "sem avaliações").
+
+A recusa trava o anúncio com `EscopoTrava.ANUNCIO` (advisory lock), o mesmo mecanismo da edição (ETI-61). A escolha de
+candidato (ETI-69/70) deve tomar a mesma trava. Sem migration.
+
+Detalhe completo em `docs/features/ETI-67-listar-candidatos-e-recusar-candidato.md`.
+
 ## 2026-11-03 — ETI-86: consultar o serviço combinado com os contatos liberados
 
 `GET /anuncios/{anuncioId}/servico` (`ConsultarServicoUseCase`): o Empregador dono e o Prestador da
