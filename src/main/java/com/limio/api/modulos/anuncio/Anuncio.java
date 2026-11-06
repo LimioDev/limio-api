@@ -69,6 +69,9 @@ public class Anuncio extends BaseEntity {
     @Column(name = "bairro_regiao_snapshot")
     private String bairroRegiaoSnapshot;
 
+    @Column(name = "cidade_snapshot", length = 50)
+    private String cidadeSnapshot;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "uf_snapshot", length = 2)
     private Uf ufSnapshot;
@@ -129,6 +132,7 @@ public class Anuncio extends BaseEntity {
         this.contratanteId = contratanteId;
         this.enderecoSalvoId = enderecoSalvoId;
         this.bairroRegiaoSnapshot = endereco.bairroRegiao();
+        this.cidadeSnapshot = endereco.cidade();
         this.ufSnapshot = endereco.uf();
         this.enderecoCompletoSnapshot = endereco.enderecoCompleto();
         this.latitudeSnapshot = endereco.latitude();
@@ -150,6 +154,23 @@ public class Anuncio extends BaseEntity {
             case PUBLICADO -> !existeEscolhida;
             case EM_ANDAMENTO, AGUARDANDO_VALIDACAO, CONCLUIDO, ENCERRADO -> false;
         };
+    }
+
+    /**
+     * ETI-88: o serviço só começa a partir de {@code PUBLICADO}. Quem chama já confirmou que existe candidatura
+     * escolhida. Passo opcional: validação presencial e check-out também partem de {@code PUBLICADO}.
+     */
+    public boolean permiteInicio() {
+        return switch (status) {
+            case PUBLICADO -> true;
+            case EM_ANDAMENTO, AGUARDANDO_VALIDACAO, CONCLUIDO, ENCERRADO -> false;
+        };
+    }
+
+    /** ETI-88: Prestador escolhido avisou que chegou. Quem chama já validou o estado do anúncio. */
+    public void iniciar(Instant agora) {
+        this.status = StatusAnuncio.EM_ANDAMENTO;
+        this.iniciadoEm = agora;
     }
 
     /**
@@ -185,9 +206,9 @@ public class Anuncio extends BaseEntity {
     /**
      * "Combinado a menos de {@code janela}": a data combinada ainda não
      * passou, mas está perto. Não depende de {@code status == EM_ANDAMENTO}
-     * — esse status só é setado no check-in, que acontece depois de {@code
-     * dataHoraPretendida}, então nunca coincidiria com "data ainda no
-     * futuro" (TICKET-0049, achado de review). Quem chama já sabe que existe
+     * — esse status só existe se o Prestador iniciar o serviço (ETI-88, passo
+     * opcional), então um combinado próximo costuma seguir {@code PUBLICADO}
+     * (TICKET-0049, achado de review). Quem chama já sabe que existe
      * candidatura escolhida/aguardando validação; aqui só a janela de tempo.
      */
     public boolean estaAMenosDe(Duration janela, Instant agora) {

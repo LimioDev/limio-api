@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.limio.api.comum.eventos.AnuncioCanceladoEvent;
 import com.limio.api.comum.eventos.CandidaturaCriadaEvent;
+import com.limio.api.comum.eventos.CandidaturaRecusadaEvent;
 import com.limio.api.comum.eventos.ContaEncerradaEvent;
 import com.limio.api.modulos.chat.Chat;
 import com.limio.api.modulos.chat.ChatService;
@@ -84,6 +85,32 @@ class ChatSomenteLeituraTest {
         });
         // sem id as duas entidades são iguais pelo equals da BaseEntity: conta as gravações, não a instância
         verify(chatService, times(2)).salvar(any());
+    }
+
+    @Test
+    void dadaCandidaturaRecusada_quandoChegaOEvento_entaoSoOChatDaCandidaturaFicaSomenteLeitura() {
+        Chat chat = chat();
+        when(chatService.buscarDaCandidatura(APLICACAO_ID)).thenReturn(Optional.of(chat));
+        Instant agora = Instant.now();
+
+        deixarSomenteLeitura.aoRecusarCandidatura(new CandidaturaRecusadaEvent(APLICACAO_ID, ANUNCIO_ID, "Faxina",
+                CONTRATANTE_ID, PRESTADOR_ID, agora));
+
+        assertThat(chat.isSomenteLeitura()).isTrue();
+        assertThat(chat.getMotivoSomenteLeitura()).isEqualTo(MotivoSomenteLeitura.CANDIDATURA_RECUSADA);
+        assertThat(chat.getSomenteLeituraEm()).isEqualTo(agora);
+        verify(chatService).salvar(chat);
+        verify(chatService, never()).buscarAbertosDoAnuncio(any());
+    }
+
+    @Test
+    void dadaCandidaturaRecusadaSemChat_quandoChegaOEvento_entaoNadaAFazer() {
+        when(chatService.buscarDaCandidatura(APLICACAO_ID)).thenReturn(Optional.empty());
+
+        deixarSomenteLeitura.aoRecusarCandidatura(new CandidaturaRecusadaEvent(APLICACAO_ID, ANUNCIO_ID, "Faxina",
+                CONTRATANTE_ID, PRESTADOR_ID, Instant.now()));
+
+        verify(chatService, never()).salvar(any());
     }
 
     @Test
