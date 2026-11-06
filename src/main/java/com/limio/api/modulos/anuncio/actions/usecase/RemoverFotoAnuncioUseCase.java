@@ -15,9 +15,9 @@ import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
 import com.limio.api.modulos.anuncio.eventos.FotoAnuncioRemovidaEvent;
+import com.limio.api.modulos.anuncio.excecao.AnuncioEstadoInvalidoException;
 import com.limio.api.modulos.anuncio.excecao.AnuncioNaoEncontradoException;
 import com.limio.api.modulos.anuncio.excecao.FotoNaoEncontradaException;
-import com.limio.api.modulos.anuncio.excecao.FotosNaoPermitidasException;
 
 /**
  * UC19 (parte das fotos, ETI-61) — o dono remove uma foto do anúncio enquanto ele ainda é editável
@@ -55,7 +55,7 @@ public class RemoverFotoAnuncioUseCase {
 
         midiaService.travarFotosAnuncio(anuncioId);
         if (!anuncio.permiteAlteracao(aplicacaoService.existeEscolhida(anuncioId))) {
-            throw new FotosNaoPermitidasException();
+            throw new AnuncioEstadoInvalidoException();
         }
         Midia foto = midiaService.buscarFotoAtivaDoAnuncio(anuncioId, fotoId)
                 .orElseThrow(FotoNaoEncontradaException::new);

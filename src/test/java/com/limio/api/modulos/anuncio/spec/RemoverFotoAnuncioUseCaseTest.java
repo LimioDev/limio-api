@@ -35,9 +35,9 @@ import com.limio.api.modulos.anuncio.actions.usecase.RemoverFotoAnuncioUseCase;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.eventos.FotoAnuncioRemovidaEvent;
+import com.limio.api.modulos.anuncio.excecao.AnuncioEstadoInvalidoException;
 import com.limio.api.modulos.anuncio.excecao.AnuncioNaoEncontradoException;
 import com.limio.api.modulos.anuncio.excecao.FotoNaoEncontradaException;
-import com.limio.api.modulos.anuncio.excecao.FotosNaoPermitidasException;
 
 @ExtendWith(MockitoExtension.class)
 class RemoverFotoAnuncioUseCaseTest {
@@ -123,7 +123,7 @@ class RemoverFotoAnuncioUseCaseTest {
         when(aplicacaoService.existeEscolhida(ANUNCIO_ID)).thenReturn(true);
 
         assertThatThrownBy(() -> useCase.executar(DONO_ID, ANUNCIO_ID, FOTO_ID))
-                .isInstanceOf(FotosNaoPermitidasException.class);
+                .isInstanceOf(AnuncioEstadoInvalidoException.class);
 
         verify(midiaService, never()).salvarAgora(any());
         verifyNoInteractions(eventos);
@@ -136,7 +136,7 @@ class RemoverFotoAnuncioUseCaseTest {
         when(aplicacaoService.existeEscolhida(ANUNCIO_ID)).thenReturn(false);
 
         assertThatThrownBy(() -> useCase.executar(DONO_ID, ANUNCIO_ID, FOTO_ID))
-                .isInstanceOf(FotosNaoPermitidasException.class);
+                .isInstanceOf(AnuncioEstadoInvalidoException.class);
 
         verify(midiaService, never()).salvarAgora(any());
         verifyNoInteractions(eventos);
