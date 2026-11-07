@@ -78,6 +78,10 @@ public class Aplicacao extends BaseEntity {
         this.recusadaEm = agora;
     }
 
+    public void registrarCheckout() {
+        this.status = StatusAplicacao.AGUARDANDO_VALIDACAO;
+    }
+
     public void encerrar(Instant agora, String motivo) {
         this.status = StatusAplicacao.ENCERRADA;
         this.encerradaEm = agora;

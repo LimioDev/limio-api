@@ -2,6 +2,7 @@ package com.limio.api.modulos.anuncio;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.limio.api.comum.base.BaseEntity;
@@ -171,6 +172,24 @@ public class Anuncio extends BaseEntity {
     public void iniciar(Instant agora) {
         this.status = StatusAnuncio.EM_ANDAMENTO;
         this.iniciadoEm = agora;
+    }
+
+    public boolean permiteCheckout() {
+        return switch (status) {
+            case PUBLICADO, EM_ANDAMENTO -> true;
+            case AGUARDANDO_VALIDACAO, CONCLUIDO, ENCERRADO -> false;
+        };
+    }
+
+    public void registrarCheckout(Instant agora) {
+        this.status = StatusAnuncio.AGUARDANDO_VALIDACAO;
+        this.checkoutEm = agora;
+    }
+
+    public Optional<Instant> prazoDeValidacao() {
+        if (checkoutEm == null || prazoValidacaoHoras == null)
+            return Optional.empty();
+        return Optional.of(checkoutEm.plus(Duration.ofHours(prazoValidacaoHoras)));
     }
 
     /** UC16 (encerrar conta do contratante): tira do mural, não conclui. */
