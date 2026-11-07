@@ -212,6 +212,37 @@ class EscolherPrestadorStoryTest {
         return linhas.isEmpty() ? 0 : linhas.get(0);
     }
 
+    private UUID chat(Aplicacao aplicacao, UUID contratanteId) {
+        UUID id = UUID.randomUUID();
+        jdbc.update("insert into chat (id, aplicacao_id, anuncio_id, contratante_id, prestador_id) "
+                + "values (?, ?, ?, ?, ?)", id, aplicacao.getId(), aplicacao.getAnuncioId(), contratanteId,
+                aplicacao.getPrestadorId());
+        return id;
+    }
+
+    /** Chat já fechado antes da escolha (recusa, desistência), com o motivo que o fechou. */
+    private UUID chatFechado(Aplicacao aplicacao, UUID contratanteId, String motivo) {
+        UUID id = chat(aplicacao, contratanteId);
+        jdbc.update("update chat set somente_leitura = true, motivo_somente_leitura = ?, somente_leitura_em = now() "
+                + "where id = ?", motivo, id);
+        return id;
+    }
+
+    private boolean somenteLeitura(UUID chatId) {
+        return jdbc.queryForObject("select somente_leitura from chat where id = ?", Boolean.class, chatId);
+    }
+
+    private String motivoSomenteLeitura(UUID chatId) {
+        return jdbc.queryForObject("select motivo_somente_leitura from chat where id = ?", String.class, chatId);
+    }
+
+    private ResultActions enviarMensagem(String token, UUID chatId) throws Exception {
+        return mockMvc.perform(post("/chats/{chatId}/mensagens", chatId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"texto\": \"Combinado, até lá!\"}"));
+    }
+
     private ResultActions escolher(String token, UUID anuncioId, UUID candidaturaId) throws Exception {
         return mockMvc.perform(post("/anuncios/{anuncioId}/candidaturas/{candidaturaId}/escolher", anuncioId,
                 candidaturaId).header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
@@ -410,6 +441,60 @@ class EscolherPrestadorStoryTest {
         assertThat(recarregar(daAna).getStatus()).isEqualTo(StatusAplicacao.ENCERRADA);
         assertThat(consumidas(rafael)).isEqualTo(1);
         assertThat(consumidas(ana)).isZero();
+    }
+
+    // ---------------------------------------------------------------- chat após o commit
+
+    /**
+     * O evento é publicado dentro da transação e o chat reage só depois do commit: os chats dos candidatos que a escolha
+     * encerrou ficam somente leitura (e o front mostra a faixa certa), o do escolhido segue aberto e o de quem já tinha
+     * sido recusado mantém o motivo original.
+     */
+    @Test
+    void dadaEscolha_quandoCommita_entaoChatsDosNaoEscolhidosFicamSomenteLeituraEOEscolhidoSegueAberto()
+            throws Exception {
+        Usuario maria = usuario("Maria da Silva", "maria@example.com", "52998224725", PapelUsuario.EMPREGADOR);
+        Usuario rafael = prestador("Rafael Souza", "rafael@example.com", "39053344705", 0);
+        Usuario ana = prestador("Ana Lima", "ana@example.com", "16899535009", 0);
+        Usuario joao = prestador("João Pereira", "joao@example.com", "15350946056", 0);
+        Anuncio anuncio = anuncio(maria.getId(), StatusAnuncio.PUBLICADO);
+        Aplicacao doRafael = aplicacao(anuncio.getId(), rafael.getId(), StatusAplicacao.ENVIADA);
+        Aplicacao daAna = aplicacao(anuncio.getId(), ana.getId(), StatusAplicacao.ENVIADA);
+        Aplicacao doJoao = aplicacao(anuncio.getId(), joao.getId(), StatusAplicacao.RECUSADA);
+        UUID chatRafael = chat(doRafael, maria.getId());
+        UUID chatAna = chat(daAna, maria.getId());
+        UUID chatJoao = chatFechado(doJoao, maria.getId(), "CANDIDATURA_RECUSADA");
+
+        escolher(logar("maria@example.com"), anuncio.getId(), doRafael.getId()).andExpect(status().isOk());
+
+        assertThat(somenteLeitura(chatRafael)).isFalse();
+        assertThat(somenteLeitura(chatAna)).isTrue();
+        assertThat(motivoSomenteLeitura(chatAna)).isEqualTo("OUTRO_PRESTADOR_ESCOLHIDO");
+        assertThat(somenteLeitura(chatJoao)).isTrue();
+        assertThat(motivoSomenteLeitura(chatJoao)).isEqualTo("CANDIDATURA_RECUSADA");
+
+        enviarMensagem(logar("rafael@example.com"), chatRafael).andExpect(status().isCreated());
+        enviarMensagem(logar("ana@example.com"), chatAna)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo", is("CHAT_SOMENTE_LEITURA")));
+    }
+
+    @Test
+    void dadaCotaEsgotada_quandoEscolhe_entaoNenhumChatMuda() throws Exception {
+        Usuario maria = usuario("Maria da Silva", "maria@example.com", "52998224725", PapelUsuario.EMPREGADOR);
+        Usuario rafael = prestador("Rafael Souza", "rafael@example.com", "39053344705", TETO);
+        Usuario ana = prestador("Ana Lima", "ana@example.com", "16899535009", 0);
+        Anuncio anuncio = anuncio(maria.getId(), StatusAnuncio.PUBLICADO);
+        Aplicacao doRafael = aplicacao(anuncio.getId(), rafael.getId(), StatusAplicacao.ENVIADA);
+        Aplicacao daAna = aplicacao(anuncio.getId(), ana.getId(), StatusAplicacao.ENVIADA);
+        UUID chatRafael = chat(doRafael, maria.getId());
+        UUID chatAna = chat(daAna, maria.getId());
+
+        escolher(logar("maria@example.com"), anuncio.getId(), doRafael.getId())
+                .andExpect(status().isConflict());
+
+        assertThat(somenteLeitura(chatRafael)).isFalse();
+        assertThat(somenteLeitura(chatAna)).isFalse();
     }
 
     // ---------------------------------------------------------------- liberação de contato
@@ -680,6 +765,7 @@ class EscolherPrestadorStoryTest {
         Anuncio anuncio = anuncio(maria.getId(), StatusAnuncio.PUBLICADO);
         Aplicacao doRafael = aplicacao(anuncio.getId(), rafael.getId(), StatusAplicacao.ENVIADA);
         Aplicacao daAna = aplicacao(anuncio.getId(), ana.getId(), StatusAplicacao.ENVIADA);
+        UUID chatAna = chat(daAna, maria.getId());
         doThrow(new IllegalStateException("falha simulada")).when(aplicacaoService).salvarEscolha(any());
 
         escolher(logar("maria@example.com"), anuncio.getId(), doRafael.getId())
@@ -690,6 +776,7 @@ class EscolherPrestadorStoryTest {
         assertThat(recarregar(doRafael).getEscolhidaEm()).isNull();
         assertThat(recarregar(daAna).getStatus()).isEqualTo(StatusAplicacao.ENVIADA);
         assertThat(eventos.stream(PrestadorEscolhidoEvent.class).count()).isZero();
+        assertThat(somenteLeitura(chatAna)).as("sem commit, o chat não reage").isFalse();
     }
 
     /** Segurar a trava do anúncio deixa a escolha em fila (espera, não falha) e ela conclui quando solta. */
