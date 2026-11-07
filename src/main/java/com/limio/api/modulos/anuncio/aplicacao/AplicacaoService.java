@@ -53,6 +53,16 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
         return repository.findByAnuncioIdAndStatusOrderByDataAplicacaoAscIdAsc(anuncioId, StatusAplicacao.ENVIADA);
     }
 
+    /**
+     * Só o {@code anuncioId} da candidatura, sem carregá-la. Serve pra descobrir qual trava de anúncio tomar antes de
+     * ler o estado. Tem que ser escalar de propósito: carregar a entidade antes da trava a deixaria gerenciada no
+     * contexto de persistência, e o {@code FOR UPDATE} seguinte devolveria essa cópia velha em vez do estado já
+     * commitado por outra transação.
+     */
+    public Optional<UUID> buscarAnuncioId(UUID id) {
+        return repository.findAnuncioIdById(id);
+    }
+
     /** Busca que não lança: quem consulta por fora do módulo ({@code ConsultaCandidatura}) decide o que fazer. */
     public Optional<Aplicacao> buscarPorId(UUID id) {
         return repository.findById(id);
@@ -135,9 +145,10 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     }
 
     /**
-     * Busca com {@code SELECT ... FOR UPDATE}: quem muda o status (desistir, ETI-77) segura a linha até o fim
-     * da transação. A escolha do Empregador (card futuro) precisa usar esta mesma busca pra esperar e reler o
-     * status atualizado — sem isso as duas gravações podem se sobrescrever.
+     * Busca com {@code SELECT ... FOR UPDATE}: quem muda o status de uma candidatura segura a linha até o fim da
+     * transação. É a 2ª etapa da ordem do agregado: o usecase já tomou o advisory lock {@code
+     * EscopoTrava.ANUNCIO} (a escolha, ETI-69, usa o mesmo mecanismo) e só então trava e relê a linha. Sozinho
+     * ele não basta: quem não o toma (por exemplo uma recusa que lê sem lock) não espera. Exige transação aberta.
      */
     public Optional<Aplicacao> buscarParaAtualizar(UUID id) {
         return repository.findByIdParaAtualizar(id);

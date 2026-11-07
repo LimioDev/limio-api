@@ -40,6 +40,10 @@ public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
 
     Page<Aplicacao> findByPrestadorIdAndStatusIn(UUID prestadorId, List<StatusAplicacao> status, Pageable pageable);
 
+    /** Consulta escalar: não carrega a entidade no contexto de persistência (ver {@code buscarAnuncioId}). */
+    @Query("select a.anuncioId from Aplicacao a where a.id = :id")
+    Optional<UUID> findAnuncioIdById(@Param("id") UUID id);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from Aplicacao a where a.id = :id")
     Optional<Aplicacao> findByIdParaAtualizar(@Param("id") UUID id);
