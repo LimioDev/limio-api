@@ -207,3 +207,15 @@ que não conta) e o estorno (ETI-94) não cabem numa contagem derivada. O `perfi
 (`ConsultaPlanoPrestador`, sempre FREE até a assinatura existir) e as escolhas do mês do `anuncio`
 (`ConsultaEscolhasDoPrestador`), por porta. Papel errado responde `ACESSO_NEGADO`, como nas outras rotas da develop;
 o card sugeria `PAPEL_INVALIDO`, que só existe na PR #19. Detalhe em `../features/ETI-79-consultar-cota-do-mes-e-virada.md`.
+
+## 2026-11-07 — ETI-69: consumo da cota mensal pela escolha do prestador
+
+`CotaMensal` ganhou `consumirEscolha()` (a contagem só muda por esse método e, depois, pelo estorno do ETI-94/ETI-95).
+`ConsumirCotaDoMesUseCase` trava `EscopoTrava.COTA_PRESTADOR` (por Prestador), lê ou cria a linha do mês e consome uma
+escolha, ou devolve `false` sem alterar nada se o teto do mês foi atingido. A trava cobre também a criação da linha, que
+`FOR UPDATE` não cobriria.
+
+O `anuncio` chama isso pela porta `comum/portas/ConsumoCotaPrestador`, implementada em
+`ConsumoCotaPrestadorService` (`Propagation.MANDATORY`: só roda na transação da escolha). É a primeira porta de
+**escrita** do projeto, exceção ao "só leitura" da ADR-0003, que não foi alterada; a justificativa está no card
+`anuncio/docs/features/ETI-69-escolher-prestador.md`.
