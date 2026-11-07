@@ -17,6 +17,7 @@ import com.limio.api.comum.base.BaseService;
 import com.limio.api.modulos.anuncio.enums.AbaCandidatura;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
 import com.limio.api.modulos.anuncio.excecao.CandidaturaDuplicadaException;
+import com.limio.api.modulos.anuncio.excecao.EscolhaConflitoException;
 
 /** Camada técnica de persistência de {@link Aplicacao} — CRUD genérico (herdado) + finders da entity. */
 @Component
@@ -33,6 +34,7 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     private static final Sort MAIS_RECENTES = Sort.by(Sort.Order.desc("dataAplicacao"), Sort.Order.desc("id"));
 
     private static final String CONSTRAINT_PAR_ATIVO_UNICO = "uk_aplicacao_par_ativo";
+    private static final String CONSTRAINT_ESCOLHIDA_UNICA = "idx_aplicacao_escolhida_unica";
 
     public AplicacaoService(AplicacaoRepository repository) {
         super(repository);
@@ -121,17 +123,41 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
         try {
             return repository.saveAndFlush(aplicacao);
         } catch (DataIntegrityViolationException e) {
-            if (violaParAtivoUnico(e)) {
+            if (violaConstraint(e, CONSTRAINT_PAR_ATIVO_UNICO)) {
                 throw new CandidaturaDuplicadaException();
             }
             throw e;
         }
     }
 
-    private static boolean violaParAtivoUnico(Throwable erro) {
+    /**
+     * {@code salvar} da candidatura escolhida (ETI-69). Com o lock do anúncio o usecase já barra a 2ª escolha; o índice
+     * único {@code idx_aplicacao_escolhida_unica} é a rede de segurança do banco, e o {@code saveAndFlush} faz a
+     * violação estourar aqui (virando 409) e não só no commit.
+     */
+    public Aplicacao salvarEscolha(Aplicacao aplicacao) {
+        try {
+            return repository.saveAndFlush(aplicacao);
+        } catch (DataIntegrityViolationException e) {
+            if (violaConstraint(e, CONSTRAINT_ESCOLHIDA_UNICA)) {
+                throw new EscolhaConflitoException();
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * As candidaturas {@code ENVIADA} do anúncio com {@code SELECT ... FOR UPDATE}, por id crescente (ETI-69). É a 2ª
+     * etapa da ordem do agregado, depois do advisory lock do anúncio. Exige transação aberta.
+     */
+    public List<Aplicacao> buscarEnviadasDoAnuncioParaAtualizar(UUID anuncioId) {
+        return repository.findEnviadasDoAnuncioParaAtualizar(anuncioId);
+    }
+
+    private static boolean violaConstraint(Throwable erro, String constraint) {
         for (Throwable causa = erro; causa != null; causa = causa.getCause()) {
             if (causa instanceof ConstraintViolationException violacao
-                    && CONSTRAINT_PAR_ATIVO_UNICO.equalsIgnoreCase(violacao.getConstraintName())) {
+                    && constraint.equalsIgnoreCase(violacao.getConstraintName())) {
                 return true;
             }
         }
