@@ -40,7 +40,7 @@ class CheckoutDominioTest {
     void dadoCheckoutPermitido_quandoRegistra_entaoAguardaValidacaoSemConcluir(StatusAnuncio status) {
         Anuncio anuncio = anuncio(status, 24);
 
-        anuncio.registrarCheckout(AGORA);
+        anuncio.registrarCheckout(AGORA, null);
 
         assertThat(anuncio.getStatus()).isEqualTo(StatusAnuncio.AGUARDANDO_VALIDACAO);
         assertThat(anuncio.getCheckoutEm()).isEqualTo(AGORA);
@@ -48,9 +48,29 @@ class CheckoutDominioTest {
     }
 
     @Test
+    void dadaObservacao_quandoRegistraCheckout_entaoGuardaSemEspacosNasPontas() {
+        Anuncio anuncio = anuncio(StatusAnuncio.EM_ANDAMENTO, 24);
+
+        anuncio.registrarCheckout(AGORA, "  Serviço feito, sobrou entulho no quintal.  ");
+
+        assertThat(anuncio.getObservacaoCheckout()).isEqualTo("Serviço feito, sobrou entulho no quintal.");
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.NullAndEmptySource
+    @org.junit.jupiter.params.provider.ValueSource(strings = { "   " })
+    void dadaObservacaoVazia_quandoRegistraCheckout_entaoNaoGuarda(String observacao) {
+        Anuncio anuncio = anuncio(StatusAnuncio.EM_ANDAMENTO, 24);
+
+        anuncio.registrarCheckout(AGORA, observacao);
+
+        assertThat(anuncio.getObservacaoCheckout()).isNull();
+    }
+
+    @Test
     void dadoCheckoutRegistrado_quandoCalculaPrazo_entaoSomaHorasGravadasNoAnuncio() {
         Anuncio anuncio = anuncio(StatusAnuncio.EM_ANDAMENTO, 24);
-        anuncio.registrarCheckout(AGORA);
+        anuncio.registrarCheckout(AGORA, null);
 
         assertThat(anuncio.prazoDeValidacao()).contains(Instant.parse("2026-11-08T12:00:00Z"));
     }
@@ -58,7 +78,7 @@ class CheckoutDominioTest {
     @Test
     void dadoPrazoDiferenteDe24h_quandoCalculaPrazo_entaoUsaOGravado() {
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO, 48);
-        anuncio.registrarCheckout(AGORA);
+        anuncio.registrarCheckout(AGORA, null);
 
         assertThat(anuncio.prazoDeValidacao()).contains(Instant.parse("2026-11-09T12:00:00Z"));
     }
@@ -71,7 +91,7 @@ class CheckoutDominioTest {
     @Test
     void dadoAnuncioSemPrazoGravado_quandoCalculaPrazo_entaoVazio() {
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO, null);
-        anuncio.registrarCheckout(AGORA);
+        anuncio.registrarCheckout(AGORA, null);
 
         assertThat(anuncio.prazoDeValidacao()).isEmpty();
     }

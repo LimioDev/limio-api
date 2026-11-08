@@ -23,7 +23,7 @@ class CheckoutContratoTest {
     @Test
     void dadoCheckoutRegistrado_quandoMapeia_entaoTrazStatusCheckoutEPrazo() {
         Anuncio anuncio = Anuncio.builder().status(StatusAnuncio.EM_ANDAMENTO).prazoValidacaoHoras(24).build();
-        anuncio.registrarCheckout(AGORA);
+        anuncio.registrarCheckout(AGORA, null);
 
         var response = mapper.toCheckoutResponse(anuncio);
 
@@ -35,7 +35,7 @@ class CheckoutContratoTest {
     @Test
     void dadoAnuncioSemPrazoGravado_quandoMapeia_entaoPrazoNulo() {
         Anuncio anuncio = Anuncio.builder().status(StatusAnuncio.PUBLICADO).build();
-        anuncio.registrarCheckout(AGORA);
+        anuncio.registrarCheckout(AGORA, null);
 
         assertThat(mapper.toCheckoutResponse(anuncio).prazoValidacaoEm()).isNull();
     }

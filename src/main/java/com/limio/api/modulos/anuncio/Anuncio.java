@@ -104,6 +104,9 @@ public class Anuncio extends BaseEntity {
     @Column(name = "checkout_em")
     private Instant checkoutEm;
 
+    @Column(name = "observacao_checkout")
+    private String observacaoCheckout;
+
     @Column(name = "validado_em")
     private Instant validadoEm;
 
@@ -181,9 +184,10 @@ public class Anuncio extends BaseEntity {
         };
     }
 
-    public void registrarCheckout(Instant agora) {
+    public void registrarCheckout(Instant agora, String observacao) {
         this.status = StatusAnuncio.AGUARDANDO_VALIDACAO;
         this.checkoutEm = agora;
+        this.observacaoCheckout = (observacao == null || observacao.isBlank()) ? null : observacao.strip();
     }
 
     public Optional<Instant> prazoDeValidacao() {

@@ -17,7 +17,7 @@ import com.limio.api.comum.midia.enums.TipoMidia;
 
 /**
  * Persistência da evidência de check-out (ETI-90): o tipo novo grava com {@code anuncio_id} e a constraint
- * da V28 continua barrando {@code anuncio_id} onde não faz sentido.
+ * da V30 continua barrando {@code anuncio_id} onde não faz sentido.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
