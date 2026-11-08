@@ -252,3 +252,22 @@ aceito e proposta pendente também já existem na tabela (TICKET-0049) sem useca
 `CodigoErro.SERVICO_NAO_ENCONTRADO` é intencionalmente igual ao sugerido pela PR#26 (ETI-88): duplicação
 esperada, resolvida no merge. Detalhe completo em
 `docs/features/ETI-86-consultar-o-servico-combinado.md`.
+
+## 2026-11-07 — ETI-90: fazer o check-out com foto
+
+`POST /anuncios/{anuncioId}/checkout` (multipart). Detalhe completo em
+`docs/features/ETI-90-fazer-o-check-out-com-foto.md`.
+
+O "combinado" do UC40 não existe como status: é `PUBLICADO` com candidatura escolhida. O check-out parte de
+`EM_ANDAMENTO` ou de `PUBLICADO`, porque iniciar o serviço (ETI-88) é opcional. `Anuncio` ganhou
+`permiteCheckout`, `registrarCheckout` e `prazoDeValidacao`; `Aplicacao` ganhou `registrarCheckout` (vai para
+`AGUARDANDO_VALIDACAO`). `checkoutEm` passa a ser preenchido pela primeira vez.
+
+`TipoMidia.EVIDENCIA_CHECKOUT` e a V30: a constraint da V20 só deixava `anuncio_id` em `FOTO_ANUNCIO`, e foi
+trocada por uma que vale para os dois tipos ligados a anúncio. A V31 cria `anuncio.observacao_checkout`
+(decisão do usuário: o card não dizia onde guardar a observação). A numeração pula V28/V29, reservadas por
+outra branch (avaliações).
+
+`CodigoErro.FOTO_OBRIGATORIA` é exclusivo do check-out; as demais rotas de foto seguem com `FOTO_INVALIDA`
+para lista vazia. A limpeza de objetos em rollback reaproveita `FotoAnuncioEnviadaEvent`.
+`CheckoutEnviadoEvent` fica em `comum/eventos/` e ainda não tem consumidor (aviso ao Empregador, ETI-112).
