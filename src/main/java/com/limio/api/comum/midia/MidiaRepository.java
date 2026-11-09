@@ -26,4 +26,6 @@ public interface MidiaRepository extends BaseRepository<Midia, UUID> {
             ORDER BY m.anuncio_id, m.criado_em, m.id
             """, nativeQuery = true)
     List<Midia> findPrimeirasFotosDosAnuncios(@Param("anuncioIds") Collection<UUID> anuncioIds);
+
+    Optional<Midia> findByIdAndAnuncioIdAndTipoAndExpurgoEmIsNull(UUID id, UUID anuncioId, TipoMidia tipo);
 }
