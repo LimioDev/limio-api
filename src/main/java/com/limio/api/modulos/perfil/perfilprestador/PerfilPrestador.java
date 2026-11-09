@@ -1,10 +1,13 @@
 package com.limio.api.modulos.perfil.perfilprestador;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+
+import org.hibernate.annotations.DynamicUpdate;
 
 import com.limio.api.comum.base.BaseEntity;
 import com.limio.api.comum.localizacao.enums.Uf;
@@ -36,9 +39,13 @@ import lombok.NoArgsConstructor;
  *
  * Sem setter de propósito: {@code completo} depende de todos os campos de atuação, então eles só mudam
  * juntos, por {@link #atualizarAtuacao}, que recalcula {@code completo} no fim.
+ *
+ * {@code @DynamicUpdate}: o UPDATE leva só as colunas alteradas. A média (ETI-107) e a atuação mudam por caminhos
+ * diferentes, e um não pode regravar o valor antigo do outro.
  */
 @Entity
 @Table(name = "perfil_prestador")
+@DynamicUpdate
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PerfilPrestador extends BaseEntity {
@@ -63,6 +70,13 @@ public class PerfilPrestador extends BaseEntity {
 
     @Column(name = "completo", nullable = false)
     private boolean completo;
+
+    /** {@code null} enquanto não há avaliação (RB11, nunca 0,0). */
+    @Column(name = "media_avaliacoes", precision = 2, scale = 1)
+    private BigDecimal mediaAvaliacoes;
+
+    @Column(name = "qtd_avaliacoes", nullable = false)
+    private int qtdAvaliacoes;
 
     @ManyToMany
     @JoinTable(name = "prestador_categoria",
@@ -104,6 +118,12 @@ public class PerfilPrestador extends BaseEntity {
         });
 
         this.completo = calcularCompleto();
+    }
+
+    /** Média e quantidade recalculadas por {@code moderacao} (ETI-107); este perfil só guarda. */
+    public void registrarAvaliacoes(BigDecimal mediaAvaliacoes, int qtdAvaliacoes) {
+        this.mediaAvaliacoes = mediaAvaliacoes;
+        this.qtdAvaliacoes = qtdAvaliacoes;
     }
 
     /**

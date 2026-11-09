@@ -46,6 +46,15 @@ public class PerfilEmpregadorService extends BaseService<PerfilEmpregador, UUID,
         return repository.findByIdParaAtualizar(perfilId).orElseThrow(PerfilEmpregadorNaoEncontradoException::new);
     }
 
+    /**
+     * Para gravar o que não vem do próprio usuário (a média, ETI-107): cria o perfil que faltar, como
+     * {@link #garantirPerfil}, mas devolve vazio em vez de lançar se a conta não existe ou foi encerrada.
+     */
+    public Optional<PerfilEmpregador> garantirPerfilSeContaAtiva(UUID usuarioId) {
+        return consultaDadosUsuario.buscarPorId(usuarioId).map(dados -> buscarOuCriar(usuarioId,
+                PerfilEmpregador.nomeExibicaoInicialDe(dados.nomeCompleto())));
+    }
+
     /** Sem criar: vazio é o usuário que nunca abriu o perfil de empregador. */
     public Optional<PerfilEmpregador> buscarPorUsuario(UUID usuarioId) {
         return repository.findByUsuarioId(usuarioId);

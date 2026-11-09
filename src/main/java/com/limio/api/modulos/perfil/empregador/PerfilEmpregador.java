@@ -3,6 +3,8 @@ package com.limio.api.modulos.perfil.empregador;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import org.hibernate.annotations.DynamicUpdate;
+
 import com.limio.api.comum.base.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -14,8 +16,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * {@code @DynamicUpdate}: o UPDATE leva só as colunas alteradas. A média (ETI-107) e o nome de exibição mudam por
+ * caminhos diferentes, e um não pode regravar o valor antigo do outro.
+ */
 @Entity
 @Table(name = "perfil_empregador")
+@DynamicUpdate
 @Getter
 @Setter
 @NoArgsConstructor
@@ -40,6 +47,12 @@ public class PerfilEmpregador extends BaseEntity {
 
     /** Conta encerrada (UC10): o nome de exibição deixa de identificar a pessoa. */
     public static final String NOME_CONTA_ENCERRADA = "Conta encerrada";
+
+    /** Média e quantidade recalculadas por {@code moderacao} (ETI-107); este perfil só guarda. */
+    public void registrarAvaliacoes(BigDecimal mediaAvaliacoes, int qtdAvaliacoes) {
+        this.mediaAvaliacoes = mediaAvaliacoes;
+        this.qtdAvaliacoes = qtdAvaliacoes;
+    }
 
     public void anonimizar() {
         this.nomeExibicao = NOME_CONTA_ENCERRADA;
