@@ -147,7 +147,7 @@ public class Anuncio extends BaseEntity {
 
     /**
      * O Empregador ainda pode mexer no anúncio: só enquanto está publicado e ninguém foi escolhido. Regra única
-     * de "Anexar fotos ao anúncio" (ETI-59) e "Cancelar anúncio antes da escolha" (ETI-63).
+     * de "Anexar fotos ao anúncio" (ETI-59), "Cancelar anúncio antes da escolha" (ETI-63) e "Editar anúncio" (ETI-61).
      */
     public boolean permiteAlteracao(boolean existeEscolhida) {
         return switch (status) {
@@ -171,6 +171,20 @@ public class Anuncio extends BaseEntity {
     public void iniciar(Instant agora) {
         this.status = StatusAnuncio.EM_ANDAMENTO;
         this.iniciadoEm = agora;
+    }
+
+    /**
+     * ETI-61: troca os campos editáveis pelos de {@code novos}. Endereço (retrato), status e prazo não mudam. Quem
+     * chama já validou dono, estado e as regras de conteúdo.
+     */
+    public void editar(Anuncio novos) {
+        this.categoriaId = novos.categoriaId;
+        this.titulo = novos.titulo;
+        this.descricao = novos.descricao;
+        this.dataHoraPretendida = novos.dataHoraPretendida;
+        this.tamanhoLocal = novos.tamanhoLocal;
+        this.numeroPessoas = novos.numeroPessoas;
+        this.observacoes = novos.observacoes;
     }
 
     /** UC16 (encerrar conta do contratante): tira do mural, não conclui. */

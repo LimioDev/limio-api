@@ -38,6 +38,8 @@ import com.limio.api.comum.midia.MidiaService;
 import com.limio.api.comum.midia.enums.TipoMidia;
 import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
 import com.limio.api.comum.midia.excecao.FotoInvalidaException;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.FotoDoAnuncio;
@@ -70,6 +72,9 @@ class AnexarFotosAnuncioUseCaseTest {
     private ArmazenamentoService armazenamentoService;
 
     @Mock
+    private TravaTransacional trava;
+
+    @Mock
     private ApplicationEventPublisher eventos;
 
     private AnexarFotosAnuncioUseCase useCase;
@@ -77,7 +82,7 @@ class AnexarFotosAnuncioUseCaseTest {
     @BeforeEach
     void montarUseCase() {
         useCase = new AnexarFotosAnuncioUseCase(anuncioService, aplicacaoService, midiaService, armazenamentoService,
-                eventos, DataSize.ofMegabytes(5), QUANTIDADE_MAXIMA);
+                trava, eventos, DataSize.ofMegabytes(5), QUANTIDADE_MAXIMA);
     }
 
     private void anuncio(StatusAnuncio status) {
@@ -202,6 +207,20 @@ class AnexarFotosAnuncioUseCaseTest {
                 List.of(ImagensDeTeste.png(5, 5), ImagensDeTeste.gif(5, 5))))
                 .isInstanceOf(FotoInvalidaException.class);
         verify(armazenamentoService, never()).enviar(anyString(), any(), anyString());
+    }
+
+    @Test
+    void dadoEnvio_quandoAnexa_entaoTravaOAnuncioAntesDaTravaDeFotosEDeLerOEstado() {
+        publicadoSemEscolhidoComFotos(0);
+        storageResponde();
+
+        useCase.executar(DONO_ID, ANUNCIO_ID, List.of(ImagensDeTeste.png(5, 5)));
+
+        var ordem = inOrder(trava, anuncioService, midiaService, aplicacaoService);
+        ordem.verify(trava).travar(EscopoTrava.ANUNCIO, ANUNCIO_ID.toString());
+        ordem.verify(anuncioService).buscarPorId(ANUNCIO_ID);
+        ordem.verify(midiaService).travarFotosAnuncio(ANUNCIO_ID);
+        ordem.verify(aplicacaoService).existeEscolhida(ANUNCIO_ID);
     }
 
     @Test
