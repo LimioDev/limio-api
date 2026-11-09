@@ -4,6 +4,9 @@ package com.limio.api.comum.midia.enums;
 public enum TipoMidia {
     FOTO_PERFIL,
     FOTO_ANUNCIO,
-    /** Foto do check-out (ETI-90); gravada só quando o check-out existir, lida já por {@code ConsultarValidacaoUseCase} (ETI-92). */
-    FOTO_CHECKOUT
+    /**
+     * Foto do check-out (ETI-90), lida por {@code ConsultarValidacaoUseCase} (ETI-92). Mesmo nome que a #33 (ETI-90)
+     * grava; o check-out ainda não existe nesta branch.
+     */
+    EVIDENCIA_CHECKOUT
 }

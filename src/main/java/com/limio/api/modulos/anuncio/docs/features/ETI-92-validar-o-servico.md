@@ -25,7 +25,7 @@ escolhido, pro Empregador ver antes de confirmar.
 existe desde a V13.
 
 **Fora**: UI (card par `[FRONT-END]`), o check-out em si (`ETI-90`, ainda não implementado — por isso
-`FOTO_CHECKOUT` existe em `TipoMidia` mas nada grava esse tipo ainda), abrir a avaliação (`ETI-107`/`108`)
+`EVIDENCIA_CHECKOUT` existe em `TipoMidia` mas nada grava esse tipo ainda), abrir a avaliação (`ETI-107`/`108`)
 e o aviso ao Prestador (`ETI-112`) — ambos só escutam `ServicoConcluidoEvent` quando existirem, registro
 e conferência de pagamento (fora do LIMIO, UC), denúncia de não pagamento (`ETI-114`/`115`).
 
@@ -42,14 +42,15 @@ e conferência de pagamento (fora do LIMIO, UC), denúncia de não pagamento (`E
 - **`PRESENCIAL` aceita `PUBLICADO` ou `EM_ANDAMENTO`.** O passo "iniciar o serviço" (ETI-88) é opcional —
   mesma observação já deixada na doc do ETI-88 ("nada aqui bloqueia a validação presencial... a partir de
   `PUBLICADO`").
-- **`FOTO_CHECKOUT` e a leitura das fotos já existem, a escrita não.** `TipoMidia.FOTO_CHECKOUT` e
+- **`EVIDENCIA_CHECKOUT` e a leitura das fotos já existem, a escrita não.** `TipoMidia.EVIDENCIA_CHECKOUT` e
   `MidiaService.buscarFotosAtivasDoCheckout` ficam prontos pro ETI-90 gravar; até lá, `GET .../validacao`
   sempre devolve `fotosCheckout: []` e `checkoutEm: null`.
 - **`AplicacaoService.buscarEscolhidaDoAnuncio` nasce aqui.** O card ETI-86 (`ConsultarServicoUseCase`)
   também precisa dessa busca, mas ainda não está em `develop` (PR em aberto); a assinatura é a mesma, pra
   convergir sem conflito quando as duas branches se encontrarem.
-- **Trava no anúncio contra clique duplo.** Mesmo idioma de `IniciarServicoUseCase`: `buscarParaAtualizar`
-  segura a linha; a segunda requisição encontra `CONCLUIDO` e recebe 409.
+- **Trava no anúncio contra clique duplo.** `trava.travar(EscopoTrava.ANUNCIO, anuncioId)` antes de ler o
+  anúncio (advisory lock, o mesmo de editar, cancelar e, com a ETI-69, de todo escritor do agregado); a segunda
+  requisição encontra `CONCLUIDO` e recebe 409. Não usa `AnuncioService.buscarParaAtualizar`, que a ETI-69 remove.
 - **Evento em `comum/eventos/`.** `ServicoConcluidoEvent` leva `anuncioTitulo` e `contratanteId` soltos,
   mesmo motivo do `ServicoIniciadoEvent`: `moderacao` e `notificacao` não importam `modulos.anuncio`.
 

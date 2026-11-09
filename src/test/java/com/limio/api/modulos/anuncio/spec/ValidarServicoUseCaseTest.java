@@ -3,6 +3,7 @@ package com.limio.api.modulos.anuncio.spec;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -19,12 +20,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.limio.api.comum.eventos.ServicoConcluidoEvent;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.actions.usecase.ValidarServicoUseCase;
@@ -53,11 +57,14 @@ class ValidarServicoUseCaseTest {
     @Mock
     private ApplicationEventPublisher eventos;
 
+    @Mock
+    private TravaTransacional trava;
+
     private ValidarServicoUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new ValidarServicoUseCase(anuncioService, aplicacaoService, eventos);
+        useCase = new ValidarServicoUseCase(anuncioService, aplicacaoService, eventos, trava);
     }
 
     private Anuncio anuncio(StatusAnuncio status) {
@@ -83,7 +90,7 @@ class ValidarServicoUseCaseTest {
     }
 
     private void comAnuncioEEscolhida(Anuncio anuncio) {
-        when(anuncioService.buscarParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
         when(aplicacaoService.buscarEscolhidaDoAnuncio(ANUNCIO_ID)).thenReturn(Optional.of(escolhida()));
     }
 
@@ -173,9 +180,23 @@ class ValidarServicoUseCaseTest {
     }
 
     @Test
+    void quandoValida_entaoTravaOAnuncioAntesDeLerOEstado() {
+        Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO);
+        comAnuncioEEscolhida(anuncio);
+        when(anuncioService.salvar(anuncio)).thenReturn(anuncio);
+
+        useCase.executar(ANUNCIO_ID, CONTRATANTE_ID, ModoValidacao.PRESENCIAL);
+
+        InOrder ordem = inOrder(trava, anuncioService, aplicacaoService);
+        ordem.verify(trava).travar(EscopoTrava.ANUNCIO, ANUNCIO_ID.toString());
+        ordem.verify(anuncioService).buscarPorId(ANUNCIO_ID);
+        ordem.verify(aplicacaoService).buscarEscolhidaDoAnuncio(ANUNCIO_ID);
+    }
+
+    @Test
     void dadoQuemNaoEDono_quandoValida_entao404() {
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO);
-        when(anuncioService.buscarParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
 
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, UUID.randomUUID(), ModoValidacao.PRESENCIAL))
                 .isInstanceOf(ServicoNaoEncontradoException.class);
@@ -186,7 +207,7 @@ class ValidarServicoUseCaseTest {
     @Test
     void dadoSemCandidaturaEscolhida_quandoValida_entao404() {
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO);
-        when(anuncioService.buscarParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
         when(aplicacaoService.buscarEscolhidaDoAnuncio(ANUNCIO_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, CONTRATANTE_ID, ModoValidacao.PRESENCIAL))
@@ -198,7 +219,7 @@ class ValidarServicoUseCaseTest {
 
     @Test
     void dadoAnuncioInexistente_quandoValida_entao404() {
-        when(anuncioService.buscarParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.empty());
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, CONTRATANTE_ID, ModoValidacao.PRESENCIAL))
                 .isInstanceOf(ServicoNaoEncontradoException.class);

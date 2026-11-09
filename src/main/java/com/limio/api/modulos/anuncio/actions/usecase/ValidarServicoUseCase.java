@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.eventos.ServicoConcluidoEvent;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
@@ -23,7 +25,9 @@ import com.limio.api.modulos.anuncio.excecao.ValidacaoSemCheckoutException;
  * partes, ETI-107/ETI-108) e {@code notificacao} (avisar o Prestador, ETI-112) escutam, nenhum dos dois
  * implementado ainda.
  *
- * A trava no anúncio barra o clique duplo, mesmo idioma de {@code IniciarServicoUseCase} (ETI-88).
+ * A trava {@link EscopoTrava#ANUNCIO} (advisory lock, a mesma de editar, cancelar, escolher e iniciar) vem antes de
+ * ler o anúncio: barra o clique duplo (a segunda requisição encontra {@code CONCLUIDO} e recebe 409) e coloca a
+ * validação na mesma fila dos outros escritores do anúncio.
  *
  * Só o Empregador dono do anúncio valida; os demais recebem o mesmo 404 {@code SERVICO_NAO_ENCONTRADO} de
  * um id inexistente, mesmo critério de {@code ConsultarServicoUseCase} (ETI-86).
@@ -34,17 +38,21 @@ public class ValidarServicoUseCase {
     private final AnuncioService anuncioService;
     private final AplicacaoService aplicacaoService;
     private final ApplicationEventPublisher eventos;
+    private final TravaTransacional trava;
 
     public ValidarServicoUseCase(AnuncioService anuncioService, AplicacaoService aplicacaoService,
-            ApplicationEventPublisher eventos) {
+            ApplicationEventPublisher eventos, TravaTransacional trava) {
         this.anuncioService = anuncioService;
         this.aplicacaoService = aplicacaoService;
         this.eventos = eventos;
+        this.trava = trava;
     }
 
     @Transactional
     public Anuncio executar(UUID anuncioId, UUID contratanteId, ModoValidacao modo) {
-        Anuncio anuncio = anuncioService.buscarParaAtualizar(anuncioId)
+        trava.travar(EscopoTrava.ANUNCIO, anuncioId.toString());
+
+        Anuncio anuncio = anuncioService.buscarPorId(anuncioId)
                 .filter(encontrado -> encontrado.pertenceA(contratanteId))
                 .orElseThrow(ServicoNaoEncontradoException::new);
 
