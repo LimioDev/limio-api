@@ -47,5 +47,6 @@ public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
     Optional<Aplicacao> findFirstByAnuncioIdAndPrestadorIdOrderByDataAplicacaoDescIdDesc(UUID anuncioId,
             UUID prestadorId);
 
+    /** {@code escolhidaEm} nunca é limpo, mesmo depois do serviço concluir ou cancelar (ETI-86). */
     Optional<Aplicacao> findFirstByAnuncioIdAndEscolhidaEmIsNotNull(UUID anuncioId);
 }

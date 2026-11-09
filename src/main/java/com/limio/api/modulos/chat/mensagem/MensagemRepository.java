@@ -48,4 +48,7 @@ public interface MensagemRepository extends BaseRepository<Mensagem, UUID> {
             """, nativeQuery = true)
     List<UUID> marcarLidas(@Param("chatId") UUID chatId, @Param("usuarioId") UUID usuarioId,
             @Param("agora") Instant agora);
+
+    /** Mensagens que a outra parte mandou e {@code usuarioId} ainda não leu (ETI-86). */
+    int countByChatIdAndRemetenteIdNotAndLidaEmIsNull(UUID chatId, UUID usuarioId);
 }

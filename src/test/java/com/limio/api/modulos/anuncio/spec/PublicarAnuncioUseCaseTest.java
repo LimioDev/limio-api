@@ -35,6 +35,7 @@ import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.EnderecoDoAnuncio;
+import com.limio.api.modulos.anuncio.actions.service.ValidacaoDoAnuncioService;
 import com.limio.api.modulos.anuncio.actions.usecase.PublicarAnuncioUseCase;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.eventos.AnuncioPublicadoEvent;
@@ -74,8 +75,9 @@ class PublicarAnuncioUseCaseTest {
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new PublicarAnuncioUseCase(anuncioService, consultaDadosUsuario, consultaCategoria,
-                consultaEndereco, eventos, TransactionOperations.withoutTransaction(), PRAZO_VALIDACAO_HORAS);
+        useCase = new PublicarAnuncioUseCase(anuncioService, consultaDadosUsuario,
+                new ValidacaoDoAnuncioService(consultaCategoria), consultaEndereco, eventos,
+                TransactionOperations.withoutTransaction(), PRAZO_VALIDACAO_HORAS);
     }
 
     private static Anuncio candidato(Instant dataHoraPretendida) {

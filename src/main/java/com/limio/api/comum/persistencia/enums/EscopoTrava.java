@@ -19,5 +19,11 @@ public enum EscopoTrava {
     FOTO_PERFIL,
 
     /** Envio de fotos por anúncio, pro limite de quantidade (ETI-59). */
-    FOTOS_ANUNCIO
+    FOTOS_ANUNCIO,
+
+    /**
+     * Mudança do conteúdo ou do estado de um anúncio (ETI-61): editar e, depois, escolher candidato. Quando um
+     * usecase também trava {@link #FOTOS_ANUNCIO}, trava esta primeiro (sem deadlock).
+     */
+    ANUNCIO
 }

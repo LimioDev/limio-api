@@ -11,6 +11,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.limio.api.comum.eventos.AnuncioCanceladoEvent;
+import com.limio.api.comum.eventos.CandidaturaRecusadaEvent;
 import com.limio.api.comum.eventos.CandidaturaEncerradaEvent;
 import com.limio.api.comum.eventos.ContaEncerradaEvent;
 import com.limio.api.modulos.chat.Chat;
@@ -39,6 +40,13 @@ public class DeixarChatSomenteLeituraUseCase {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void aoCancelarAnuncio(AnuncioCanceladoEvent evento) {
         executarDoAnuncio(evento.anuncioId(), MotivoSomenteLeitura.ANUNCIO_CANCELADO, evento.ocorridoEm());
+    }
+
+    /** Recusada pelo Empregador (ETI-67): o histórico fica, o Prestador não recebe nem manda mais mensagem. */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void aoRecusarCandidatura(CandidaturaRecusadaEvent evento) {
+        executarDaCandidatura(evento.candidaturaId(), MotivoSomenteLeitura.CANDIDATURA_RECUSADA, evento.ocorridoEm());
     }
 
     /** A outra parte não fica mandando mensagem para "Usuário excluído". */
