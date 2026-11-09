@@ -15,6 +15,7 @@ import com.limio.api.modulos.anuncio.records.CandidatoResumidoResponse;
 import com.limio.api.modulos.anuncio.records.CategoriaAnuncioResponse;
 import com.limio.api.modulos.anuncio.records.CriarAnuncioRequest;
 import com.limio.api.modulos.anuncio.records.CriarAnuncioResponse;
+import com.limio.api.modulos.anuncio.records.EditarAnuncioRequest;
 import com.limio.api.modulos.anuncio.records.EnderecoAvulsoRequest;
 import com.limio.api.modulos.anuncio.records.FotoAnuncioResponse;
 import com.limio.api.modulos.anuncio.records.MeuAnuncioResponse;
@@ -24,6 +25,19 @@ public class AnuncioMapper {
 
     /** Só o que vem da tela; dono, status, retrato do endereço e prazo são do {@code PublicarAnuncioUseCase}. */
     public Anuncio toEntity(CriarAnuncioRequest request) {
+        return Anuncio.builder()
+                .categoriaId(request.categoriaId())
+                .titulo(request.titulo())
+                .descricao(request.descricao())
+                .dataHoraPretendida(request.dataHoraPretendida())
+                .tamanhoLocal(request.tamanhoLocal())
+                .numeroPessoas(request.numeroPessoas())
+                .observacoes(request.observacoes())
+                .build();
+    }
+
+    /** Só os campos editáveis; o {@code EditarAnuncioUseCase} copia pro anúncio existente. */
+    public Anuncio toEntity(EditarAnuncioRequest request) {
         return Anuncio.builder()
                 .categoriaId(request.categoriaId())
                 .titulo(request.titulo())

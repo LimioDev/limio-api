@@ -168,6 +168,20 @@ anúncios do próprio contratante).
 `CandidaturaCriadaEvent` de cada candidatura, ETI-75), então não precisa da lista de candidaturas aqui
 pra marcar os chats em somente leitura.
 
+## 2026-10-29 — ETI-77: acompanhar minhas candidaturas e desistir de uma pendente
+
+Primeira tela do lado do Prestador: `GET /candidaturas/minhas` (abas Pendentes/Combinadas/Histórico, paginada) e
+`POST /candidaturas/{id}/desistir`. A classificação status → aba mora em `AbaCandidatura.de` (`switch` sem
+`default`), pra status novo não cair em aba nenhuma sem o compilador avisar. Combinadas inclui
+`AGUARDANDO_VALIDACAO`: o Prestador foi escolhido e o serviço ainda não terminou.
+
+Desistir encerra a candidatura (`ENCERRADA`, motivo "Desistência do Prestador") e publica
+`CandidaturaEncerradaEvent` pro `chat`. A leitura usa `PESSIMISTIC_WRITE` — o card de escolha do Empregador
+precisa travar a mesma linha, senão uma escolha e uma desistência simultâneas podem se sobrescrever.
+
+`PageResponse<T>` entrou em `comum/records/` (já previsto no ADR-0001). Detalhe em
+`docs/features/ETI-77-acompanhar-e-desistir-das-candidaturas.md`.
+
 ## 2026-10-30 — ETI-79: escolhas do Prestador para a cota do mês
 
 `anuncio` implementa a porta `comum/portas/ConsultaEscolhasDoPrestador` (`actions/service/ConsultaEscolhasDoPrestadorService`):
@@ -193,3 +207,61 @@ detalhe, papel inválido como `ACESSO_NEGADO` em vez de `PAPEL_INVALIDO`. `anunc
 (`EnderecoLocalizado` passou a ter `cidade`). Migrations `V25` (índices do mural) e `V26` (cidade) — pulam V22–V24
 porque outras PRs abertas já usam V22/V23. Detalhe em
 `docs/features/ETI-73-mural-e-detalhe-do-anuncio-para-o-prestador.md`.
+
+## 2026-10-30 — ETI-88: iniciar o serviço
+
+`POST /anuncios/{anuncioId}/iniciar`: `IniciarServicoUseCase` leva o anúncio de `PUBLICADO` para
+`EM_ANDAMENTO`, grava `iniciadoEm`, encerra a proposta de reagendamento pendente e publica
+`ServicoIniciadoEvent` (novo, `comum/eventos/`), que o ETI-112 vai escutar. Sem migration.
+
+Quem não é o Prestador escolhido recebe o mesmo 404 `SERVICO_NAO_ENCONTRADO` de um id inexistente. A busca
+trava a linha do anúncio (`findByIdParaAtualizar`), porque `BaseEntity` não tem `@Version`: no clique duplo
+só uma requisição passa, a outra recebe 409 `SERVICO_ESTADO_INVALIDO`.
+
+Detalhe em `docs/features/ETI-88-iniciar-o-servico.md`.
+
+## 2026-10-30 — ETI-67: listar candidatos e recusar candidato
+
+`GET /anuncios/{anuncioId}/candidaturas` e `POST /anuncios/{anuncioId}/candidaturas/{candidaturaId}/recusar`
+(`CandidatoController`, `ListarCandidatosUseCase`, `RecusarCandidatoUseCase`). A recusa publica o novo
+`comum/eventos/CandidaturaRecusadaEvent`, que o `chat` escuta para deixar o chat somente leitura.
+
+Três portas de leitura novas em `comum/portas/`: `ConsultaEspecialidades` (`perfil`), `ConsultaChat` (`chat`) e
+`ConsultaAvaliacoes` (`perfil`, provisória: sem módulo de avaliações, devolve sempre "sem avaliações").
+
+A recusa trava o anúncio com `EscopoTrava.ANUNCIO` (advisory lock), o mesmo mecanismo da edição (ETI-61). A escolha de
+candidato (ETI-69/70) deve tomar a mesma trava. Sem migration.
+
+Detalhe completo em `docs/features/ETI-67-listar-candidatos-e-recusar-candidato.md`.
+
+## 2026-11-03 — ETI-86: consultar o serviço combinado com os contatos liberados
+
+`GET /anuncios/{anuncioId}/servico` (`ConsultarServicoUseCase`): o Empregador dono e o Prestador da
+candidatura escolhida veem o anúncio com o contato um do outro liberado (nome e telefone completos, não
+abreviados), prazo de cancelamento, reagendamentos aceitos/limite, proposta pendente e o chat da candidatura
+com as mensagens não lidas. A candidatura escolhida é achada por `escolhidaEm != null`
+(`AplicacaoRepository.findFirstByAnuncioIdAndEscolhidaEmIsNotNull`), não pelo `status` atual, pra o acesso
+continuar valendo depois que o serviço conclui ou o anúncio cancela.
+
+Porta nova `comum/portas/ConsultaChatDoServico`, implementada em `chat` (id do chat + não lidas de uma
+candidatura, por quem consulta). `MensagemRepository` ganhou a contagem de não lidas.
+
+Nenhuma coluna nova: `iniciadoEm`, `checkoutEm` e `validadoEm` já existiam em `Anuncio` desde a V13, mas
+nenhum usecase os preenche ainda, então saem `null` na prática até ETI-88/90/91/92/93 entrarem. Reagendamento
+aceito e proposta pendente também já existem na tabela (TICKET-0049) sem usecase que crie (ETI-99/100).
+`CodigoErro.SERVICO_NAO_ENCONTRADO` é intencionalmente igual ao sugerido pela PR#26 (ETI-88): duplicação
+esperada, resolvida no merge. Detalhe completo em
+`docs/features/ETI-86-consultar-o-servico-combinado.md`.
+
+## 2026-11-01 — ETI-61: editar anúncio antes da escolha
+
+`PUT /anuncios/{id}` (`EditarAnuncioUseCase`) corrige título, categoria, descrição, data/hora e opcionais enquanto o
+anúncio está `PUBLICADO` e sem candidatura escolhida (`Anuncio.permiteAlteracao`, a mesma regra de anexar fotos e
+cancelar). `DELETE /anuncios/{id}/fotos/{fotoId}` (`RemoverFotoAnuncioUseCase`) expurga a `Midia` e apaga o objeto
+do storage em `AFTER_COMMIT` (`FotoAnuncioRemovidaEvent`). Adicionar foto continua em `POST /anuncios/{id}/fotos`.
+
+Data futura e categoria ativa saíram de `PublicarAnuncioUseCase` para `ValidacaoDoAnuncioService`, compartilhado
+com a edição. Novo `EscopoTrava.ANUNCIO`: editar, remover e anexar foto travam o anúncio antes de ler o estado; o
+usecase de escolher candidato (ETI-69/70) deve tomar a mesma trava. Sem `CodigoErro` novo, sem migration, sem
+`AnuncioEditado` nem `USE_REAGENDAMENTO` (pontos em aberto). O raciocínio completo está em
+`docs/features/ETI-61-editar-anuncio-antes-da-escolha.md`.

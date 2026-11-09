@@ -39,4 +39,9 @@ public class MensagemService extends BaseService<Mensagem, UUID, MensagemReposit
     public List<UUID> marcarLidas(UUID chatId, UUID usuarioId, Instant agora) {
         return repository.marcarLidas(chatId, usuarioId, agora);
     }
+
+    /** Quantas mensagens do chat {@code usuarioId} ainda não leu (ETI-86). */
+    public int contarNaoLidas(UUID chatId, UUID usuarioId) {
+        return repository.countByChatIdAndRemetenteIdNotAndLidaEmIsNull(chatId, usuarioId);
+    }
 }

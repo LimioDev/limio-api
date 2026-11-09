@@ -147,7 +147,7 @@ public class Anuncio extends BaseEntity {
 
     /**
      * O Empregador ainda pode mexer no anúncio: só enquanto está publicado e ninguém foi escolhido. Regra única
-     * de "Anexar fotos ao anúncio" (ETI-59) e "Cancelar anúncio antes da escolha" (ETI-63).
+     * de "Anexar fotos ao anúncio" (ETI-59), "Cancelar anúncio antes da escolha" (ETI-63) e "Editar anúncio" (ETI-61).
      */
     public boolean permiteAlteracao(boolean existeEscolhida) {
         return switch (status) {
@@ -166,6 +166,37 @@ public class Anuncio extends BaseEntity {
             case CONCLUIDO -> validadoEm;
             case PUBLICADO, EM_ANDAMENTO, AGUARDANDO_VALIDACAO, ENCERRADO -> null;
         };
+    }
+
+    /**
+     * ETI-88: o serviço só começa a partir de {@code PUBLICADO}. Quem chama já confirmou que existe candidatura
+     * escolhida. Passo opcional: validação presencial e check-out também partem de {@code PUBLICADO}.
+     */
+    public boolean permiteInicio() {
+        return switch (status) {
+            case PUBLICADO -> true;
+            case EM_ANDAMENTO, AGUARDANDO_VALIDACAO, CONCLUIDO, ENCERRADO -> false;
+        };
+    }
+
+    /** ETI-88: Prestador escolhido avisou que chegou. Quem chama já validou o estado do anúncio. */
+    public void iniciar(Instant agora) {
+        this.status = StatusAnuncio.EM_ANDAMENTO;
+        this.iniciadoEm = agora;
+    }
+
+    /**
+     * ETI-61: troca os campos editáveis pelos de {@code novos}. Endereço (retrato), status e prazo não mudam. Quem
+     * chama já validou dono, estado e as regras de conteúdo.
+     */
+    public void editar(Anuncio novos) {
+        this.categoriaId = novos.categoriaId;
+        this.titulo = novos.titulo;
+        this.descricao = novos.descricao;
+        this.dataHoraPretendida = novos.dataHoraPretendida;
+        this.tamanhoLocal = novos.tamanhoLocal;
+        this.numeroPessoas = novos.numeroPessoas;
+        this.observacoes = novos.observacoes;
     }
 
     /** UC16 (encerrar conta do contratante): tira do mural, não conclui. */
@@ -187,9 +218,9 @@ public class Anuncio extends BaseEntity {
     /**
      * "Combinado a menos de {@code janela}": a data combinada ainda não
      * passou, mas está perto. Não depende de {@code status == EM_ANDAMENTO}
-     * — esse status só é setado no check-in, que acontece depois de {@code
-     * dataHoraPretendida}, então nunca coincidiria com "data ainda no
-     * futuro" (TICKET-0049, achado de review). Quem chama já sabe que existe
+     * — esse status só existe se o Prestador iniciar o serviço (ETI-88, passo
+     * opcional), então um combinado próximo costuma seguir {@code PUBLICADO}
+     * (TICKET-0049, achado de review). Quem chama já sabe que existe
      * candidatura escolhida/aguardando validação; aqui só a janela de tempo.
      */
     public boolean estaAMenosDe(Duration janela, Instant agora) {

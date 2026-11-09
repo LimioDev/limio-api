@@ -1,6 +1,5 @@
 package com.limio.api.modulos.anuncio.actions.usecase;
 
-import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -8,20 +7,17 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionOperations;
 
-import com.limio.api.comum.portas.ConsultaCategoria;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.ConsultaEndereco;
 import com.limio.api.comum.portas.DadosUsuario;
 import com.limio.api.comum.portas.EnderecoLocalizado;
-import com.limio.api.comum.portas.ResumoCategoria;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.EnderecoDoAnuncio;
+import com.limio.api.modulos.anuncio.actions.service.ValidacaoDoAnuncioService;
 import com.limio.api.modulos.anuncio.eventos.AnuncioPublicadoEvent;
-import com.limio.api.modulos.anuncio.excecao.CategoriaIndisponivelException;
 import com.limio.api.modulos.anuncio.excecao.ContatosNaoConfirmadosException;
-import com.limio.api.modulos.anuncio.excecao.DataNoPassadoException;
 import com.limio.api.modulos.anuncio.excecao.SomenteEmpregadorPublicaException;
 
 /**
@@ -38,7 +34,7 @@ public class PublicarAnuncioUseCase {
 
     private final AnuncioService anuncioService;
     private final ConsultaDadosUsuario consultaDadosUsuario;
-    private final ConsultaCategoria consultaCategoria;
+    private final ValidacaoDoAnuncioService validacaoDoAnuncio;
     private final ConsultaEndereco consultaEndereco;
     private final ApplicationEventPublisher eventos;
     private final TransactionOperations transacao;
@@ -46,14 +42,14 @@ public class PublicarAnuncioUseCase {
 
     public PublicarAnuncioUseCase(AnuncioService anuncioService,
             ConsultaDadosUsuario consultaDadosUsuario,
-            ConsultaCategoria consultaCategoria,
+            ValidacaoDoAnuncioService validacaoDoAnuncio,
             ConsultaEndereco consultaEndereco,
             ApplicationEventPublisher eventos,
             TransactionOperations transacao,
             @Value("${anuncio.prazo-validacao-horas}") int prazoValidacaoHoras) {
         this.anuncioService = anuncioService;
         this.consultaDadosUsuario = consultaDadosUsuario;
-        this.consultaCategoria = consultaCategoria;
+        this.validacaoDoAnuncio = validacaoDoAnuncio;
         this.consultaEndereco = consultaEndereco;
         this.eventos = eventos;
         this.transacao = transacao;
@@ -63,11 +59,9 @@ public class PublicarAnuncioUseCase {
     /** @param candidato categoria, descrição, data e opcionais vindos da tela; o resto é preenchido aqui */
     public Anuncio executar(UUID usuarioId, PapelUsuario papelAtivo, Anuncio candidato, EnderecoDoAnuncio endereco) {
         exigirEmpregador(papelAtivo);
-        if (!candidato.getDataHoraPretendida().isAfter(Instant.now())) {
-            throw new DataNoPassadoException();
-        }
+        validacaoDoAnuncio.exigirDataFutura(candidato.getDataHoraPretendida());
         exigirContatosConfirmados(usuarioId);
-        exigirCategoriaAtiva(candidato.getCategoriaId());
+        validacaoDoAnuncio.exigirCategoriaAtiva(candidato.getCategoriaId());
         EnderecoLocalizado localizado = localizar(usuarioId, endereco);
 
         candidato.publicar(usuarioId, enderecoSalvoId(endereco), localizado, prazoValidacaoHoras);
@@ -93,12 +87,6 @@ public class PublicarAnuncioUseCase {
         if (!confirmados) {
             throw new ContatosNaoConfirmadosException();
         }
-    }
-
-    private void exigirCategoriaAtiva(UUID categoriaId) {
-        consultaCategoria.buscarPorId(categoriaId)
-                .filter(ResumoCategoria::ativa)
-                .orElseThrow(CategoriaIndisponivelException::new);
     }
 
     private EnderecoLocalizado localizar(UUID usuarioId, EnderecoDoAnuncio endereco) {
