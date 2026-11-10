@@ -96,7 +96,7 @@ class ConsultarValidacaoUseCaseTest {
         when(aplicacaoService.buscarEscolhidaDoAnuncio(ANUNCIO_ID)).thenReturn(Optional.of(escolhida()));
         when(midiaService.buscarFotosAtivasDoCheckout(ANUNCIO_ID)).thenReturn(List.of(
                 Midia.fotoAnuncio(CONTRATANTE_ID, ANUNCIO_ID, "fotos-checkout/a.jpg", "image/jpeg", 10, 10, 100)));
-        when(armazenamentoService.gerarLink(anyString())).thenReturn(LINK);
+        when(armazenamentoService.gerarLinkSeDisponivel(anyString())).thenReturn(Optional.of(LINK));
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID))
                 .thenReturn(Optional.of(new DadosUsuario("Carlos Souza", "carlos@example.com", "+5511988887777",
                         Instant.now(), Instant.now())));

@@ -1,18 +1,13 @@
 package com.limio.api.modulos.anuncio.actions.usecase;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.midia.ArmazenamentoService;
-import com.limio.api.comum.midia.LinkTemporario;
 import com.limio.api.comum.midia.MidiaService;
-import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.DadosUsuario;
 import com.limio.api.modulos.anuncio.Anuncio;
@@ -30,8 +25,6 @@ import com.limio.api.modulos.anuncio.excecao.ServicoNaoEncontradoException;
  */
 @Service
 public class ConsultarValidacaoUseCase {
-
-    private static final Logger log = LoggerFactory.getLogger(ConsultarValidacaoUseCase.class);
 
     private final AnuncioService anuncioService;
     private final AplicacaoService aplicacaoService;
@@ -59,7 +52,8 @@ public class ConsultarValidacaoUseCase {
                 .orElseThrow(ServicoNaoEncontradoException::new);
 
         List<FotoDoCheckout> fotos = midiaService.buscarFotosAtivasDoCheckout(anuncioId).stream()
-                .map(foto -> new FotoDoCheckout(foto.getId(), link(foto.getUrlS3()).orElse(null)))
+                .map(foto -> new FotoDoCheckout(foto.getId(),
+                        armazenamentoService.gerarLinkSeDisponivel(foto.getUrlS3()).orElse(null)))
                 .toList();
 
         String nomePrestador = consultaDadosUsuario.buscarPorId(escolhida.getPrestadorId())
@@ -67,14 +61,5 @@ public class ConsultarValidacaoUseCase {
                 .orElse(null);
 
         return new ValidacaoDoServico(anuncio, fotos, nomePrestador);
-    }
-
-    private Optional<LinkTemporario> link(String chave) {
-        try {
-            return Optional.of(armazenamentoService.gerarLink(chave));
-        } catch (ArmazenamentoIndisponivelException e) {
-            log.warn("link de mídia indisponível; validação segue sem a foto do check-out");
-            return Optional.empty();
-        }
     }
 }

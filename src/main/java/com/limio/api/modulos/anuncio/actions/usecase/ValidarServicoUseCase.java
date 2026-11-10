@@ -21,13 +21,16 @@ import com.limio.api.modulos.anuncio.excecao.ValidacaoSemCheckoutException;
 /**
  * UC — Empregador valida o serviço, presencial ou pela foto (ETI-92): o anúncio vai pra {@code CONCLUIDO}
  * e {@code validadoEm} é preenchido. Não registra nem confere pagamento (UC) — isso fica fora do LIMIO.
- * {@link ServicoConcluidoEvent} é publicado, que os módulos {@code moderacao} (abrir avaliação das duas
- * partes, ETI-107/ETI-108) e {@code notificacao} (avisar o Prestador, ETI-112) escutam, nenhum dos dois
- * implementado ainda.
+ * {@link ServicoConcluidoEvent} é publicado; o único consumidor previsto, ainda não implementado, é
+ * {@code notificacao} (avisar o Prestador, ETI-112). {@code moderacao} (ETI-107, já na develop) não escuta
+ * este evento — lê {@code validadoEm} direto pela porta {@code ConsultaServico}/{@code ResumoServico}.
  *
- * A trava {@link EscopoTrava#ANUNCIO} (advisory lock, a mesma de editar, cancelar, escolher e iniciar) vem antes de
- * ler o anúncio: barra o clique duplo (a segunda requisição encontra {@code CONCLUIDO} e recebe 409) e coloca a
- * validação na mesma fila dos outros escritores do anúncio.
+ * A trava {@link EscopoTrava#ANUNCIO} (advisory lock, a mesma de editar, recusar candidato e anexar/remover
+ * foto) vem antes de ler o anúncio: barra o clique duplo (a segunda requisição encontra {@code CONCLUIDO} e
+ * recebe 409) e coloca a validação na mesma fila dos outros escritores do anúncio. {@code
+ * CancelarAnuncioUseCase} não trava nada ainda e {@code IniciarServicoUseCase} usa trava de linha
+ * ({@code buscarParaAtualizar}), que não exclui o advisory lock — os dois só entram nesta mesma fila quando
+ * migrarem pra {@link EscopoTrava#ANUNCIO}.
  *
  * Só o Empregador dono do anúncio valida; os demais recebem o mesmo 404 {@code SERVICO_NAO_ENCONTRADO} de
  * um id inexistente, mesmo critério de {@code ConsultarServicoUseCase} (ETI-86).
@@ -60,14 +63,7 @@ public class ValidarServicoUseCase {
                 .orElseThrow(ServicoNaoEncontradoException::new)
                 .getPrestadorId();
 
-        boolean permite = switch (modo) {
-            case PRESENCIAL -> anuncio.permiteValidacaoPresencial();
-            case PELA_FOTO -> anuncio.permiteValidacaoPelaFoto();
-        };
-        if (!permite) {
-            boolean semCheckout = modo == ModoValidacao.PELA_FOTO && anuncio.aindaNaoTeveCheckout();
-            throw semCheckout ? new ValidacaoSemCheckoutException() : new ServicoEstadoInvalidoException();
-        }
+        garantirQuePermite(anuncio, modo);
 
         Instant agora = Instant.now();
         anuncio.validar(agora);
@@ -76,5 +72,27 @@ public class ValidarServicoUseCase {
         eventos.publishEvent(
                 new ServicoConcluidoEvent(anuncioId, anuncio.getTitulo(), contratanteId, prestadorId, agora));
         return salvo;
+    }
+
+    /**
+     * Cada modo lança a sua própria exceção quando nega, em vez de calcular um {@code boolean} geral e só
+     * depois decidir qual delas: {@code PELA_FOTO} tem dois motivos de recusa possíveis
+     * ({@link ValidacaoSemCheckoutException} sem check-out, {@link ServicoEstadoInvalidoException} já
+     * concluído/encerrado) e {@code PRESENCIAL} só um.
+     */
+    private static void garantirQuePermite(Anuncio anuncio, ModoValidacao modo) {
+        switch (modo) {
+            case PRESENCIAL -> {
+                if (!anuncio.servicoEmAberto()) {
+                    throw new ServicoEstadoInvalidoException();
+                }
+            }
+            case PELA_FOTO -> {
+                if (!anuncio.permiteValidacaoPelaFoto()) {
+                    throw anuncio.servicoEmAberto() ? new ValidacaoSemCheckoutException()
+                            : new ServicoEstadoInvalidoException();
+                }
+            }
+        }
     }
 }

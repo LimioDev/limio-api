@@ -188,10 +188,12 @@ public class Anuncio extends BaseEntity {
     }
 
     /**
-     * ETI-92: validação presencial, sem check-out — a partir de {@code PUBLICADO} (o passo opcional "iniciar"
-     * nunca rodou) ou {@code EM_ANDAMENTO}. Quem chama já confirmou que existe candidatura escolhida.
+     * ETI-92: o serviço ainda não passou pelo check-out — {@code PUBLICADO} (o passo opcional "iniciar" nunca
+     * rodou) ou {@code EM_ANDAMENTO}. Dois usos: permite validação presencial (quem chama já confirmou que
+     * existe candidatura escolhida) e, quando a validação pela foto nega, decide o {@code CodigoErro} certo
+     * ({@code VALIDACAO_SEM_CHECKOUT} aqui, {@code SERVICO_ESTADO_INVALIDO} se já concluído ou encerrado).
      */
-    public boolean permiteValidacaoPresencial() {
+    public boolean servicoEmAberto() {
         return switch (status) {
             case PUBLICADO, EM_ANDAMENTO -> true;
             case AGUARDANDO_VALIDACAO, CONCLUIDO, ENCERRADO -> false;
@@ -203,18 +205,6 @@ public class Anuncio extends BaseEntity {
         return switch (status) {
             case AGUARDANDO_VALIDACAO -> true;
             case PUBLICADO, EM_ANDAMENTO, CONCLUIDO, ENCERRADO -> false;
-        };
-    }
-
-    /**
-     * ETI-92: só pra escolher o {@code CodigoErro} certo quando {@link #permiteValidacaoPelaFoto} nega — o
-     * anúncio ainda não passou pelo check-out (sem foto pra validar), diferente de já ter concluído ou
-     * encerrado (aí o problema é outro, {@code SERVICO_ESTADO_INVALIDO}).
-     */
-    public boolean aindaNaoTeveCheckout() {
-        return switch (status) {
-            case PUBLICADO, EM_ANDAMENTO -> true;
-            case AGUARDANDO_VALIDACAO, CONCLUIDO, ENCERRADO -> false;
         };
     }
 

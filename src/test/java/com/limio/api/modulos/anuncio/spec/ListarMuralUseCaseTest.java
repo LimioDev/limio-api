@@ -30,7 +30,6 @@ import com.limio.api.comum.midia.ArmazenamentoService;
 import com.limio.api.comum.midia.LinkTemporario;
 import com.limio.api.comum.midia.Midia;
 import com.limio.api.comum.midia.MidiaService;
-import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
 import com.limio.api.comum.portas.ConsultaCategoria;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.ConsultaPerfilEmpregador;
@@ -229,7 +228,7 @@ class ListarMuralUseCaseTest {
         Midia foto = Midia.fotoAnuncio(empregador, idComFoto, "fotos-anuncio/a", "image/jpeg", 10, 10, 100);
         when(midiaService.buscarPrimeirasFotosDosAnuncios(anyCollection())).thenReturn(Map.of(idComFoto, foto));
         LinkTemporario link = new LinkTemporario("https://bucket/a", Instant.now());
-        when(armazenamentoService.gerarLink("fotos-anuncio/a")).thenReturn(link);
+        when(armazenamentoService.gerarLinkSeDisponivel("fotos-anuncio/a")).thenReturn(Optional.of(link));
 
         Page<ItemDoMural> pagina = useCase.executar(PRESTADOR_ID, PapelUsuario.PRESTADOR, null, null, QuandoMural.QUALQUER, 0, 20);
 
@@ -253,7 +252,7 @@ class ListarMuralUseCaseTest {
         UUID idLinha = linha.getId();
         Midia foto = Midia.fotoAnuncio(empregador, idLinha, "fotos-anuncio/a", "image/jpeg", 10, 10, 100);
         when(midiaService.buscarPrimeirasFotosDosAnuncios(anyCollection())).thenReturn(Map.of(idLinha, foto));
-        when(armazenamentoService.gerarLink("fotos-anuncio/a")).thenThrow(new ArmazenamentoIndisponivelException());
+        when(armazenamentoService.gerarLinkSeDisponivel("fotos-anuncio/a")).thenReturn(Optional.empty());
 
         Page<ItemDoMural> pagina = useCase.executar(PRESTADOR_ID, PapelUsuario.PRESTADOR, null, null, QuandoMural.QUALQUER, 0, 20);
 

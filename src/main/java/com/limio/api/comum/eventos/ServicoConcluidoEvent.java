@@ -5,9 +5,10 @@ import java.util.UUID;
 
 /**
  * O Empregador validou o serviço, presencial ou pela foto (ETI-92): o anúncio foi pra {@code CONCLUIDO}.
- * Consumidores previstos, ainda não em código: {@code moderacao} abre a avaliação das duas partes
- * (ETI-107/ETI-108), {@code notificacao} avisa o Prestador (ETI-112). {@code anuncioTitulo} vai solto pelo
- * mesmo motivo de {@link ServicoIniciadoEvent}: quem escuta não pode importar {@code modulos.anuncio}.
+ * Único consumidor previsto, ainda não em código: {@code notificacao} avisa o Prestador (ETI-112).
+ * {@code moderacao} (ETI-107, já implementado) não escuta este evento — lê {@code validadoEm} direto pela
+ * porta {@code ConsultaServico}/{@code ResumoServico}. {@code anuncioTitulo} vai solto pelo mesmo motivo de
+ * {@link ServicoIniciadoEvent}: quem escuta não pode importar {@code modulos.anuncio}.
  */
 public record ServicoConcluidoEvent(
         UUID anuncioId,

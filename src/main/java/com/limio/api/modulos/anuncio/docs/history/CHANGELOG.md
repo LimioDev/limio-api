@@ -265,3 +265,18 @@ com a edição. Novo `EscopoTrava.ANUNCIO`: editar, remover e anexar foto travam
 usecase de escolher candidato (ETI-69/70) deve tomar a mesma trava. Sem `CodigoErro` novo, sem migration, sem
 `AnuncioEditado` nem `USE_REAGENDAMENTO` (pontos em aberto). O raciocínio completo está em
 `docs/features/ETI-61-editar-anuncio-antes-da-escolha.md`.
+
+## 2026-11-10 — ETI-92: validar o serviço, presencial ou pela foto
+
+`GET /anuncios/{id}/validacao` e `POST /anuncios/{id}/validar` (`{ "modo": "PRESENCIAL"|"PELA_FOTO" }`):
+o anúncio vai pra `CONCLUIDO`, grava `validadoEm` e publica `ServicoConcluidoEvent` (único consumidor
+previsto, ainda não implementado: `notificacao`, ETI-112 — `moderacao`/ETI-107, que já está na `develop`,
+não escuta esse evento, lê `validadoEm` pela porta `ConsultaServico`). `PRESENCIAL` aceita
+`PUBLICADO`/`EM_ANDAMENTO`; `PELA_FOTO` só `AGUARDANDO_VALIDACAO`, senão `VALIDACAO_SEM_CHECKOUT`
+(distinto de `SERVICO_ESTADO_INVALIDO` quando já concluído/encerrado) — os dois modos compartilham o
+critério de "serviço ainda em aberto" num método só (`Anuncio.servicoEmAberto`, review da PR #31: existiam
+dois `switch` idênticos, um deles só pra escolher o `CodigoErro`). Trava `EscopoTrava.ANUNCIO` contra
+clique duplo, mesma trava de editar/recusar/anexar-remover foto (`CancelarAnuncioUseCase` e
+`IniciarServicoUseCase` ainda não usam essa trava). `TipoMidia.EVIDENCIA_CHECKOUT` e
+`MidiaService.buscarFotosAtivasDoCheckout` ficam prontos pro check-out (ETI-90) gravar; até lá a consulta
+devolve lista vazia. Detalhe completo em `docs/features/ETI-92-validar-o-servico.md`.

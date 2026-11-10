@@ -22,8 +22,10 @@ public enum EscopoTrava {
     FOTOS_ANUNCIO,
 
     /**
-     * Mudança do conteúdo ou do estado de um anúncio (ETI-61): editar e, depois, escolher candidato. Quando um
-     * usecase também trava {@link #FOTOS_ANUNCIO}, trava esta primeiro (sem deadlock).
+     * Mudança do conteúdo ou do estado de um anúncio: editar, recusar candidato, anexar/remover foto
+     * (ETI-61) e validar o serviço (ETI-92). {@code CancelarAnuncioUseCase} e {@code IniciarServicoUseCase}
+     * ainda não tomam esta trava (o segundo usa lock de linha); escolher candidato (ETI-69/70) deve tomar
+     * também. Quando um usecase também trava {@link #FOTOS_ANUNCIO}, trava esta primeiro (sem deadlock).
      */
     ANUNCIO
 }
