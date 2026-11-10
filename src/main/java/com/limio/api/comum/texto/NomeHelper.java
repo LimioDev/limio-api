@@ -1,8 +1,12 @@
-package com.limio.api.modulos.anuncio.actions.helper;
+package com.limio.api.comum.texto;
 
 import java.util.Locale;
 
-/** Nome de pessoa como aparece pra outra parte de um anúncio. */
+/**
+ * Nome de pessoa como aparece pra outra parte — anúncio ({@code modulos.anuncio}) e perfil público
+ * ({@code modulos.perfil}, ETI-105). Promovido pra {@code comum/} quando o segundo módulo passou a precisar
+ * da mesma regra (critério do ADR-0001: usado por 2+ módulos hoje).
+ */
 public final class NomeHelper {
 
     private NomeHelper() {

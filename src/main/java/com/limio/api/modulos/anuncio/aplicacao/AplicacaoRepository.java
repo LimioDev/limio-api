@@ -20,6 +20,9 @@ public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
 
     List<Aplicacao> findByPrestadorIdAndStatusIn(UUID prestadorId, List<StatusAplicacao> status);
 
+    /** Usa {@code idx_aplicacao_prestador_status} — histórico resumido do perfil público (ETI-105). */
+    long countByPrestadorIdAndStatus(UUID prestadorId, StatusAplicacao status);
+
     /** @param fimExclusivo limite superior do período, não incluso */
     List<Aplicacao> findByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThanOrderByEscolhidaEmDesc(
             UUID prestadorId, Instant inicio, Instant fimExclusivo);

@@ -109,6 +109,11 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
                 fimExclusivo);
     }
 
+    /** Quantos serviços {@code prestadorId} já concluiu como prestador escolhido (histórico do perfil público, ETI-105). */
+    public long contarConcluidasDoPrestador(UUID prestadorId) {
+        return repository.countByPrestadorIdAndStatus(prestadorId, StatusAplicacao.CONCLUIDA);
+    }
+
     /**
      * {@code salvar} de uma candidatura nova: a checagem de duplicata do usecase já cobre o caso normal,
      * mas clique duplo/corrida pode passar os dois pela checagem antes de qualquer insert — só o índice

@@ -28,4 +28,14 @@ public interface ConsultaDadosUsuario {
      */
     Optional<DadosUsuario> buscarPorId(UUID usuarioId);
 
+    /**
+     * Diferente de {@link #buscarPorId}: aqui conta encerrada conta como existente. Pro perfil público
+     * (ETI-105), que precisa diferenciar "usuário nunca existiu" (404) de "conta encerrada" (200, perfil
+     * anonimizado) — os outros consumidores da porta não precisam dessa distinção.
+     *
+     * @param usuarioId id do usuário
+     * @return {@code true} se já existiu uma conta com este id, encerrada ou não
+     */
+    boolean existe(UUID usuarioId);
+
 }

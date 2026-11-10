@@ -182,6 +182,32 @@ o resumo sai sem foto em vez de 503 — a foto não derruba o painel.
 3. `registrarAvaliacoes(media, qtd)` na entity e `salvar`. As duas entities têm `@DynamicUpdate`, então o UPDATE leva só
    a média e a quantidade, sem regravar o nome de exibição ou a atuação.
 
+## `GET /perfis-publicos/{usuarioId}?papel=` (ETI-105)
+
+1. `PerfilPublicoController.consultar` chama `ConsultarPerfilPublicoUseCase.executar(usuarioId, papel)` —
+   sem `@AuthenticationPrincipal`: nada aqui depende de quem está logado, só de estar autenticado (regra
+   padrão de `SecurityConfig`).
+2. `ConsultaDadosUsuario.buscarPorId` dá os dados do usuário (vazio se não existe ou conta encerrada). Vazio
+   → confere `ConsultaDadosUsuario.existe` pra decidir: nunca existiu (404
+   `PerfilPublicoNaoEncontradoException`) ou existiu e foi encerrada (segue, com nome "Conta encerrada" —
+   mesmo literal do encerramento, não "Usuário excluído" do Figma).
+3. Nome de exibição por papel: `EMPREGADOR` lê `PerfilEmpregadorService.buscarPorUsuario` (ou o nome inicial
+   calculado do nome completo, se o perfil nunca foi aberto); `PRESTADOR` abrevia o nome completo do
+   cadastro com `comum/texto/NomeHelper` (mesma regra de "candidatos do anúncio", ETI-67) — o Prestador não
+   escolhe como aparece.
+4. Foto pela porta `ConsultaFotoPerfil` (já expurgada pra conta encerrada, sem checagem própria aqui).
+5. Especialidades só pro `PRESTADOR`: `PerfilPrestadorService.buscarPorUsuario`, mesma ordenação de
+   `Categoria.ORDEM_EXIBICAO` usada em `ConsultaEspecialidadesService`. Perfil apagado (conta encerrada) ou
+   nunca salvo → lista vazia, sem checagem própria.
+6. Quantidade/média de avaliações: lida direto das colunas `mediaAvaliacoes`/`qtdAvaliacoes` de
+   `PerfilEmpregador`/`PerfilPrestador` (ETI-107 — mesma fonte pros dois papéis agora, sem porta). Avaliações
+   recentes: porta `ConsultaAvaliacoes.listarRecentes(avaliadoId, papel, limite)`, implementada em
+   `modulos.moderacao` (dono da entity `Avaliacao`) — abrevia o nome do avaliador com `NomeHelper`.
+7. Serviços concluídos: porta `ConsultaHistoricoDeServicos.contarConcluidos`, implementada em
+   `modulos.anuncio` — conta `Anuncio` `CONCLUIDO` (Empregador) ou `Aplicacao` `CONCLUIDA` (Prestador), pelos
+   índices `idx_anuncio_contratante_status`/`idx_aplicacao_prestador_status`.
+8. `PerfilPublicoMapper.toResponse` → 200 `PerfilPublicoResponse`.
+
 ## Classes envolvidas
 
 | Classe | Papel |
@@ -234,5 +260,13 @@ o resumo sai sem foto em vez de 503 — a foto não derruba o painel.
 | `actions/usecase/ConsultarCotaDoMesUseCase`, `actions/mapper/CotaDoMesMapper`, `actions/controller/CotaDoMesController`, `records/CotaDoMesResponse`, `EscolhaDoMesResponse` | consulta da cota do mês (ETI-79) |
 | `excecao/SomentePrestadorConsultaCotaException` | 403 `ACESSO_NEGADO` da cota (ETI-79) |
 | `comum/portas/ConsultaPlanoPrestador`, `enums/Plano` / `ConsultaEscolhasDoPrestador`, `EscolhaDoPrestador` | portas de leitura do plano (`financeiro`) e das escolhas do Prestador (`anuncio`), ETI-79 |
+| `PerfilPublico` | tipo de domínio (não é `record` de HTTP): resultado do usecase, antes do mapper (ETI-105) |
+| `actions/usecase/ConsultarPerfilPublicoUseCase` | regra de negócio do perfil público — nome por papel, foto, especialidades, avaliações, histórico (ETI-105) |
+| `actions/mapper/PerfilPublicoMapper`, `actions/controller/PerfilPublicoController`, `records/PerfilPublicoResponse`, `AvaliacaoRecenteResponse` | contrato HTTP do perfil público (ETI-105) |
+| `excecao/PerfilPublicoNaoEncontradoException` | 404 `PERFIL_NAO_ENCONTRADO` — usuário que nunca existiu (diferente de conta encerrada, que é 200) |
+| `comum/portas/ConsultaAvaliacoes.listarRecentes`, `AvaliacaoRecente` | extensão da porta (ETI-67 já tinha `resumir`) pra avaliações recentes; implementada em `modulos.moderacao` (ETI-107), dono da entity `Avaliacao` |
+| `comum/portas/ConsultaHistoricoDeServicos` | porta nova de contagem de serviços concluídos por papel; implementada em `modulos.anuncio` (`ConsultaHistoricoDeServicosService`) |
+| `comum/portas/ConsultaDadosUsuario.existe` | extensão da porta pra diferenciar "nunca existiu" de "conta encerrada" |
+| `comum/texto/NomeHelper` | abreviação de nome, promovida de `modulos.anuncio.actions.helper` quando `modulos.perfil` passou a precisar da mesma regra (ETI-105) |
 
 Atualize esta página sempre que uma classe mudar de responsabilidade.

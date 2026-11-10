@@ -27,6 +27,11 @@ public class ConsultaDadosUsuarioService implements ConsultaDadosUsuario {
                 .map(ConsultaDadosUsuarioService::toDados);
     }
 
+    @Override
+    public boolean existe(UUID usuarioId) {
+        return usuarioService.existePorId(usuarioId);
+    }
+
     private static DadosUsuario toDados(Usuario usuario) {
         return new DadosUsuario(
                 usuario.getNomeCompleto(),

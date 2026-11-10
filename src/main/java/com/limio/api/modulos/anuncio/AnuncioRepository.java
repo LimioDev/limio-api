@@ -28,6 +28,9 @@ public interface AnuncioRepository extends BaseRepository<Anuncio, UUID> {
 
     List<Anuncio> findByContratanteIdAndStatusIn(UUID contratanteId, List<StatusAnuncio> status);
 
+    /** Usa {@code idx_anuncio_contratante_status} — histórico resumido do perfil público (ETI-105). */
+    long countByContratanteIdAndStatus(UUID contratanteId, StatusAnuncio status);
+
     List<Anuncio> findByContratanteIdAndStatusInOrderByDataHoraPretendidaAsc(UUID contratanteId,
             List<StatusAnuncio> status);
 

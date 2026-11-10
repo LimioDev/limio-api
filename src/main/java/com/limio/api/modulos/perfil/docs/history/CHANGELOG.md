@@ -207,3 +207,22 @@ que não conta) e o estorno (ETI-94) não cabem numa contagem derivada. O `perfi
 (`ConsultaPlanoPrestador`, sempre FREE até a assinatura existir) e as escolhas do mês do `anuncio`
 (`ConsultaEscolhasDoPrestador`), por porta. Papel errado responde `ACESSO_NEGADO`, como nas outras rotas da develop;
 o card sugeria `PAPEL_INVALIDO`, que só existe na PR #19. Detalhe em `../features/ETI-79-consultar-cota-do-mes-e-virada.md`.
+
+## 2026-11-10 — ETI-105: perfil público e reputação; `NomeHelper` sobe pra `comum/`
+
+`GET /perfis-publicos/{usuarioId}?papel=`. Reaproveita o que já existia em vez de criar um modelo de dados
+novo: quantidade/média de avaliações vêm das colunas de `PerfilEmpregador`/`PerfilPrestador` (ETI-107 deu ao
+Prestador as mesmas colunas que o Empregador já tinha desde o TICKET-0048, mantidas depois do encerramento,
+de propósito). `ConsultaAvaliacoes` ganhou `listarRecentes(avaliadoId, papel, limite)` e sua implementação
+migrou do stub provisório em `perfil` pra `moderacao` (dono real da entity `Avaliacao`, que chegou junto
+nesta mesma janela pelo ETI-107) — não dá pra ter duas implementações da porta no contexto. Nova porta
+`ConsultaHistoricoDeServicos` (`anuncio`) conta serviços concluídos pelos índices que já existiam, sem
+migration. `ConsultaDadosUsuario` ganhou `existe`, pra diferenciar usuário que nunca existiu (404) de conta
+encerrada (200, com nome "Conta encerrada" — não o "Usuário excluído" do Figma, pra não duplicar o literal
+que o TICKET-0034 já fixou em dois lugares).
+
+`comum/texto/NomeHelper` (antes `modulos.anuncio.actions.helper`): o Prestador aparece pro perfil público
+abreviado, mesma regra de "candidatos do anúncio" (ETI-67) — com dois módulos precisando da mesma lógica, o
+próprio critério do ADR-0001 pra subir algo a `comum/` (2+ módulos hoje) deixou de ser "talvez" e passou a
+valer. Mudança mecânica, sem tocar a lógica nem os testes (só pacote e imports). Detalhe em
+`../features/ETI-105-consultar-perfil-publico-e-reputacao.md`.
