@@ -21,11 +21,26 @@ public enum EscopoTrava {
     /** Envio de fotos por anúncio, pro limite de quantidade (ETI-59). */
     FOTOS_ANUNCIO,
 
+    /** Avaliações recebidas por usuário e papel, pro recálculo da média (ETI-107). */
+    AVALIACOES_RECEBIDAS,
+
     /**
-     * Mudança do conteúdo ou do estado de um anúncio: editar, recusar candidato, anexar/remover foto
-     * (ETI-61) e validar o serviço (ETI-92). {@code CancelarAnuncioUseCase} e {@code IniciarServicoUseCase}
-     * ainda não tomam esta trava (o segundo usa lock de linha); escolher candidato (ETI-69/70) deve tomar
-     * também. Quando um usecase também trava {@link #FOTOS_ANUNCIO}, trava esta primeiro (sem deadlock).
+     * Mudança do conteúdo ou do estado de um anúncio e de suas candidaturas (ETI-61, ETI-69): editar, cancelar,
+     * iniciar o serviço, candidatar-se, desistir, recusar, escolher candidato e validar o serviço (ETI-92). É o
+     * mecanismo único do agregado: advisory lock não bloqueia linha nenhuma, só quem também o toma, por isso
+     * todo escritor do anúncio ou das suas candidaturas trava este escopo como PRIMEIRA instrução da
+     * transação, antes de ler o estado que vai decidir.
+     *
+     * <p>Ordem de aquisição quando um usecase precisa de mais de um recurso (sem deadlock): {@code ANUNCIO} →
+     * linhas de {@code aplicacao} ({@code SELECT ... FOR UPDATE}, por id crescente) → {@link #COTA_PRESTADOR}.
+     * {@link #FOTOS_ANUNCIO} também vem sempre depois de {@code ANUNCIO}.
      */
-    ANUNCIO
+    ANUNCIO,
+
+    /**
+     * Cota mensal de escolhas de um Prestador, chave = id do Prestador (ETI-69). Protege o par ler-saldo/consumir
+     * mesmo quando a linha do mês ainda não existe e quando o mesmo Prestador é escolhido em anúncios diferentes
+     * ao mesmo tempo (o lock {@link #ANUNCIO} é por anúncio e não o cobre). Sempre depois de {@link #ANUNCIO}.
+     */
+    COTA_PRESTADOR
 }

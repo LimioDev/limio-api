@@ -1,6 +1,7 @@
 package com.limio.api.modulos.perfil.spec;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
 import java.time.YearMonth;
@@ -17,7 +18,7 @@ class CotaMensalTest {
 
     private static CotaMensal cota(YearMonth mes, int consumidas, int teto) {
         CotaMensal cota = CotaMensal.zerada(PERFIL_ID, mes, teto);
-        // a contagem só sobe pela escolha (ETI-69/ETI-70), que ainda não existe
+        // monta o estado direto, sem passar por consumirEscolha()
         ReflectionTestUtils.setField(cota, "escolhasConsumidas", consumidas);
         return cota;
     }
@@ -56,5 +57,26 @@ class CotaMensalTest {
     void esgotaQuandoAsEscolhasChegamAoTeto() {
         assertThat(cota(YearMonth.of(2026, 10), 3, 4).isEsgotada()).isFalse();
         assertThat(cota(YearMonth.of(2026, 10), 4, 4).isEsgotada()).isTrue();
+    }
+
+    @Test
+    void consumirEscolhaSobeAContagemEEsgotaNoTeto() {
+        CotaMensal cota = CotaMensal.zerada(PERFIL_ID, YearMonth.of(2026, 10), 2);
+
+        cota.consumirEscolha();
+        assertThat(cota.getEscolhasConsumidas()).isEqualTo(1);
+        assertThat(cota.isEsgotada()).isFalse();
+
+        cota.consumirEscolha();
+        assertThat(cota.getEscolhasConsumidas()).isEqualTo(2);
+        assertThat(cota.isEsgotada()).isTrue();
+    }
+
+    @Test
+    void consumirEscolhaComCotaEsgotadaFalhaSemAlterarAContagem() {
+        CotaMensal cota = cota(YearMonth.of(2026, 10), 4, 4);
+
+        assertThatThrownBy(cota::consumirEscolha).isInstanceOf(IllegalStateException.class);
+        assertThat(cota.getEscolhasConsumidas()).isEqualTo(4);
     }
 }

@@ -46,12 +46,18 @@ public enum CodigoErro {
     ANUNCIO_PROPRIO("Você não pode se candidatar ao próprio anúncio."),
     CANDIDATURA_DUPLICADA("Você já tem uma candidatura em aberto para este anúncio."),
     COTA_ESGOTADA("Você atingiu o limite de candidaturas escolhidas do plano gratuito neste mês."),
+    COTA_ESGOTADA_CANDIDATO("O candidato atingiu o limite de escolhas do plano gratuito neste mês."),
+    ESCOLHA_CONFLITO("Outro candidato já foi escolhido para este anúncio."),
     CANDIDATURA_NAO_ENCONTRADA("Candidatura não encontrada."),
     CANDIDATURA_ESTADO_INVALIDO("Esta candidatura já foi encerrada."),
     USE_CANCELAMENTO_SERVICO("Você já foi escolhido para este serviço. Para desistir, cancele o serviço combinado."),
     CHAT_NAO_ENCONTRADO("Conversa não encontrada."),
     CHAT_SOMENTE_LEITURA("Esta conversa está encerrada e não recebe novas mensagens."),
     PERFIL_INCOMPLETO("Complete seu perfil de atuação para ver os anúncios."),
+    SERVICO_NAO_CONCLUIDO("O serviço ainda não foi concluído."),
+    JANELA_AVALIACAO_ENCERRADA("O prazo para avaliar este serviço terminou."),
+    AVALIACAO_DUPLICADA("Você já avaliou este serviço."),
+    COMENTARIO_SEM_NOTA("Escolha uma nota para enviar o comentário."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;

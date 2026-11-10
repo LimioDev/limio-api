@@ -173,6 +173,15 @@ o resumo sai sem foto em vez de 503 — a foto não derruba o painel.
 3. `ConsultaCategoriaService.buscarPorIdsEmLote(ids)` → `CategoriaService.buscarPorIds`: id inexistente não vem no mapa.
 4. `EnderecoLocalizado` ganhou `cidade` (vem do endereço salvo ou do avulso), para o retrato `cidade_snapshot` do anúncio.
 
+## Média de avaliações (ETI-107, avaliação em `moderacao`)
+
+1. `moderacao` publica `AvaliacaoPublicadaEvent` com a média e a quantidade já recalculadas para o papel do avaliado.
+2. `RegistrarMediaAvaliacoesUseCase.aoPublicarAvaliacao` escuta na mesma transação (`@EventListener`, `MANDATORY`):
+   `EMPREGADOR` → `PerfilEmpregadorService.garantirPerfilSeContaAtiva` (cria o perfil que faltar; conta encerrada fica
+   de fora); `PRESTADOR` → `PerfilPrestadorService.buscarPorUsuario` (sem perfil de atuação, não grava).
+3. `registrarAvaliacoes(media, qtd)` na entity e `salvar`. As duas entities têm `@DynamicUpdate`, então o UPDATE leva só
+   a média e a quantidade, sem regravar o nome de exibição ou a atuação.
+
 ## Classes envolvidas
 
 | Classe | Papel |
@@ -222,6 +231,7 @@ o resumo sai sem foto em vez de 503 — a foto não derruba o painel.
 | `actions/service/ConsultaEnderecoService` | implementa `comum/portas/ConsultaEndereco` (ETI-59): endereço salvo do usuário ou avulso geocodificado, sempre com o texto de uma linha do retrato do anúncio |
 | `perfilprestador/cotamensal/CotaMensal`, `CotaMensalRepository`, `CotaMensalService`, `AnoMesConverter` | subentidade de `PerfilPrestador` (uma linha por mês, `FUSO`, `mesDe`, `inicio`, `renovaEm`, `isEsgotada`), persistência e `YearMonth` ↔ `'AAAA-MM'` (ETI-79) |
 | `perfilprestador/cotamensal/CotaDoMes` | tipo de domínio: plano + cota do mês + escolhas; teto e esgotada por plano (ETI-79) |
+| `actions/usecase/ConsumirCotaDoMesUseCase`, `actions/service/ConsumoCotaPrestadorService`, `CotaMensal.consumirEscolha` | consumo da cota pela escolha do prestador (ETI-69): trava `COTA_PRESTADOR`, cria a linha do mês, consome ou recusa sem alterar; exposto ao `anuncio` pela porta de escrita `comum/portas/ConsumoCotaPrestador` (`MANDATORY`) |
 | `actions/usecase/ConsultarCotaDoMesUseCase`, `actions/mapper/CotaDoMesMapper`, `actions/controller/CotaDoMesController`, `records/CotaDoMesResponse`, `EscolhaDoMesResponse` | consulta da cota do mês (ETI-79) |
 | `excecao/SomentePrestadorConsultaCotaException` | 403 `ACESSO_NEGADO` da cota (ETI-79) |
 | `comum/portas/ConsultaPlanoPrestador`, `enums/Plano` / `ConsultaEscolhasDoPrestador`, `EscolhaDoPrestador` | portas de leitura do plano (`financeiro`) e das escolhas do Prestador (`anuncio`), ETI-79 |

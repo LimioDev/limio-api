@@ -157,6 +157,18 @@ public class Anuncio extends BaseEntity {
     }
 
     /**
+     * Quando o serviço foi concluído, ou {@code null} se ainda não foi (ETI-107: abre a janela de avaliação). Não há
+     * coluna própria: a conclusão por validação grava {@code validadoEm}, e a por silêncio (fim do
+     * {@code prazoValidacaoHoras}) também precisa gravar, como validação tácita.
+     */
+    public Instant concluidoEm() {
+        return switch (status) {
+            case CONCLUIDO -> validadoEm;
+            case PUBLICADO, EM_ANDAMENTO, AGUARDANDO_VALIDACAO, ENCERRADO -> null;
+        };
+    }
+
+    /**
      * ETI-88: o serviço só começa a partir de {@code PUBLICADO}. Quem chama já confirmou que existe candidatura
      * escolhida. Passo opcional: validação presencial e check-out também partem de {@code PUBLICADO}.
      */

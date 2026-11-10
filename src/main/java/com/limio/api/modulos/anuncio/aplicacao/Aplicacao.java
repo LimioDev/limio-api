@@ -32,6 +32,7 @@ import lombok.Setter;
 public class Aplicacao extends BaseEntity {
 
     private static final String MOTIVO_DESISTENCIA = "Desistência do Prestador";
+    private static final String MOTIVO_OUTRA_ESCOLHA = "Outro prestador escolhido";
 
     @Column(name = "anuncio_id", nullable = false)
     private UUID anuncioId;
@@ -76,6 +77,15 @@ public class Aplicacao extends BaseEntity {
     public void recusar(Instant agora) {
         this.status = StatusAplicacao.RECUSADA;
         this.recusadaEm = agora;
+    }
+
+    public void escolher(Instant agora) {
+        this.status = StatusAplicacao.ESCOLHIDA;
+        this.escolhidaEm = agora;
+    }
+
+    public void encerrarPorOutraEscolha(Instant agora) {
+        encerrar(agora, MOTIVO_OUTRA_ESCOLHA);
     }
 
     public void encerrar(Instant agora, String motivo) {

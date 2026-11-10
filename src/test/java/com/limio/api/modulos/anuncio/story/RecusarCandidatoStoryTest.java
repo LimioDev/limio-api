@@ -176,6 +176,11 @@ class RecusarCandidatoStoryTest {
                 candidaturaId).header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
     }
 
+    private ResultActions desistir(String token, UUID candidaturaId) throws Exception {
+        return mockMvc.perform(post("/candidaturas/{candidaturaId}/desistir", candidaturaId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
+    }
+
     private Aplicacao recarregar(Aplicacao aplicacao) {
         return aplicacaoRepository.findById(aplicacao.getId()).orElseThrow();
     }
@@ -449,6 +454,86 @@ class RecusarCandidatoStoryTest {
         }
 
         assertThat(recarregar(candidatura).getStatus()).isEqualTo(StatusAplicacao.RECUSADA);
+    }
+
+    /**
+     * A desistência também toma a trava do anúncio (ETI-69): com ela segurada, a desistência fica em fila e só
+     * conclui depois que a trava solta. Antes ela travava só a linha da candidatura e passava por cima de uma
+     * recusa/escolha em andamento.
+     */
+    @Test
+    void dadaTravaDoAnuncioSegurada_quandoPrestadorDesiste_entaoDesistenciaEsperaASoltura() throws Exception {
+        Usuario maria = usuario("Maria da Silva", "maria@example.com", "52998224725", PapelUsuario.EMPREGADOR);
+        Usuario rafael = usuario("Rafael Souza", "rafael@example.com", "39053344705", PapelUsuario.PRESTADOR);
+        Anuncio anuncio = anuncio(maria.getId(), StatusAnuncio.PUBLICADO);
+        Aplicacao candidatura = aplicacao(anuncio.getId(), rafael.getId(), StatusAplicacao.ENVIADA);
+        String tokenRafael = logar("rafael@example.com");
+        CountDownLatch comTrava = new CountDownLatch(1);
+        CountDownLatch soltar = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<?> segurando = executor.submit(() -> transacao.executeWithoutResult(tx -> {
+                trava.travar(EscopoTrava.ANUNCIO, anuncio.getId().toString());
+                comTrava.countDown();
+                aguardar(soltar);
+            }));
+            assertThat(comTrava.await(10, TimeUnit.SECONDS)).isTrue();
+
+            Future<Integer> desistencia = executor.submit(
+                    () -> desistir(tokenRafael, candidatura.getId()).andReturn().getResponse().getStatus());
+            pausa(Duration.ofMillis(700));
+            assertThat(desistencia).isNotDone();
+            assertThat(recarregar(candidatura).getStatus()).isEqualTo(StatusAplicacao.ENVIADA);
+
+            soltar.countDown();
+            segurando.get(10, TimeUnit.SECONDS);
+            assertThat(desistencia.get(10, TimeUnit.SECONDS)).isEqualTo(200);
+        } finally {
+            soltar.countDown();
+            executor.shutdownNow();
+        }
+
+        assertThat(recarregar(candidatura).getStatus()).isEqualTo(StatusAplicacao.ENCERRADA);
+    }
+
+    /**
+     * Recusa e desistência disparadas juntas sobre a mesma candidatura: uma vence e a outra enxerga o estado já
+     * mudado (409). O estado final é o do vencedor, nunca a recusa sobrescrevendo a desistência (lost update).
+     */
+    @Test
+    void dadasRecusaEDesistenciaSimultaneas_entaoUmaVenceEOEstadoFinalEDoVencedor() throws Exception {
+        Usuario maria = usuario("Maria da Silva", "maria@example.com", "52998224725", PapelUsuario.EMPREGADOR);
+        Usuario rafael = usuario("Rafael Souza", "rafael@example.com", "39053344705", PapelUsuario.PRESTADOR);
+        Anuncio anuncio = anuncio(maria.getId(), StatusAnuncio.PUBLICADO);
+        Aplicacao candidatura = aplicacao(anuncio.getId(), rafael.getId(), StatusAplicacao.ENVIADA);
+        String tokenMaria = logar("maria@example.com");
+        String tokenRafael = logar("rafael@example.com");
+        CountDownLatch largada = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<Integer> recusa = executor.submit(() -> {
+                aguardar(largada);
+                return recusar(tokenMaria, anuncio.getId(), candidatura.getId()).andReturn().getResponse().getStatus();
+            });
+            Future<Integer> desistencia = executor.submit(() -> {
+                aguardar(largada);
+                return desistir(tokenRafael, candidatura.getId()).andReturn().getResponse().getStatus();
+            });
+            largada.countDown();
+
+            int codigoRecusa = recusa.get(15, TimeUnit.SECONDS);
+            int codigoDesistencia = desistencia.get(15, TimeUnit.SECONDS);
+
+            boolean recusaVenceu = codigoRecusa == 200 && codigoDesistencia == 409;
+            boolean desistenciaVenceu = codigoRecusa == 409 && codigoDesistencia == 200;
+            assertThat(recusaVenceu || desistenciaVenceu)
+                    .as("recusa=%d desistencia=%d", codigoRecusa, codigoDesistencia).isTrue();
+            assertThat(recarregar(candidatura).getStatus())
+                    .isEqualTo(recusaVenceu ? StatusAplicacao.RECUSADA : StatusAplicacao.ENCERRADA);
+        } finally {
+            largada.countDown();
+            executor.shutdownNow();
+        }
     }
 
     private static void pausa(Duration duracao) {

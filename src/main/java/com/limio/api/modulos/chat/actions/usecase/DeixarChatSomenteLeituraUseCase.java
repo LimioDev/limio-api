@@ -1,6 +1,7 @@
 package com.limio.api.modulos.chat.actions.usecase;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -14,6 +15,7 @@ import com.limio.api.comum.eventos.AnuncioCanceladoEvent;
 import com.limio.api.comum.eventos.CandidaturaRecusadaEvent;
 import com.limio.api.comum.eventos.CandidaturaEncerradaEvent;
 import com.limio.api.comum.eventos.ContaEncerradaEvent;
+import com.limio.api.comum.eventos.PrestadorEscolhidoEvent;
 import com.limio.api.modulos.chat.Chat;
 import com.limio.api.modulos.chat.ChatService;
 import com.limio.api.modulos.chat.enums.MotivoSomenteLeitura;
@@ -22,10 +24,10 @@ import com.limio.api.modulos.chat.enums.MotivoSomenteLeitura;
  * Reação de {@code chat} ao fim da candidatura, do anúncio ou da conta de uma das partes (ETI-101): o chat para de
  * receber mensagens e o histórico continua. Roda depois do commit de quem publicou, em transação própria (ADR-0003).
  *
- * Hoje escuta {@code AnuncioCanceladoEvent}, {@code ContaEncerradaEvent} e {@code CandidaturaEncerradaEvent}
- * (desistência, ETI-77). Os cards de recusa (ETI-67), escolha (ETI-69) e serviço cancelado (ETI-94/ETI-96) publicam
- * seus eventos e ligam aqui um listener que chama {@link #executarDaCandidatura} (ou {@link #executarDoAnuncio}) com
- * o {@link MotivoSomenteLeitura} do cenário.
+ * Hoje escuta {@code AnuncioCanceladoEvent}, {@code ContaEncerradaEvent}, {@code CandidaturaEncerradaEvent}
+ * (desistência, ETI-77), {@code CandidaturaRecusadaEvent} (ETI-67) e {@code PrestadorEscolhidoEvent} (ETI-69). O card
+ * de serviço cancelado (ETI-94/ETI-96) publica seu evento e liga aqui um listener que chama {@link
+ * #executarDaCandidatura} (ou {@link #executarDoAnuncio}) com o {@link MotivoSomenteLeitura} do cenário.
  */
 @Service
 public class DeixarChatSomenteLeituraUseCase {
@@ -49,6 +51,13 @@ public class DeixarChatSomenteLeituraUseCase {
         executarDaCandidatura(evento.candidaturaId(), MotivoSomenteLeitura.CANDIDATURA_RECUSADA, evento.ocorridoEm());
     }
 
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void aoEscolherPrestador(PrestadorEscolhidoEvent evento) {
+        executarDasCandidaturas(evento.candidaturasNaoEscolhidasIds(), MotivoSomenteLeitura.OUTRO_PRESTADOR_ESCOLHIDO,
+                evento.ocorridoEm());
+    }
+
     /** A outra parte não fica mandando mensagem para "Usuário excluído". */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -67,6 +76,15 @@ public class DeixarChatSomenteLeituraUseCase {
     @Transactional
     public void executarDaCandidatura(UUID aplicacaoId, MotivoSomenteLeitura motivo, Instant agora) {
         deixarSomenteLeitura(chatService.buscarDaCandidatura(aplicacaoId).stream().toList(), motivo, agora);
+    }
+
+    /** Os chats de várias candidaturas de uma vez; candidatura sem chat é ignorada. */
+    @Transactional
+    public void executarDasCandidaturas(Collection<UUID> aplicacaoIds, MotivoSomenteLeitura motivo, Instant agora) {
+        if (aplicacaoIds.isEmpty()) {
+            return;
+        }
+        deixarSomenteLeitura(chatService.buscarDasCandidaturas(aplicacaoIds), motivo, agora);
     }
 
     /** Todos os chats ainda abertos de um anúncio. */
