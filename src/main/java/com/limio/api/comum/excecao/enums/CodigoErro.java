@@ -52,6 +52,10 @@ public enum CodigoErro {
     CHAT_NAO_ENCONTRADO("Conversa não encontrada."),
     CHAT_SOMENTE_LEITURA("Esta conversa está encerrada e não recebe novas mensagens."),
     PERFIL_INCOMPLETO("Complete seu perfil de atuação para ver os anúncios."),
+    SERVICO_NAO_CONCLUIDO("O serviço ainda não foi concluído."),
+    JANELA_AVALIACAO_ENCERRADA("O prazo para avaliar este serviço terminou."),
+    AVALIACAO_DUPLICADA("Você já avaliou este serviço."),
+    COMENTARIO_SEM_NOTA("Escolha uma nota para enviar o comentário."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;

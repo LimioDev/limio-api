@@ -13,7 +13,8 @@
  *   <li>{@code valor_combinado}, {@code reagendamento}, {@code nao_comparecimento}, {@code contestacao} — subentidades de {@code anuncio}</li>
  *   <li>{@code midia} — mídia anexada a anúncio/aplicação (também referenciada por {@code chat}). As fotos
  *       do anúncio (ETI-59) usam a entity {@code comum.midia.Midia}, que subiu de {@code modulos.perfil}
- *       quando este módulo passou a gravar mídia (ADR-0001: nunca importar {@code perfil})</li>
+ *       quando este módulo passou a gravar mídia (ADR-0001: nunca importar {@code perfil}). O dono edita o anúncio e remove fotos enquanto ele está
+ *       {@code PUBLICADO} e sem escolhido (ETI-61)</li>
  * </ul>
  */
 package com.limio.api.modulos.anuncio;

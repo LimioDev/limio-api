@@ -173,6 +173,15 @@ o resumo sai sem foto em vez de 503 — a foto não derruba o painel.
 3. `ConsultaCategoriaService.buscarPorIdsEmLote(ids)` → `CategoriaService.buscarPorIds`: id inexistente não vem no mapa.
 4. `EnderecoLocalizado` ganhou `cidade` (vem do endereço salvo ou do avulso), para o retrato `cidade_snapshot` do anúncio.
 
+## Média de avaliações (ETI-107, avaliação em `moderacao`)
+
+1. `moderacao` publica `AvaliacaoPublicadaEvent` com a média e a quantidade já recalculadas para o papel do avaliado.
+2. `RegistrarMediaAvaliacoesUseCase.aoPublicarAvaliacao` escuta na mesma transação (`@EventListener`, `MANDATORY`):
+   `EMPREGADOR` → `PerfilEmpregadorService.garantirPerfilSeContaAtiva` (cria o perfil que faltar; conta encerrada fica
+   de fora); `PRESTADOR` → `PerfilPrestadorService.buscarPorUsuario` (sem perfil de atuação, não grava).
+3. `registrarAvaliacoes(media, qtd)` na entity e `salvar`. As duas entities têm `@DynamicUpdate`, então o UPDATE leva só
+   a média e a quantidade, sem regravar o nome de exibição ou a atuação.
+
 ## Classes envolvidas
 
 | Classe | Papel |

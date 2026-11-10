@@ -21,6 +21,9 @@ public enum EscopoTrava {
     /** Envio de fotos por anúncio, pro limite de quantidade (ETI-59). */
     FOTOS_ANUNCIO,
 
+    /** Avaliações recebidas por usuário e papel, pro recálculo da média (ETI-107). */
+    AVALIACOES_RECEBIDAS,
+
     /**
      * Mudança do conteúdo ou do estado de um anúncio (ETI-61): editar e, depois, escolher candidato. Quando um
      * usecase também trava {@link #FOTOS_ANUNCIO}, trava esta primeiro (sem deadlock).
