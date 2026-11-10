@@ -51,7 +51,8 @@ Empregador (ETI-112, só o evento é publicado aqui), UI. O Prestador nunca marc
   limite definido pelo PO, e fica `null` quando vazia ou só espaços.
 - **Prazo é derivado.** `Anuncio.prazoDeValidacao()` soma `prazoValidacaoHoras`, retrato gravado na
   publicação. Sem coluna nova. Anúncio sem prazo gravado devolve `prazoValidacaoEm` nulo, sem fallback.
-- **Trava no anúncio contra clique duplo.** `buscarParaAtualizar` segura a linha; a segunda requisição vê
+- **Trava no anúncio contra clique duplo.** `TravaTransacional` com `EscopoTrava.ANUNCIO` (advisory lock por id
+  do anúncio, solto no fim da transação), tomada antes de ler o anúncio. A segunda requisição espera o lock, vê
   `AGUARDANDO_VALIDACAO` e recebe 409, sem duplicar fotos nem evento.
 - **Evento em `comum/eventos/`.** `CheckoutEnviadoEvent` leva `anuncioTitulo` e `contratanteId` soltos, como
   `ServicoIniciadoEvent`. É publicado dentro da transação; o consumidor deve escutar em `AFTER_COMMIT`

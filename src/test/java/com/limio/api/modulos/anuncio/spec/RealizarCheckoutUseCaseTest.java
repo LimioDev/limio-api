@@ -38,6 +38,8 @@ import com.limio.api.comum.midia.MidiaService;
 import com.limio.api.comum.midia.enums.TipoMidia;
 import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
 import com.limio.api.comum.midia.excecao.FotoInvalidaException;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.actions.usecase.RealizarCheckoutUseCase;
@@ -72,12 +74,15 @@ class RealizarCheckoutUseCaseTest {
     @Mock
     private ApplicationEventPublisher eventos;
 
+    @Mock
+    private TravaTransacional trava;
+
     private RealizarCheckoutUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
         useCase = new RealizarCheckoutUseCase(anuncioService, aplicacaoService, midiaService, armazenamentoService,
-                eventos, DataSize.ofMegabytes(5), 5);
+                eventos, trava, DataSize.ofMegabytes(5), 5);
     }
 
     private Anuncio anuncio(StatusAnuncio status) {
@@ -97,7 +102,7 @@ class RealizarCheckoutUseCaseTest {
     }
 
     private void comAnuncio(Anuncio anuncio) {
-        when(anuncioService.buscarParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
     }
 
     private void comCandidatura(Aplicacao aplicacao) {
@@ -158,11 +163,26 @@ class RealizarCheckoutUseCaseTest {
     }
 
     @Test
+    void dadoCheckout_quandoExecuta_entaoTravaOAnuncioAntesDeLer() {
+        comAnuncio(anuncio(StatusAnuncio.EM_ANDAMENTO));
+        comCandidatura(candidatura(StatusAplicacao.ESCOLHIDA));
+        when(midiaService.salvar(any(Midia.class))).thenAnswer(i -> i.getArgument(0));
+
+        useCase.executar(ANUNCIO_ID, PRESTADOR_ID, umaFoto(), null);
+
+        var ordem = inOrder(trava, anuncioService);
+        ordem.verify(trava).travar(EscopoTrava.ANUNCIO, ANUNCIO_ID.toString());
+        ordem.verify(anuncioService).buscarPorId(ANUNCIO_ID);
+    }
+
+    @Test
     void dadoAnuncioInexistente_quandoFazCheckout_entao404SemNadaGravado() {
-        when(anuncioService.buscarParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.empty());
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, PRESTADOR_ID, umaFoto(), null))
                 .isInstanceOf(ServicoNaoEncontradoException.class);
+
+        verify(trava).travar(EscopoTrava.ANUNCIO, ANUNCIO_ID.toString());
 
         verify(armazenamentoService, never()).enviar(anyString(), any(), anyString());
         verify(eventos, never()).publishEvent(any(Object.class));

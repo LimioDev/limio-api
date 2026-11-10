@@ -17,6 +17,8 @@ import com.limio.api.comum.midia.ImagemHelper.ImagemProcessada;
 import com.limio.api.comum.midia.Midia;
 import com.limio.api.comum.midia.MidiaService;
 import com.limio.api.comum.midia.excecao.FotoInvalidaException;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
@@ -37,8 +39,9 @@ import com.limio.api.modulos.anuncio.excecao.ServicoNaoEncontradoException;
  *
  * Mesmo tratamento de imagem e mesmos limites das fotos do anúncio ({@code anuncio.foto.*}). Tudo ou nada: as
  * fotos são conferidas antes do primeiro upload, e se algo falhar depois a transação desfaz e os objetos já
- * enviados saem do bucket ({@link FotoAnuncioEnviadaEvent}, mesma limpeza das fotos do anúncio). A trava no
- * anúncio barra o clique duplo: a segunda requisição encontra {@code AGUARDANDO_VALIDACAO} e recebe 409.
+ * enviados saem do bucket ({@link FotoAnuncioEnviadaEvent}, mesma limpeza das fotos do anúncio). O advisory
+ * lock no anúncio ({@code EscopoTrava.ANUNCIO}) barra o clique duplo: a segunda requisição espera o lock, encontra
+ * {@code AGUARDANDO_VALIDACAO} e recebe 409.
  */
 @Service
 public class RealizarCheckoutUseCase {
@@ -50,6 +53,7 @@ public class RealizarCheckoutUseCase {
     private final MidiaService midiaService;
     private final ArmazenamentoService armazenamentoService;
     private final ApplicationEventPublisher eventos;
+    private final TravaTransacional trava;
     private final long tamanhoMaximoBytes;
     private final int quantidadeMaxima;
 
@@ -58,6 +62,7 @@ public class RealizarCheckoutUseCase {
             MidiaService midiaService,
             ArmazenamentoService armazenamentoService,
             ApplicationEventPublisher eventos,
+            TravaTransacional trava,
             @Value("${anuncio.foto.tamanho-maximo}") DataSize tamanhoMaximo,
             @Value("${anuncio.foto.quantidade-maxima}") int quantidadeMaxima) {
         this.anuncioService = anuncioService;
@@ -65,13 +70,16 @@ public class RealizarCheckoutUseCase {
         this.midiaService = midiaService;
         this.armazenamentoService = armazenamentoService;
         this.eventos = eventos;
+        this.trava = trava;
         this.tamanhoMaximoBytes = tamanhoMaximo.toBytes();
         this.quantidadeMaxima = quantidadeMaxima;
     }
 
     @Transactional
     public Anuncio executar(UUID anuncioId, UUID prestadorId, List<byte[]> arquivos, String observacao) {
-        Anuncio anuncio = anuncioService.buscarParaAtualizar(anuncioId)
+        trava.travar(EscopoTrava.ANUNCIO, anuncioId.toString());
+
+        Anuncio anuncio = anuncioService.buscarPorId(anuncioId)
                 .orElseThrow(ServicoNaoEncontradoException::new);
 
         Aplicacao escolhida = aplicacaoService.buscarDoPrestadorNoAnuncio(anuncioId, prestadorId)
