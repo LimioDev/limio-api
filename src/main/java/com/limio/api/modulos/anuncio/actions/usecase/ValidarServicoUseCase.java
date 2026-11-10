@@ -25,12 +25,10 @@ import com.limio.api.modulos.anuncio.excecao.ValidacaoSemCheckoutException;
  * {@code notificacao} (avisar o Prestador, ETI-112). {@code moderacao} (ETI-107, já na develop) não escuta
  * este evento — lê {@code validadoEm} direto pela porta {@code ConsultaServico}/{@code ResumoServico}.
  *
- * A trava {@link EscopoTrava#ANUNCIO} (advisory lock, a mesma de editar, recusar candidato e anexar/remover
- * foto) vem antes de ler o anúncio: barra o clique duplo (a segunda requisição encontra {@code CONCLUIDO} e
- * recebe 409) e coloca a validação na mesma fila dos outros escritores do anúncio. {@code
- * CancelarAnuncioUseCase} não trava nada ainda e {@code IniciarServicoUseCase} usa trava de linha
- * ({@code buscarParaAtualizar}), que não exclui o advisory lock — os dois só entram nesta mesma fila quando
- * migrarem pra {@link EscopoTrava#ANUNCIO}.
+ * A trava {@link EscopoTrava#ANUNCIO} (advisory lock, a mesma de editar, cancelar, iniciar, candidatar-se,
+ * desistir, recusar e escolher candidato, ETI-61/ETI-69) vem antes de ler o anúncio: barra o clique duplo (a
+ * segunda requisição encontra {@code CONCLUIDO} e recebe 409) e coloca a validação na mesma fila de todo
+ * escritor do agregado.
  *
  * Só o Empregador dono do anúncio valida; os demais recebem o mesmo 404 {@code SERVICO_NAO_ENCONTRADO} de
  * um id inexistente, mesmo critério de {@code ConsultarServicoUseCase} (ETI-86).

@@ -50,10 +50,9 @@ evento: lê `validadoEm` direto pela porta `ConsultaServico`/`ResumoServico`.
 - **`AplicacaoService.buscarEscolhidaDoAnuncio`**, usada aqui e por `ConsultarServicoUseCase` (ETI-86, já
   na `develop` desde a #29) — mesma busca, uma assinatura só.
 - **Trava no anúncio contra clique duplo.** `trava.travar(EscopoTrava.ANUNCIO, anuncioId)` antes de ler o
-  anúncio (advisory lock, o mesmo de editar, recusar candidato e anexar/remover foto); a segunda requisição
-  encontra `CONCLUIDO` e recebe 409. `CancelarAnuncioUseCase` não trava nada ainda e `IniciarServicoUseCase`
-  usa trava de linha (`buscarParaAtualizar`), que não exclui o advisory lock — os dois só entram nesta
-  mesma fila quando migrarem pra `EscopoTrava.ANUNCIO` (a #32, ETI-69, faz isso pro iniciar).
+  anúncio — mesma trava que a #32 (ETI-69) estendeu a todo escritor do agregado (editar, cancelar, iniciar,
+  candidatar-se, desistir, recusar, escolher candidato); validar entra na mesma fila. A segunda requisição
+  encontra `CONCLUIDO` e recebe 409.
 - **Evento em `comum/eventos/`.** `ServicoConcluidoEvent` leva `anuncioTitulo` e `contratanteId` soltos,
   mesmo motivo do `ServicoIniciadoEvent`: `notificacao` não importa `modulos.anuncio`. `moderacao` (ETI-107)
   não escuta este evento — lê `validadoEm` pela porta `ConsultaServico`/`ResumoServico`.
