@@ -41,3 +41,11 @@ deixa o chat da candidatura somente leitura com `CANDIDATURA_RECUSADA`. O chat t
 `comum/portas/ConsultaChat` (`actions/service/ConsultaChatService`), que devolve o id do chat por candidatura, em lote,
 para a lista de candidatos do `anuncio`. Só leitura: nunca cria o chat. Ver
 `anuncio/docs/features/ETI-67-listar-candidatos-e-recusar-candidato.md`.
+
+## 2026-11-07 — ETI-69: chats dos candidatos não escolhidos ficam somente leitura
+
+`DeixarChatSomenteLeituraUseCase.aoEscolherPrestador` escuta `PrestadorEscolhidoEvent` (`comum/eventos`, publicado
+por `anuncio`) em `AFTER_COMMIT` + `REQUIRES_NEW` e deixa somente leitura (`OUTRO_PRESTADOR_ESCOLHIDO`) os chats das
+candidaturas listadas em `candidaturasNaoEscolhidasIds`, em lote (`executarDasCandidaturas`). O chat do escolhido não é
+tocado e segue aberto. Recusadas e desistentes não entram na lista: seus chats já foram fechados com o motivo próprio
+(e `Chat.deixarSomenteLeitura` mantém o primeiro motivo). Só `SERVICO_CANCELADO` (ETI-94 a ETI-97) segue sem listener.
