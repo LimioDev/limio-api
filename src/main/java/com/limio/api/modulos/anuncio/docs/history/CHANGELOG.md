@@ -265,3 +265,28 @@ com a edição. Novo `EscopoTrava.ANUNCIO`: editar, remover e anexar foto travam
 usecase de escolher candidato (ETI-69/70) deve tomar a mesma trava. Sem `CodigoErro` novo, sem migration, sem
 `AnuncioEditado` nem `USE_REAGENDAMENTO` (pontos em aberto). O raciocínio completo está em
 `docs/features/ETI-61-editar-anuncio-antes-da-escolha.md`.
+
+## 2026-11-07 — ETI-69: escolher prestador
+
+`POST /anuncios/{anuncioId}/candidaturas/{candidaturaId}/escolher` (`EscolherPrestadorUseCase`): numa transação, a
+candidatura vira `ESCOLHIDA` (`escolhidaEm`), as demais `ENVIADA` viram `ENCERRADA` ("Outro prestador escolhido"), a
+cota do Prestador FREE é consumida (GOLD ativo não) e `PrestadorEscolhidoEvent` é publicado. O anúncio continua
+`PUBLICADO`. Cota sem saldo responde 409 `COTA_ESGOTADA_CANDIDATO` com o nome do candidato e não altera nada; segunda
+escolha responde 409 `ESCOLHA_CONFLITO`. O telefone e o endereço completo só chegam ao escolhido porque o ETI-86 os
+entrega a quem tem `escolhidaEm`; não houve coluna nem DTO novo.
+
+**Travas.** Mapeadas as quatro existentes (advisory `ANUNCIO`, `FOR UPDATE` no `Anuncio`, `FOR UPDATE` na `Aplicacao`,
+índices únicos): advisory lock e `FOR UPDATE` não se bloqueiam, então não são intercambiáveis. Ordem única de
+aquisição, agora documentada em `EscopoTrava`: `ANUNCIO` → linhas de `aplicacao` → `COTA_PRESTADOR` (escopo novo, por
+Prestador, porque `ANUNCIO` não cobre o mesmo Prestador escolhido em dois anúncios). Desistir, candidatar-se, cancelar
+e iniciar passaram a tomar `ANUNCIO` primeiro; o `FOR UPDATE` da linha do `Anuncio` saiu. O teste de corrida desistência
+x recusa pegou um bug do primeiro desenho do desistir: ler a candidatura antes da trava a deixava gerenciada e o
+`FOR UPDATE` seguinte devolvia a cópia velha; agora só o `anuncioId` é lido antes, por consulta escalar.
+
+**Porta de escrita.** `comum/portas/ConsumoCotaPrestador` (implementada no `perfil`) é a primeira porta que muda
+estado, porque o consumo da cota tem que estar na mesma transação da escolha. É exceção ao "portas só leitura" da
+ADR-0003, registrada aqui e no card; a ADR não foi alterada.
+
+Pendências conhecidas: o `CandidatarSe` ainda conta aplicações por `escolhidaEm` com outro teto
+(`anuncio.candidatura.max-escolhas-gratuitas`) em vez de usar `cota_mensal`; o `financeiro` é stub (sempre FREE); sem
+`lock_timeout`. Detalhe completo em `docs/features/ETI-69-escolher-prestador.md`.

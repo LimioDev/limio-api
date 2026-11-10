@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.eventos.CandidaturaCriadaEvent;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.DadosUsuario;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
@@ -58,17 +60,20 @@ public class CandidatarSeUseCase {
     private final AplicacaoService aplicacaoService;
     private final ConsultaDadosUsuario consultaDadosUsuario;
     private final ApplicationEventPublisher eventos;
+    private final TravaTransacional trava;
     private final int maxEscolhasGratuitas;
 
     public CandidatarSeUseCase(AnuncioService anuncioService,
             AplicacaoService aplicacaoService,
             ConsultaDadosUsuario consultaDadosUsuario,
             ApplicationEventPublisher eventos,
+            TravaTransacional trava,
             @Value("${anuncio.candidatura.max-escolhas-gratuitas}") int maxEscolhasGratuitas) {
         this.anuncioService = anuncioService;
         this.aplicacaoService = aplicacaoService;
         this.consultaDadosUsuario = consultaDadosUsuario;
         this.eventos = eventos;
+        this.trava = trava;
         this.maxEscolhasGratuitas = maxEscolhasGratuitas;
     }
 
@@ -76,6 +81,10 @@ public class CandidatarSeUseCase {
     public Aplicacao executar(UUID anuncioId, UUID prestadorId, PapelUsuario papelAtivo) {
         exigirPrestador(papelAtivo);
         exigirContatosConfirmados(prestadorId);
+
+        // Lock antes de ler o anúncio: sem ele, uma candidatura nasceria ENVIADA depois que a escolha já
+        // encerrou as demais, e ficaria órfã num anúncio com escolhida (ver EscopoTrava.ANUNCIO).
+        trava.travar(EscopoTrava.ANUNCIO, anuncioId.toString());
 
         Anuncio anuncio = anuncioService.buscarPorId(anuncioId).orElseThrow(AnuncioNaoEncontradoException::new);
         if (anuncio.pertenceA(prestadorId)) {

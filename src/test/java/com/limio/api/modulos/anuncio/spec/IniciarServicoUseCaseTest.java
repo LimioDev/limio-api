@@ -3,6 +3,7 @@ package com.limio.api.modulos.anuncio.spec;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -20,12 +21,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.limio.api.comum.eventos.ServicoIniciadoEvent;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.actions.usecase.IniciarServicoUseCase;
@@ -56,11 +60,14 @@ class IniciarServicoUseCaseTest {
     @Mock
     private ApplicationEventPublisher eventos;
 
+    @Mock
+    private TravaTransacional trava;
+
     private IniciarServicoUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new IniciarServicoUseCase(anuncioService, aplicacaoService, reagendamentoService, eventos);
+        useCase = new IniciarServicoUseCase(anuncioService, aplicacaoService, reagendamentoService, eventos, trava);
     }
 
     private Anuncio anuncio(StatusAnuncio status) {
@@ -76,7 +83,7 @@ class IniciarServicoUseCaseTest {
     }
 
     private void comAnuncioEPrestadorEscolhido(Anuncio anuncio) {
-        when(anuncioService.buscarParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
         when(aplicacaoService.foiEscolhido(ANUNCIO_ID, PRESTADOR_ID)).thenReturn(true);
     }
 
@@ -135,9 +142,25 @@ class IniciarServicoUseCaseTest {
     }
 
     @Test
+    void dadoPrestadorEscolhido_quandoInicia_entaoTravaOAnuncioAntesDeLerOEstado() {
+        Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO);
+        comAnuncioEPrestadorEscolhido(anuncio);
+        when(reagendamentoService.buscarPendentesDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of());
+        when(anuncioService.salvar(anuncio)).thenReturn(anuncio);
+
+        useCase.executar(ANUNCIO_ID, PRESTADOR_ID);
+
+        InOrder ordem = inOrder(trava, anuncioService, aplicacaoService);
+        ordem.verify(trava).travar(EscopoTrava.ANUNCIO, ANUNCIO_ID.toString());
+        ordem.verify(anuncioService).buscarPorId(ANUNCIO_ID);
+        ordem.verify(aplicacaoService).foiEscolhido(ANUNCIO_ID, PRESTADOR_ID);
+        ordem.verify(anuncioService).salvar(anuncio);
+    }
+
+    @Test
     void dadoPrestadorNaoEscolhido_quandoInicia_entao404() {
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO);
-        when(anuncioService.buscarParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
         when(aplicacaoService.foiEscolhido(ANUNCIO_ID, PRESTADOR_ID)).thenReturn(false);
 
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, PRESTADOR_ID))
@@ -150,7 +173,7 @@ class IniciarServicoUseCaseTest {
 
     @Test
     void dadoAnuncioInexistente_quandoInicia_entao404() {
-        when(anuncioService.buscarParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.empty());
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, PRESTADOR_ID))
                 .isInstanceOf(ServicoNaoEncontradoException.class);
