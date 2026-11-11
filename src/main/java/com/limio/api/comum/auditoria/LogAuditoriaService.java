@@ -19,10 +19,16 @@ public class LogAuditoriaService extends BaseService<LogAuditoria, UUID, LogAudi
 
     public LogAuditoria registrar(String entidade, UUID entidadeId, TipoAcaoAuditoria tipoAcao, String origem,
             String ip) {
+        return registrar(entidade, entidadeId, tipoAcao, origem, ip, null);
+    }
+
+    public LogAuditoria registrar(String entidade, UUID entidadeId, TipoAcaoAuditoria tipoAcao, String origem,
+            String ip, String detalhesJson) {
         return salvar(LogAuditoria.builder()
                 .entidade(entidade)
                 .entidadeId(entidadeId)
                 .tipoAcao(tipoAcao)
+                .detalhesJson(detalhesJson)
                 .origem(origem)
                 .ip(ip)
                 .build());

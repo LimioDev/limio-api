@@ -7,5 +7,6 @@ package com.limio.api.comum.auditoria.enums;
  */
 public enum TipoAcaoAuditoria {
     CONTA_ENCERRADA,
-    COMBINADO_CANCELADO
+    COMBINADO_CANCELADO,
+    COMBINADO_CANCELADO_TARDIO
 }
