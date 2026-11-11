@@ -132,8 +132,10 @@ class EscolherPrestadorUseCaseTest {
         assertThat(resultado.getStatus()).isEqualTo(StatusAnuncio.PUBLICADO);
         assertThat(escolhida.getStatus()).isEqualTo(StatusAplicacao.ESCOLHIDA);
         assertThat(escolhida.getEscolhidaEm()).isNotNull();
+        assertThat(escolhida.isCotaConsumida()).isTrue();
         assertThat(escolhida.getEncerradaEm()).isNull();
         for (Aplicacao outra : List.of(outra1, outra2)) {
+            assertThat(outra.isCotaConsumida()).isFalse();
             assertThat(outra.getStatus()).isEqualTo(StatusAplicacao.ENCERRADA);
             assertThat(outra.getEncerradaEm()).isEqualTo(escolhida.getEscolhidaEm());
             assertThat(outra.getMotivoEncerramento()).isEqualTo("Outro prestador escolhido");
@@ -163,6 +165,7 @@ class EscolherPrestadorUseCaseTest {
         useCase.executar(CONTRATANTE_ID, ANUNCIO_ID, escolhida.getId());
 
         assertThat(escolhida.getStatus()).isEqualTo(StatusAplicacao.ESCOLHIDA);
+        assertThat(escolhida.isCotaConsumida()).isFalse();
         verifyNoInteractions(consumoCotaPrestador);
         verify(eventos).publishEvent(any(PrestadorEscolhidoEvent.class));
     }

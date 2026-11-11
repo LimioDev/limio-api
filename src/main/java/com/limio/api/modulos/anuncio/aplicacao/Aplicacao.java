@@ -59,6 +59,9 @@ public class Aplicacao extends BaseEntity {
     @Column(name = "motivo_encerramento")
     private String motivoEncerramento;
 
+    @Column(name = "cota_consumida", nullable = false)
+    private boolean cotaConsumida;
+
     /** Prestador já escolhido pelo contratante: combinado ou aguardando validação (TICKET-0052). */
     public boolean isEscolhida() {
         return status.isEscolhida();
@@ -79,9 +82,10 @@ public class Aplicacao extends BaseEntity {
         this.recusadaEm = agora;
     }
 
-    public void escolher(Instant agora) {
+    public void escolher(Instant agora, boolean cotaConsumida) {
         this.status = StatusAplicacao.ESCOLHIDA;
         this.escolhidaEm = agora;
+        this.cotaConsumida = cotaConsumida;
     }
 
     public void encerrarPorOutraEscolha(Instant agora) {
