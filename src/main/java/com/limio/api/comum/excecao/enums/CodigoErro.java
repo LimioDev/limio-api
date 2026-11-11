@@ -58,6 +58,11 @@ public enum CodigoErro {
     JANELA_AVALIACAO_ENCERRADA("O prazo para avaliar este serviço terminou."),
     AVALIACAO_DUPLICADA("Você já avaliou este serviço."),
     COMENTARIO_SEM_NOTA("Escolha uma nota para enviar o comentário."),
+    PLANO_NAO_ENCONTRADO("Plano não encontrado."),
+    ASSINATURA_JA_ATIVA("Você já é assinante do plano GOLD."),
+    PAGAMENTO_RECUSADO("Pagamento recusado. Verifique os dados do cartão e tente novamente."),
+    GATEWAY_INDISPONIVEL("Não foi possível processar o pagamento agora. Tente novamente em instantes."),
+    CARTAO_INVALIDO("Dados do cartão inválidos. Confira número, validade e CVV."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;

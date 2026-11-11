@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 
+import com.limio.api.comum.portas.ConsultaCpfUsuario;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.DadosUsuario;
 import com.limio.api.modulos.auth.actions.helper.TelefoneHelper;
@@ -12,7 +13,7 @@ import com.limio.api.modulos.auth.usuario.Usuario;
 import com.limio.api.modulos.auth.usuario.UsuarioService;
 
 @Component
-public class ConsultaDadosUsuarioService implements ConsultaDadosUsuario {
+public class ConsultaDadosUsuarioService implements ConsultaDadosUsuario, ConsultaCpfUsuario {
 
     private final UsuarioService usuarioService;
 
@@ -25,6 +26,13 @@ public class ConsultaDadosUsuarioService implements ConsultaDadosUsuario {
         return usuarioService.buscarPorId(usuarioId)
                 .filter(usuario -> !usuario.isEncerrada())
                 .map(ConsultaDadosUsuarioService::toDados);
+    }
+
+    @Override
+    public Optional<String> cpfDe(UUID usuarioId) {
+        return usuarioService.buscarPorId(usuarioId)
+                .filter(usuario -> !usuario.isEncerrada())
+                .map(Usuario::getCpf);
     }
 
     private static DadosUsuario toDados(Usuario usuario) {
