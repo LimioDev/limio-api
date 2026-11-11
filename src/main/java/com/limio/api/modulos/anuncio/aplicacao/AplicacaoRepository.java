@@ -20,8 +20,7 @@ public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
 
     List<Aplicacao> findByPrestadorIdAndStatusIn(UUID prestadorId, List<StatusAplicacao> status);
 
-    /** @param fimExclusivo limite superior do período, não incluso */
-    List<Aplicacao> findByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThanOrderByEscolhidaEmDesc(
+    List<Aplicacao> findByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThanAndCotaEstornadaEmIsNullOrderByEscolhidaEmDesc(
             UUID prestadorId, Instant inicio, Instant fimExclusivo);
 
     List<Aplicacao> findByAnuncioIdAndStatusIn(UUID anuncioId, List<StatusAplicacao> status);
@@ -37,9 +36,8 @@ public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
 
     boolean existsByAnuncioIdAndPrestadorIdAndStatusIn(UUID anuncioId, UUID prestadorId, List<StatusAplicacao> status);
 
-    /** @param fimExclusivo limite superior do período, não contado (início do mês seguinte) */
-    long countByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThan(UUID prestadorId, Instant inicio,
-            Instant fimExclusivo);
+    long countByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThanAndCotaEstornadaEmIsNull(
+            UUID prestadorId, Instant inicio, Instant fimExclusivo);
 
     Page<Aplicacao> findByPrestadorIdAndStatusIn(UUID prestadorId, List<StatusAplicacao> status, Pageable pageable);
 
@@ -51,6 +49,12 @@ public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
     @Query("select a from Aplicacao a where a.anuncioId = :anuncioId and a.status = "
             + "com.limio.api.modulos.anuncio.enums.StatusAplicacao.ENVIADA order by a.id")
     List<Aplicacao> findEnviadasDoAnuncioParaAtualizar(@Param("anuncioId") UUID anuncioId);
+
+    /** A candidatura {@code ESCOLHIDA} do anúncio, travada ({@code FOR UPDATE}); no máximo uma (V13). */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select a from Aplicacao a where a.anuncioId = :anuncioId and a.status = "
+            + "com.limio.api.modulos.anuncio.enums.StatusAplicacao.ESCOLHIDA")
+    Optional<Aplicacao> findEscolhidaDoAnuncioParaAtualizar(@Param("anuncioId") UUID anuncioId);
 
     /** Consulta escalar: não carrega a entidade no contexto de persistência (ver {@code buscarAnuncioId}). */
     @Query("select a.anuncioId from Aplicacao a where a.id = :id")

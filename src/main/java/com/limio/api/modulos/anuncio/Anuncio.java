@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import com.limio.api.comum.base.BaseEntity;
+import com.limio.api.comum.eventos.enums.TipoCancelamento;
 import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.comum.portas.EnderecoLocalizado;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
@@ -40,6 +41,8 @@ public class Anuncio extends BaseEntity {
 
     private static final String MOTIVO_EXCLUSAO_DE_CONTA = "Cancelado por saída de conta";
     private static final String MOTIVO_CANCELAMENTO_PELO_EMPREGADOR = "Cancelado pelo Empregador";
+    private static final String MOTIVO_SERVICO_CANCELADO = "Serviço cancelado pelo Empregador";
+    private static final String MOTIVO_SERVICO_CANCELADO_NA_CARENCIA = "Serviço cancelado pelo Empregador na carência pós-reagendamento";
 
     @Column(name = "contratante_id", nullable = false)
     private UUID contratanteId;
@@ -121,6 +124,10 @@ public class Anuncio extends BaseEntity {
      */
     @Column(name = "motivo_encerramento")
     private String motivoEncerramento;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_cancelamento", length = 20)
+    private TipoCancelamento tipoCancelamento;
 
     /** Status ainda "vivo" — ainda não chegou num estado final (TICKET-0049: candidato a encerramento). */
     public boolean isAberto() {
@@ -230,6 +237,18 @@ public class Anuncio extends BaseEntity {
     /** ETI-63: Empregador cancela antes de escolher alguém. Quem chama já validou o estado do anúncio. */
     public void cancelarPeloEmpregador(Instant agora) {
         encerrar(agora, MOTIVO_CANCELAMENTO_PELO_EMPREGADOR);
+    }
+
+    public void cancelarServicoCombinado(Instant agora, TipoCancelamento tipo) {
+        encerrar(agora, switch (tipo) {
+            case NORMAL -> MOTIVO_SERVICO_CANCELADO;
+            case TARDIO -> MOTIVO_SERVICO_CANCELADO_NA_CARENCIA;
+        });
+        this.tipoCancelamento = tipo;
+    }
+
+    public boolean temAntecedenciaDe(Duration antecedencia, Instant agora) {
+        return !dataHoraPretendida.isBefore(agora.plus(antecedencia));
     }
 
     private void encerrar(Instant agora, String motivo) {

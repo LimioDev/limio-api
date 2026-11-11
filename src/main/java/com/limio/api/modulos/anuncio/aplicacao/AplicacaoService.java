@@ -86,11 +86,13 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
 
     /**
      * Candidaturas de {@code prestadorId} escolhidas no período ({@code escolhidaEm} entre {@code inicio}, incluso, e
-     * {@code fimExclusivo}), qualquer que seja o status atual, da escolha mais recente pra mais antiga.
+     * {@code fimExclusivo}), qualquer que seja o status atual, da escolha mais recente pra mais antiga. As que já
+     * tiveram a cota estornada (ETI-94) ficam de fora.
      */
     public List<Aplicacao> buscarEscolhidasDoPrestadorEntre(UUID prestadorId, Instant inicio, Instant fimExclusivo) {
-        return repository.findByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThanOrderByEscolhidaEmDesc(
-                prestadorId, inicio, fimExclusivo);
+        return repository
+                .findByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThanAndCotaEstornadaEmIsNullOrderByEscolhidaEmDesc(
+                        prestadorId, inicio, fimExclusivo);
     }
 
     /**
@@ -115,10 +117,13 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
         return repository.existsByAnuncioIdAndPrestadorIdAndStatusIn(anuncioId, prestadorId, STATUS_ABERTOS);
     }
 
-    /** Quantas vezes {@code prestadorId} foi escolhido entre {@code inicio} (incluso) e {@code fimExclusivo}. */
+    /**
+     * Quantas vezes {@code prestadorId} foi escolhido entre {@code inicio} (incluso) e {@code fimExclusivo}, sem as
+     * escolhas que tiveram a cota estornada (ETI-94): cancelamento normal devolve a vaga também a esta barreira.
+     */
     public long contarEscolhidasNoPeriodo(UUID prestadorId, Instant inicio, Instant fimExclusivo) {
-        return repository.countByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThan(prestadorId, inicio,
-                fimExclusivo);
+        return repository.countByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThanAndCotaEstornadaEmIsNull(
+                prestadorId, inicio, fimExclusivo);
     }
 
     /**
@@ -195,6 +200,15 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
      */
     public Optional<Aplicacao> buscarDoPrestadorNoAnuncio(UUID anuncioId, UUID prestadorId) {
         return repository.findFirstByAnuncioIdAndPrestadorIdOrderByDataAplicacaoDescIdDesc(anuncioId, prestadorId);
+    }
+
+    /**
+     * A candidatura {@code ESCOLHIDA} do anúncio, com {@code SELECT ... FOR UPDATE} (ETI-94). 2ª etapa da ordem do
+     * agregado, depois do advisory lock {@code EscopoTrava.ANUNCIO}. Vazio se ninguém foi escolhido ou o serviço já
+     * passou de {@code ESCOLHIDA}. Exige transação aberta.
+     */
+    public Optional<Aplicacao> buscarEscolhidaDoAnuncioParaAtualizar(UUID anuncioId) {
+        return repository.findEscolhidaDoAnuncioParaAtualizar(anuncioId);
     }
 
     /**
