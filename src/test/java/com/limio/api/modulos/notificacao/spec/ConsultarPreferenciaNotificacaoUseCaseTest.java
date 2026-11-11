@@ -37,7 +37,7 @@ class ConsultarPreferenciaNotificacaoUseCaseTest {
     @Test
     void deveDevolverPreferenciaSalvaDoUsuario() {
         PreferenciaNotificacao salva = PreferenciaNotificacao.builder()
-                .usuarioId(USUARIO_ID).push(false).email(true).sms(true).whatsapp(false).build();
+                .usuarioId(USUARIO_ID).push(false).email(true).whatsapp(false).build();
         when(preferenciaNotificacaoService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.of(salva));
 
         PreferenciaNotificacao resultado = useCase.executar(USUARIO_ID);
@@ -54,7 +54,6 @@ class ConsultarPreferenciaNotificacaoUseCaseTest {
         assertThat(resultado.getUsuarioId()).isEqualTo(USUARIO_ID);
         assertThat(resultado.getPush()).isTrue();
         assertThat(resultado.getEmail()).isFalse();
-        assertThat(resultado.getSms()).isFalse();
         assertThat(resultado.getWhatsapp()).isFalse();
         verify(preferenciaNotificacaoService, never()).salvar(any());
     }

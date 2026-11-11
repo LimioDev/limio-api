@@ -84,7 +84,7 @@ class ListarMuralUseCaseTest {
 
     private void prestadorHabilitado() {
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(
-                new DadosUsuario("Rafael Souza", "r@example.com", "+5511999998888", CONFIRMADO, CONFIRMADO)));
+                new DadosUsuario("Rafael Souza", "r@example.com", "+5511999998888", CONFIRMADO)));
         when(consultaPerfilPrestador.buscarCompleto(PRESTADOR_ID)).thenReturn(Optional.of(PERFIL));
     }
 
@@ -116,21 +116,12 @@ class ListarMuralUseCaseTest {
     @Test
     void dadoEmailNaoConfirmado_quandoListaMural_entaoContatosNaoConfirmados() {
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(
-                new DadosUsuario("Rafael", "r@example.com", "+5511999998888", null, CONFIRMADO)));
+                new DadosUsuario("Rafael", "r@example.com", "+5511999998888", null)));
 
         assertThatThrownBy(() -> useCase.executar(PRESTADOR_ID, PapelUsuario.PRESTADOR, null, null, QuandoMural.QUALQUER, 0, 20))
                 .isInstanceOf(ContatosNaoConfirmadosException.class)
                 .hasMessageContaining("ver os anúncios");
         verifyNoInteractions(anuncioService);
-    }
-
-    @Test
-    void dadoTelefoneNaoConfirmado_quandoListaMural_entaoContatosNaoConfirmados() {
-        when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(
-                new DadosUsuario("Rafael", "r@example.com", "+5511999998888", CONFIRMADO, null)));
-
-        assertThatThrownBy(() -> useCase.executar(PRESTADOR_ID, PapelUsuario.PRESTADOR, null, null, QuandoMural.QUALQUER, 0, 20))
-                .isInstanceOf(ContatosNaoConfirmadosException.class);
     }
 
     @Test
@@ -144,7 +135,7 @@ class ListarMuralUseCaseTest {
     @Test
     void dadoPerfilIncompleto_quandoListaMural_entaoPerfilIncompleto() {
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(
-                new DadosUsuario("Rafael", "r@example.com", "+5511999998888", CONFIRMADO, CONFIRMADO)));
+                new DadosUsuario("Rafael", "r@example.com", "+5511999998888", CONFIRMADO)));
         when(consultaPerfilPrestador.buscarCompleto(PRESTADOR_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.executar(PRESTADOR_ID, PapelUsuario.PRESTADOR, null, null, QuandoMural.QUALQUER, 0, 20))

@@ -219,3 +219,8 @@ O `anuncio` chama isso pela porta `comum/portas/ConsumoCotaPrestador`, implement
 `ConsumoCotaPrestadorService` (`Propagation.MANDATORY`: só roda na transação da escolha). É a primeira porta de
 **escrita** do projeto, exceção ao "só leitura" da ADR-0003, que não foi alterada; a justificativa está no card
 `anuncio/docs/features/ETI-69-escolher-prestador.md`.
+## 2026-11 — UC04 (OTP por SMS) fora de escopo em definitivo (ETI-134)
+
+`PerfilEmpregadorResponse` e `comum/portas/DadosUsuario` deixaram de expor `telefoneConfirmadoEm` — a tela "Meu
+perfil" mostra "verificado" só pro e-mail. `GET /conta/perfil-empregador` não devolve mais esse campo. Decisão
+completa (porquê, módulo `auth` envolvido) em `auth/docs/history/CHANGELOG.md`.

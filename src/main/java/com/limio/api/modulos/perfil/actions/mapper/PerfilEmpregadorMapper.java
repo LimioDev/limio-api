@@ -17,7 +17,6 @@ public class PerfilEmpregadorMapper {
                 perfil.getQtdAvaliacoes(),
                 meuPerfil.dados().email(),
                 meuPerfil.dados().telefone(),
-                meuPerfil.dados().emailConfirmadoEm(),
-                meuPerfil.dados().telefoneConfirmadoEm());
+                meuPerfil.dados().emailConfirmadoEm());
     }
 }

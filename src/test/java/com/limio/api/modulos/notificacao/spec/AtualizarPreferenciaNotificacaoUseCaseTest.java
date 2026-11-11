@@ -36,27 +36,27 @@ class AtualizarPreferenciaNotificacaoUseCaseTest {
         useCase = new AtualizarPreferenciaNotificacaoUseCase(preferenciaNotificacaoService);
     }
 
-    private static PreferenciaNotificacao preferencia(boolean push, boolean email, boolean sms, boolean whatsapp) {
-        return PreferenciaNotificacao.builder().push(push).email(email).sms(sms).whatsapp(whatsapp).build();
+    private static PreferenciaNotificacao preferencia(boolean push, boolean email, boolean whatsapp) {
+        return PreferenciaNotificacao.builder().push(push).email(email).whatsapp(whatsapp).build();
     }
 
     @Test
-    void deveGravarOsQuatroCanaisDoUsuarioLogadoPorUpsertEDevolverOEstadoPersistido() {
-        PreferenciaNotificacao persistida = preferencia(true, false, true, false);
+    void deveGravarOsTresCanaisDoUsuarioLogadoPorUpsertEDevolverOEstadoPersistido() {
+        PreferenciaNotificacao persistida = preferencia(true, false, false);
         persistida.setUsuarioId(USUARIO_ID);
         when(preferenciaNotificacaoService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.of(persistida));
 
-        PreferenciaNotificacao resultado = useCase.executar(USUARIO_ID, true, false, true, false);
+        PreferenciaNotificacao resultado = useCase.executar(USUARIO_ID, true, false, false);
 
         InOrder ordem = inOrder(preferenciaNotificacaoService);
-        ordem.verify(preferenciaNotificacaoService).gravarCanais(USUARIO_ID, true, false, true, false);
+        ordem.verify(preferenciaNotificacaoService).gravarCanais(USUARIO_ID, true, false, false);
         ordem.verify(preferenciaNotificacaoService).buscarPorUsuario(USUARIO_ID);
         assertThat(resultado).isSameAs(persistida);
     }
 
     @Test
     void whatsappTrueDeveSerRejeitadoSemGravarNada() {
-        assertThatThrownBy(() -> useCase.executar(USUARIO_ID, true, false, false, true))
+        assertThatThrownBy(() -> useCase.executar(USUARIO_ID, true, false, true))
                 .isInstanceOf(WhatsappConsentimentoIndisponivelException.class);
 
         verifyNoInteractions(preferenciaNotificacaoService);
@@ -64,11 +64,11 @@ class AtualizarPreferenciaNotificacaoUseCaseTest {
 
     @Test
     void cadaCanalDeveSerRepassadoDeFormaIndependente() {
-        PreferenciaNotificacao persistida = preferencia(true, true, false, false);
+        PreferenciaNotificacao persistida = preferencia(true, true, false);
         when(preferenciaNotificacaoService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.of(persistida));
 
-        useCase.executar(USUARIO_ID, true, true, false, false);
+        useCase.executar(USUARIO_ID, true, true, false);
 
-        org.mockito.Mockito.verify(preferenciaNotificacaoService).gravarCanais(USUARIO_ID, true, true, false, false);
+        org.mockito.Mockito.verify(preferenciaNotificacaoService).gravarCanais(USUARIO_ID, true, true, false);
     }
 }

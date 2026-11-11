@@ -24,7 +24,8 @@ import com.limio.api.modulos.anuncio.excecao.SomenteEmpregadorPublicaException;
  * UC "Criar anúncio de serviço (sem valor)" (ETI-59): o Empregador publica o anúncio, que nasce
  * {@code PUBLICADO} e aguarda candidatos.
  *
- * Só publica quem está com o papel ativo {@code EMPREGADOR} e tem e-mail e telefone confirmados. O endereço
+ * Só publica quem está com o papel ativo {@code EMPREGADOR} e tem e-mail confirmado (ETI-134, telefone não
+ * exige confirmação). O endereço
  * (salvo ou avulso) vira retrato no anúncio. A localização do endereço avulso chama o geocodificador, então
  * tudo é conferido antes de abrir a transação: a chamada externa não segura conexão do pool. Só a gravação e
  * o {@link AnuncioPublicadoEvent} ficam na transação.
@@ -60,7 +61,7 @@ public class PublicarAnuncioUseCase {
     public Anuncio executar(UUID usuarioId, PapelUsuario papelAtivo, Anuncio candidato, EnderecoDoAnuncio endereco) {
         exigirEmpregador(papelAtivo);
         validacaoDoAnuncio.exigirDataFutura(candidato.getDataHoraPretendida());
-        exigirContatosConfirmados(usuarioId);
+        exigirEmailConfirmado(usuarioId);
         validacaoDoAnuncio.exigirCategoriaAtiva(candidato.getCategoriaId());
         EnderecoLocalizado localizado = localizar(usuarioId, endereco);
 
@@ -80,11 +81,11 @@ public class PublicarAnuncioUseCase {
         }
     }
 
-    private void exigirContatosConfirmados(UUID usuarioId) {
-        boolean confirmados = consultaDadosUsuario.buscarPorId(usuarioId)
-                .map(DadosUsuario::contatosConfirmados)
+    private void exigirEmailConfirmado(UUID usuarioId) {
+        boolean confirmado = consultaDadosUsuario.buscarPorId(usuarioId)
+                .map(DadosUsuario::emailConfirmado)
                 .orElse(false);
-        if (!confirmados) {
+        if (!confirmado) {
             throw new ContatosNaoConfirmadosException();
         }
     }

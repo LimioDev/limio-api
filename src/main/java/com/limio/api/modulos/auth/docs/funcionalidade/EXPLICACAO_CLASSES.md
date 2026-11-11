@@ -92,9 +92,9 @@ usuário pelo id do token, recusa conta encerrada/suspensa e grava `papelAtivo`.
 ## `PATCH /auth/telefone` (TICKET-0048 — trocar telefone)
 
 Mesmo começo (lock, conta ativa, senha atual). `TrocarTelefoneRequest` normaliza com `TelefoneHelper` para
-dígitos nacionais (`DDNNNNNNNNN`, o formato do banco); o usecase grava e zera `telefoneConfirmadoEm`. A resposta
-(`UsuarioMapper.toContatoResponse`) devolve o número em `+55...` via `TelefoneHelper.paraInternacional`. Não cria token,
-não envia SMS (UC04 inexistente).
+dígitos nacionais (`DDNNNNNNNNN`, o formato do banco); o usecase só grava o número — não zera nem bloqueia nada
+(ETI-134: telefone não tem etapa de confirmação). A resposta (`UsuarioMapper.toContatoResponse`) devolve o número
+em `+55...` via `TelefoneHelper.paraInternacional`. Não cria token, não envia SMS (UC04 fora de escopo).
 
 ## Links dos e-mails e páginas web (TICKET-0047, ADR-0002)
 
@@ -145,7 +145,7 @@ o token e encerra todas as sessões.
 | `LimparRetencaoUseCase` | Rotina diária de retenção: `cpf_bloqueado`, `log_auditoria`, `sessao`, `tentativa_login`, cada uma isolada |
 | `LinkWeb` | Helper — monta o link `https` da página web com o token no fragmento |
 | `PaginasWebConfig` (`comum/config/`) | URLs limpas `/nova-senha` e `/confirmar-email` para o HTML estático |
-| `TrocarTelefoneUseCase` | Troca de telefone (TICKET-0048): grava dígitos nacionais, limpa confirmação; sem SMS |
+| `TrocarTelefoneUseCase` | Troca de telefone (TICKET-0048): grava dígitos nacionais, sem zerar/bloquear nada (ETI-134) |
 | `ConsultaDadosUsuarioService` | Implementa a porta `comum/portas/ConsultaDadosUsuario` para outros módulos (só leitura) |
 | `TelefoneHelper` | Helper puro — `normalizar` (entrada → dígitos nacionais, só a troca) e `paraInternacional` (saída → `+55...`, usado pelo mapper e pela porta) |
 | `ConfirmacaoEmailSolicitadaEvent`, `EmailContaAlteradoEvent` | Eventos internos do `auth` (`auth/eventos/`) publicados pela troca de e-mail |

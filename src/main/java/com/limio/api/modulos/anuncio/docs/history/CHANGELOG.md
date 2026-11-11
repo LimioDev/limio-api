@@ -308,3 +308,11 @@ outra branch (avaliações).
 `CodigoErro.FOTO_OBRIGATORIA` é exclusivo do check-out; as demais rotas de foto seguem com `FOTO_INVALIDA`
 para lista vazia. A limpeza de objetos em rollback reaproveita `FotoAnuncioEnviadaEvent`.
 `CheckoutEnviadoEvent` fica em `comum/eventos/` e ainda não tem consumidor (aviso ao Empregador, ETI-112).
+
+## 2026-11 — UC04 (OTP por SMS) fora de escopo em definitivo (ETI-134)
+
+Publicar anúncio, mural (listar/detalhar) e candidatar-se passam a exigir só `emailConfirmadoEm`
+(`DadosUsuario.emailConfirmado()`). Telefone não é mais pré-condição — nunca teve confirmação de fato
+implementada (campo e enum eram andaime morto). `ContatosNaoConfirmadosException` manteve nome e
+`CodigoErro.CONTATOS_NAO_CONFIRMADOS` (contrato estável com o front), só a mensagem padrão mudou para "Confirme
+seu e-mail para continuar." Decisão completa em `auth/docs/history/CHANGELOG.md`.

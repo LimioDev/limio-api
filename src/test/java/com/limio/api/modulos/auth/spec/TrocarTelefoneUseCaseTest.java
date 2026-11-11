@@ -57,8 +57,9 @@ class TrocarTelefoneUseCaseTest {
                 .build();
     }
 
+    /** ETI-134: trocar o telefone não zera nem bloqueia nada — telefone não tem etapa de confirmação. */
     @Test
-    void deveGravarONumeroELimparSoAConfirmacaoDoTelefone() {
+    void deveGravarONumeroSemZerarNada() {
         Usuario usuario = usuario(StatusConta.ATIVA);
         when(usuarioService.buscarParaAtualizarOuFalhar(USUARIO_ID)).thenReturn(usuario);
         when(senhaHasher.confere("senha", "hash")).thenReturn(true);
@@ -67,7 +68,6 @@ class TrocarTelefoneUseCaseTest {
         Usuario atualizado = useCase.executar(USUARIO_ID, "21988887777", "senha");
 
         assertThat(atualizado.getTelefone()).isEqualTo("21988887777");
-        assertThat(atualizado.getTelefoneConfirmadoEm()).isNull();
         assertThat(atualizado.getEmailConfirmadoEm()).isEqualTo(CONFIRMADO);
         assertThat(atualizado.getEmail()).isEqualTo("maria@example.com");
         verify(usuarioService).salvar(usuario);
@@ -97,7 +97,6 @@ class TrocarTelefoneUseCaseTest {
         Usuario atualizado = useCase.executar(USUARIO_ID, "11999998888", "senha");
 
         assertThat(atualizado.getTelefone()).isEqualTo("11999998888");
-        assertThat(atualizado.getTelefoneConfirmadoEm()).isNull();
     }
 
     @Test
