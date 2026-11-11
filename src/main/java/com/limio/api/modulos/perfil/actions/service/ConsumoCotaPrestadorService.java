@@ -9,14 +9,25 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.portas.ConsumoCotaPrestador;
 import com.limio.api.modulos.perfil.actions.usecase.ConsumirCotaDoMesUseCase;
+import com.limio.api.modulos.perfil.actions.usecase.EstornarCotaDoMesUseCase;
 
 @Component
 public class ConsumoCotaPrestadorService implements ConsumoCotaPrestador {
 
     private final ConsumirCotaDoMesUseCase consumirCotaDoMesUseCase;
 
-    public ConsumoCotaPrestadorService(ConsumirCotaDoMesUseCase consumirCotaDoMesUseCase) {
+    private final EstornarCotaDoMesUseCase estornarCotaDoMesUseCase;
+
+    public ConsumoCotaPrestadorService(ConsumirCotaDoMesUseCase consumirCotaDoMesUseCase,
+            EstornarCotaDoMesUseCase estornarCotaDoMesUseCase) {
         this.consumirCotaDoMesUseCase = consumirCotaDoMesUseCase;
+        this.estornarCotaDoMesUseCase = estornarCotaDoMesUseCase;
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public boolean estornarEscolha(UUID prestadorId, Instant escolhidaEm) {
+        return estornarCotaDoMesUseCase.executar(prestadorId, escolhidaEm);
     }
 
     @Override
