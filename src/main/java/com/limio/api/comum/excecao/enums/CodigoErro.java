@@ -34,6 +34,7 @@ public enum CodigoErro {
     MUNICIPIO_NAO_ENCONTRADO("Município não encontrado na UF informada."),
     GEOCODIFICACAO_INDISPONIVEL("Não foi possível localizar o município agora. Tente novamente em instantes."),
     FOTO_INVALIDA("Envie uma foto JPG ou PNG."),
+    FOTO_OBRIGATORIA("Envie ao menos uma foto do serviço."),
     ARQUIVO_GRANDE_DEMAIS("O arquivo é maior que o permitido."),
     ARMAZENAMENTO_INDISPONIVEL("Não foi possível guardar o arquivo agora. Tente novamente em instantes."),
     CONTATOS_NAO_CONFIRMADOS("Confirme seu e-mail e seu telefone para continuar."),
