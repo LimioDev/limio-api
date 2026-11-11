@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +20,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.limio.api.comum.eventos.PrestadorEscolhidoEvent;
+import com.limio.api.comum.eventos.ServicoCanceladoEvent;
+import com.limio.api.comum.eventos.enums.TipoCancelamento;
 import com.limio.api.modulos.chat.Chat;
 import com.limio.api.modulos.chat.ChatService;
 import com.limio.api.modulos.chat.actions.usecase.DeixarChatSomenteLeituraUseCase;
@@ -106,5 +109,46 @@ class DeixarChatSomenteLeituraUseCaseTest {
 
         assertThat(jaFechado.getMotivoSomenteLeitura()).isEqualTo(MotivoSomenteLeitura.CANDIDATO_DESISTIU);
         assertThat(jaFechado.getSomenteLeituraEm()).isEqualTo(AGORA.minusSeconds(60));
+    }
+
+    private static ServicoCanceladoEvent servicoCancelado(UUID candidaturaEscolhida, TipoCancelamento tipo) {
+        return new ServicoCanceladoEvent(ANUNCIO_ID, "Instalar 3 tomadas", candidaturaEscolhida, UUID.randomUUID(),
+                UUID.randomUUID(), tipo, tipo == TipoCancelamento.NORMAL, AGORA.plusSeconds(3 * 24 * 3600), AGORA);
+    }
+
+    @Test
+    void dadoServicoCancelado_quandoReage_entaoSoOChatDaEscolhidaFicaSomenteLeitura() {
+        UUID escolhida = UUID.randomUUID();
+        Chat chat = chatAberto(escolhida);
+        when(chatService.buscarDaCandidatura(escolhida)).thenReturn(Optional.of(chat));
+
+        useCase.aoCancelarServico(servicoCancelado(escolhida, TipoCancelamento.NORMAL));
+
+        assertThat(chat.isSomenteLeitura()).isTrue();
+        assertThat(chat.getMotivoSomenteLeitura()).isEqualTo(MotivoSomenteLeitura.SERVICO_CANCELADO);
+        assertThat(chat.getSomenteLeituraEm()).isEqualTo(AGORA);
+        verify(chatService).salvar(chat);
+        verify(chatService, never()).buscarAbertosDoAnuncio(any());
+    }
+
+    @Test
+    void dadoCancelamentoTardio_quandoReage_entaoUsaOMesmoMotivo() {
+        UUID escolhida = UUID.randomUUID();
+        Chat chat = chatAberto(escolhida);
+        when(chatService.buscarDaCandidatura(escolhida)).thenReturn(Optional.of(chat));
+
+        useCase.aoCancelarServico(servicoCancelado(escolhida, TipoCancelamento.TARDIO));
+
+        assertThat(chat.getMotivoSomenteLeitura()).isEqualTo(MotivoSomenteLeitura.SERVICO_CANCELADO);
+    }
+
+    @Test
+    void dadoEscolhidaSemChat_quandoServicoCancelado_entaoIgnoraSemFalhar() {
+        UUID semChat = UUID.randomUUID();
+        when(chatService.buscarDaCandidatura(semChat)).thenReturn(Optional.empty());
+
+        useCase.aoCancelarServico(servicoCancelado(semChat, TipoCancelamento.NORMAL));
+
+        verify(chatService, never()).salvar(any());
     }
 }
