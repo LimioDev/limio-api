@@ -40,6 +40,7 @@ public class Anuncio extends BaseEntity {
 
     private static final String MOTIVO_EXCLUSAO_DE_CONTA = "Cancelado por saída de conta";
     private static final String MOTIVO_CANCELAMENTO_PELO_EMPREGADOR = "Cancelado pelo Empregador";
+    private static final String MOTIVO_EXPIRACAO = "Expirado sem candidatos";
 
     @Column(name = "contratante_id", nullable = false)
     private UUID contratanteId;
@@ -230,6 +231,17 @@ public class Anuncio extends BaseEntity {
     /** ETI-63: Empregador cancela antes de escolher alguém. Quem chama já validou o estado do anúncio. */
     public void cancelarPeloEmpregador(Instant agora) {
         encerrar(agora, MOTIVO_CANCELAMENTO_PELO_EMPREGADOR);
+    }
+
+    public boolean permiteExpiracao(boolean existeAplicacao, Instant agora) {
+        return switch (status) {
+            case PUBLICADO -> !existeAplicacao && !dataHoraPretendida.isAfter(agora);
+            case EM_ANDAMENTO, AGUARDANDO_VALIDACAO, CONCLUIDO, ENCERRADO -> false;
+        };
+    }
+
+    public void expirar(Instant agora) {
+        encerrar(agora, MOTIVO_EXPIRACAO);
     }
 
     private void encerrar(Instant agora, String motivo) {
