@@ -1,5 +1,6 @@
 package com.limio.api.modulos.anuncio;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -58,6 +59,10 @@ public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository
             return List.of();
         }
         return repository.findAllById(ids);
+    }
+
+    public List<UUID> buscarIdsParaExpirar(Instant agora, int lote) {
+        return repository.buscarIdsParaExpirar(agora, lote);
     }
 
     /**

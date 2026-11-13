@@ -308,3 +308,15 @@ outra branch (avaliações).
 `CodigoErro.FOTO_OBRIGATORIA` é exclusivo do check-out; as demais rotas de foto seguem com `FOTO_INVALIDA`
 para lista vazia. A limpeza de objetos em rollback reaproveita `FotoAnuncioEnviadaEvent`.
 `CheckoutEnviadoEvent` fica em `comum/eventos/` e ainda não tem consumidor (aviso ao Empregador, ETI-112).
+
+## 2026-11-12 — ETI-66: expirar anúncio sem candidatos
+
+Job `@Scheduled` (`ExpirarAnunciosSemCandidatosUseCase`) que encerra por expiração o anúncio `PUBLICADO` vencido e sem
+nenhuma candidatura. Detalhe completo em `docs/features/ETI-66-expirar-anuncio-sem-candidatos.md`.
+
+Não existe status `EXPIRADO`: é `ENCERRADO` com `motivoEncerramento = "Expirado sem candidatos"`, como o ETI-63 já
+deixava previsto. O "combinado" não muda o anúncio (só a candidatura), então "sem nenhuma candidatura" já exclui o
+escolhido. `Anuncio` ganhou `permiteExpiracao` e `expirar`; `ExpirarAnuncioUseCase` (bean à parte, por causa do proxy
+transacional) trava `ANUNCIO`, confere de novo e publica `AnuncioExpiradoEvent` (`comum/eventos/`, sem consumidor
+até a US56). Sem migration, sem mudança no mural e sem tocar na cota. Propriedades `anuncio.expiracao.cron` e
+`anuncio.expiracao.lote`; o cron fica desligado (`-`) nos testes.
