@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import com.limio.api.comum.eventos.enums.TipoCancelamento;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
+import com.limio.api.modulos.anuncio.enums.SituacaoCancelamentoServico;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
 
@@ -21,6 +22,10 @@ class CancelamentoServicoDominioTest {
 
     private static Anuncio anuncioParaDaquiA(Duration quanto) {
         return Anuncio.builder().status(StatusAnuncio.PUBLICADO).dataHoraPretendida(AGORA.plus(quanto)).build();
+    }
+
+    private static Anuncio anuncioComStatus(StatusAnuncio status) {
+        return Anuncio.builder().status(status).dataHoraPretendida(AGORA.plus(Duration.ofDays(3))).build();
     }
 
     @Test
@@ -36,6 +41,28 @@ class CancelamentoServicoDominioTest {
                 AGORA)).isFalse();
         assertThat(anuncioParaDaquiA(Duration.ZERO).temAntecedenciaDe(VINTE_E_QUATRO_HORAS, AGORA)).isFalse();
         assertThat(anuncioParaDaquiA(Duration.ofHours(-1)).temAntecedenciaDe(VINTE_E_QUATRO_HORAS, AGORA)).isFalse();
+    }
+
+    @Test
+    void soOAnuncioPublicadoPodeCancelarOServico() {
+        assertThat(anuncioComStatus(StatusAnuncio.PUBLICADO).situacaoParaCancelarServico())
+                .isEqualTo(SituacaoCancelamentoServico.CANCELAVEL);
+    }
+
+    @Test
+    void emAndamentoOuAguardandoValidacaoOCaminhoEADenuncia() {
+        assertThat(anuncioComStatus(StatusAnuncio.EM_ANDAMENTO).situacaoParaCancelarServico())
+                .isEqualTo(SituacaoCancelamentoServico.USAR_DENUNCIA);
+        assertThat(anuncioComStatus(StatusAnuncio.AGUARDANDO_VALIDACAO).situacaoParaCancelarServico())
+                .isEqualTo(SituacaoCancelamentoServico.USAR_DENUNCIA);
+    }
+
+    @Test
+    void concluidoOuEncerradoNaoTemMaisOQueCancelar() {
+        assertThat(anuncioComStatus(StatusAnuncio.CONCLUIDO).situacaoParaCancelarServico())
+                .isEqualTo(SituacaoCancelamentoServico.SEM_O_QUE_CANCELAR);
+        assertThat(anuncioComStatus(StatusAnuncio.ENCERRADO).situacaoParaCancelarServico())
+                .isEqualTo(SituacaoCancelamentoServico.SEM_O_QUE_CANCELAR);
     }
 
     @Test

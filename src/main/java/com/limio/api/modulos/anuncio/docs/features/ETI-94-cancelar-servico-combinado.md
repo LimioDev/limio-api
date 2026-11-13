@@ -31,7 +31,8 @@ publicado), penalidade ou registro de reputação do cancelamento tardio, UI.
 - **"Combinado" e "Cancelado" não são status.** Combinado é `PUBLICADO` com candidatura `ESCOLHIDA`. Cancelar é
   `ENCERRADO` mais `tipo_cancelamento` (`NORMAL` ou `TARDIO`) e um `motivoEncerramento` em texto livre.
 - **Data vigente é `dataHoraPretendida`.** Exatamente 24h de antecedência é permitido; menos, 409
-  `PRAZO_CANCELAMENTO_ESGOTADO`. O prazo reaproveita `ConsultarServicoUseCase.PRAZO_CANCELAMENTO`.
+  `PRAZO_CANCELAMENTO_ESGOTADO`. O prazo é regra do anúncio (`Anuncio.PRAZO_CANCELAMENTO_SERVICO`, lido por `permiteCancelarServico` e
+  `prazoCancelamentoServicoEm`), e os dois usecases (cancelar e consultar) leem de lá.
 - **Carência pós-reagendamento.** Se o último `Reagendamento` `ACEITO` tem `respondidoEm + carência > agora`, o
   cancelamento é `TARDIO`: sem estorno, com auditoria (`COMBINADO_CANCELADO_TARDIO`, JSON com `dataAnterior`,
   `dataNova` e `aceitoEm`, origem `anuncio-cancelar-servico`). A carência é `anuncio.carencia-pos-reagendamento-horas`

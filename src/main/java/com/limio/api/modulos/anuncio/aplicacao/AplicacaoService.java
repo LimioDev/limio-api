@@ -90,9 +90,7 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
      * tiveram a cota estornada (ETI-94) ficam de fora.
      */
     public List<Aplicacao> buscarEscolhidasDoPrestadorEntre(UUID prestadorId, Instant inicio, Instant fimExclusivo) {
-        return repository
-                .findByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThanAndCotaEstornadaEmIsNullOrderByEscolhidaEmDesc(
-                        prestadorId, inicio, fimExclusivo);
+        return repository.buscarEscolhidasQueContamNaCota(prestadorId, inicio, fimExclusivo);
     }
 
     /**
@@ -122,8 +120,7 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
      * escolhas que tiveram a cota estornada (ETI-94): cancelamento normal devolve a vaga também a esta barreira.
      */
     public long contarEscolhidasNoPeriodo(UUID prestadorId, Instant inicio, Instant fimExclusivo) {
-        return repository.countByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThanAndCotaEstornadaEmIsNull(
-                prestadorId, inicio, fimExclusivo);
+        return repository.contarEscolhidasQueContamNaCota(prestadorId, inicio, fimExclusivo);
     }
 
     /**

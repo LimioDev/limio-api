@@ -5,6 +5,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +17,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.limio.api.comum.auditoria.enums.TipoAcaoAuditoria;
+
+import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
 class LogAuditoriaServiceTest {
@@ -28,7 +32,7 @@ class LogAuditoriaServiceTest {
 
     @BeforeEach
     void montarService() {
-        service = new LogAuditoriaService(repository);
+        service = new LogAuditoriaService(repository, JsonMapper.builder().build());
         when(repository.save(any(LogAuditoria.class))).thenAnswer(invocacao -> invocacao.getArgument(0));
     }
 
@@ -39,8 +43,10 @@ class LogAuditoriaServiceTest {
     }
 
     @Test
-    void dadoDetalhes_quandoRegistra_entaoGravaODetalhesJsonJuntoDosDemaisCampos() {
-        String detalhes = "{\"dataAnterior\":\"2026-11-20T15:00:00Z\",\"dataNova\":\"2026-11-25T15:00:00Z\"}";
+    void dadoDetalhes_quandoRegistra_entaoSerializaEGravaODetalhesJsonJuntoDosDemaisCampos() {
+        Map<String, String> detalhes = new LinkedHashMap<>();
+        detalhes.put("dataAnterior", "2026-11-20T15:00:00Z");
+        detalhes.put("dataNova", "2026-11-25T15:00:00Z");
 
         service.registrar("Anuncio", ANUNCIO_ID, TipoAcaoAuditoria.COMBINADO_CANCELADO_TARDIO,
                 "anuncio-cancelar-servico", "203.0.113.7", detalhes);
@@ -51,7 +57,8 @@ class LogAuditoriaServiceTest {
         assertThat(log.getTipoAcao()).isEqualTo(TipoAcaoAuditoria.COMBINADO_CANCELADO_TARDIO);
         assertThat(log.getOrigem()).isEqualTo("anuncio-cancelar-servico");
         assertThat(log.getIp()).isEqualTo("203.0.113.7");
-        assertThat(log.getDetalhesJson()).isEqualTo(detalhes);
+        assertThat(log.getDetalhesJson())
+                .isEqualTo("{\"dataAnterior\":\"2026-11-20T15:00:00Z\",\"dataNova\":\"2026-11-25T15:00:00Z\"}");
     }
 
     @Test

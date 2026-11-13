@@ -17,6 +17,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -57,7 +58,6 @@ import com.limio.api.modulos.anuncio.excecao.UseDenunciaException;
 import com.limio.api.modulos.anuncio.reagendamento.Reagendamento;
 import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
 
-import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -97,7 +97,7 @@ class CancelarServicoCombinadoUseCaseTest {
     void montarUseCase() {
         useCase = new CancelarServicoCombinadoUseCase(anuncioService, aplicacaoService, reagendamentoService,
                 consumoCotaPrestador, logAuditoriaService, eventos, trava, Clock.fixed(AGORA, ZoneOffset.UTC),
-                JsonMapper.builder().build(), 24);
+                24);
         lenient().when(anuncioService.salvar(any(Anuncio.class))).thenAnswer(i -> i.getArgument(0));
         lenient().when(reagendamentoService.buscarUltimoAceito(ANUNCIO_ID)).thenReturn(Optional.empty());
         lenient().when(reagendamentoService.buscarPendentesDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of());
@@ -299,13 +299,14 @@ class CancelarServicoCombinadoUseCaseTest {
         assertThat(escolhida.getCotaEstornadaEm()).isNull();
         verifyNoInteractions(consumoCotaPrestador);
 
-        ArgumentCaptor<String> detalhes = ArgumentCaptor.forClass(String.class);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, Object>> detalhes = ArgumentCaptor.forClass(Map.class);
         verify(logAuditoriaService).registrar(eq("Anuncio"), eq(ANUNCIO_ID),
                 eq(TipoAcaoAuditoria.COMBINADO_CANCELADO_TARDIO), eq("anuncio-cancelar-servico"), eq(IP),
                 detalhes.capture());
-        assertThat(detalhes.getValue()).contains("\"dataAnterior\":\"2026-11-20T15:00:00Z\"")
-                .contains("\"dataNova\":\"2026-11-25T15:00:00Z\"")
-                .contains("\"aceitoEm\":\"" + AGORA.minus(Duration.ofHours(2)) + "\"");
+        assertThat(detalhes.getValue()).containsEntry("dataAnterior", "2026-11-20T15:00:00Z")
+                .containsEntry("dataNova", "2026-11-25T15:00:00Z")
+                .containsEntry("aceitoEm", AGORA.minus(Duration.ofHours(2)).toString());
 
         ServicoCanceladoEvent evento = eventoPublicado();
         assertThat(evento.tipo()).isEqualTo(TipoCancelamento.TARDIO);

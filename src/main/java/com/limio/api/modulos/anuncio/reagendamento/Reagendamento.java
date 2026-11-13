@@ -1,5 +1,6 @@
 package com.limio.api.modulos.anuncio.reagendamento;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -49,5 +50,13 @@ public class Reagendamento extends BaseEntity {
     public void cancelarSemEfeito(Instant agora) {
         this.status = StatusReagendamento.CANCELADO;
         this.respondidoEm = agora;
+    }
+
+    /**
+     * RB36: o reagendamento foi respondido há menos que a {@code carencia}. Sem resposta registrada não há carência.
+     * Quem chama já filtrou o {@code ACEITO}; aqui só se conta o tempo.
+     */
+    public boolean estaNaCarencia(Duration carencia, Instant agora) {
+        return respondidoEm != null && respondidoEm.plus(carencia).isAfter(agora);
     }
 }

@@ -33,8 +33,6 @@ import com.limio.api.modulos.anuncio.excecao.UseDenunciaException;
 import com.limio.api.modulos.anuncio.reagendamento.Reagendamento;
 import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
 
-import tools.jackson.databind.ObjectMapper;
-
 /**
  * UC42 — Empregador cancela o serviço combinado, com 24h ou mais de antecedência (ETI-94, RF47/RB08/RB17/RB36).
  *
@@ -70,13 +68,12 @@ public class CancelarServicoCombinadoUseCase {
     private final ApplicationEventPublisher eventos;
     private final TravaTransacional trava;
     private final Clock relogio;
-    private final ObjectMapper objectMapper;
     private final Duration carenciaPosReagendamento;
 
     public CancelarServicoCombinadoUseCase(AnuncioService anuncioService, AplicacaoService aplicacaoService,
             ReagendamentoService reagendamentoService, ConsumoCotaPrestador consumoCotaPrestador,
             LogAuditoriaService logAuditoriaService, ApplicationEventPublisher eventos, TravaTransacional trava,
-            Clock relogio, ObjectMapper objectMapper,
+            Clock relogio,
             @Value("${anuncio.carencia-pos-reagendamento-horas}") long carenciaPosReagendamentoHoras) {
         this.anuncioService = anuncioService;
         this.aplicacaoService = aplicacaoService;
@@ -86,7 +83,6 @@ public class CancelarServicoCombinadoUseCase {
         this.eventos = eventos;
         this.trava = trava;
         this.relogio = relogio;
-        this.objectMapper = objectMapper;
         this.carenciaPosReagendamento = Duration.ofHours(carenciaPosReagendamentoHoras);
     }
 
@@ -103,13 +99,12 @@ public class CancelarServicoCombinadoUseCase {
                 .orElseThrow(ServicoEstadoInvalidoException::new);
 
         Instant agora = relogio.instant();
-        if (!anuncio.temAntecedenciaDe(ConsultarServicoUseCase.PRAZO_CANCELAMENTO, agora)) {
+        if (!anuncio.permiteCancelarServico(agora)) {
             throw new PrazoCancelamentoEsgotadoException();
         }
 
         Optional<Reagendamento> naCarencia = reagendamentoService.buscarUltimoAceito(anuncioId)
-                .filter(aceito -> aceito.getRespondidoEm() != null
-                        && aceito.getRespondidoEm().plus(carenciaPosReagendamento).isAfter(agora));
+                .filter(aceito -> aceito.estaNaCarencia(carenciaPosReagendamento, agora));
         TipoCancelamento tipo = naCarencia.isPresent() ? TipoCancelamento.TARDIO : TipoCancelamento.NORMAL;
         Instant dataHoraVigente = anuncio.getDataHoraPretendida();
 
@@ -122,8 +117,10 @@ public class CancelarServicoCombinadoUseCase {
         Anuncio salvo = anuncioService.salvar(anuncio);
 
         escolhida.encerrarPorCancelamentoDoServico(agora);
-        boolean cotaEstornada = tipo == TipoCancelamento.NORMAL && escolhida.isCotaConsumida()
-                && consumoCotaPrestador.estornarEscolha(escolhida.getPrestadorId(), escolhida.getEscolhidaEm());
+        boolean cotaEstornada = false;
+        if (tipo == TipoCancelamento.NORMAL && escolhida.isCotaConsumida()) {
+            cotaEstornada = consumoCotaPrestador.estornarEscolha(escolhida.getPrestadorId(), escolhida.getEscolhidaEm());
+        }
         if (cotaEstornada) {
             escolhida.registrarEstornoDeCota(agora);
         }
@@ -136,17 +133,13 @@ public class CancelarServicoCombinadoUseCase {
         return new CancelamentoServico(salvo, cotaEstornada);
     }
 
-    /**
-     * Só o serviço combinado e ainda não começado se cancela por aqui. Em andamento ou aguardando validação o caminho
-     * é a denúncia; concluído ou encerrado (inclui o cancelamento repetido) não tem mais o que cancelar. {@code switch}
-     * sem {@code default}: um status novo obriga a decidir aqui.
-     */
+    /** A regra de estado é do {@code Anuncio}; aqui só se traduz a situação na resposta de negócio. */
     private static void exigirCombinado(Anuncio anuncio) {
-        switch (anuncio.getStatus()) {
-            case PUBLICADO -> {
+        switch (anuncio.situacaoParaCancelarServico()) {
+            case CANCELAVEL -> {
             }
-            case EM_ANDAMENTO, AGUARDANDO_VALIDACAO -> throw new UseDenunciaException();
-            case CONCLUIDO, ENCERRADO -> throw new ServicoEstadoInvalidoException();
+            case USAR_DENUNCIA -> throw new UseDenunciaException();
+            case SEM_O_QUE_CANCELAR -> throw new ServicoEstadoInvalidoException();
         }
     }
 
@@ -156,6 +149,6 @@ public class CancelarServicoCombinadoUseCase {
         detalhes.put("dataNova", aceito.getDataProposta().toString());
         detalhes.put("aceitoEm", aceito.getRespondidoEm().toString());
         logAuditoriaService.registrar("Anuncio", anuncioId, TipoAcaoAuditoria.COMBINADO_CANCELADO_TARDIO,
-                ORIGEM_AUDITORIA, ip, objectMapper.writeValueAsString(detalhes));
+                ORIGEM_AUDITORIA, ip, detalhes);
     }
 }

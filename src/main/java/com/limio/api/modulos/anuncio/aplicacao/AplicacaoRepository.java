@@ -20,8 +20,14 @@ public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
 
     List<Aplicacao> findByPrestadorIdAndStatusIn(UUID prestadorId, List<StatusAplicacao> status);
 
-    List<Aplicacao> findByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThanAndCotaEstornadaEmIsNullOrderByEscolhidaEmDesc(
-            UUID prestadorId, Instant inicio, Instant fimExclusivo);
+    /**
+     * As escolhas do Prestador no período ({@code escolhidaEm} em {@code [inicio, fimExclusivo)}), em qualquer status,
+     * da mais recente pra mais antiga, sem as que já tiveram a cota estornada: só as que ainda ocupam a cota (ETI-94).
+     */
+    @Query("select a from Aplicacao a where a.prestadorId = :prestadorId and a.escolhidaEm >= :inicio "
+            + "and a.escolhidaEm < :fimExclusivo and a.cotaEstornadaEm is null order by a.escolhidaEm desc")
+    List<Aplicacao> buscarEscolhidasQueContamNaCota(@Param("prestadorId") UUID prestadorId,
+            @Param("inicio") Instant inicio, @Param("fimExclusivo") Instant fimExclusivo);
 
     List<Aplicacao> findByAnuncioIdAndStatusIn(UUID anuncioId, List<StatusAplicacao> status);
 
@@ -36,8 +42,11 @@ public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
 
     boolean existsByAnuncioIdAndPrestadorIdAndStatusIn(UUID anuncioId, UUID prestadorId, List<StatusAplicacao> status);
 
-    long countByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThanAndCotaEstornadaEmIsNull(
-            UUID prestadorId, Instant inicio, Instant fimExclusivo);
+    /** Mesmo critério de {@link #buscarEscolhidasQueContamNaCota}, só a contagem. */
+    @Query("select count(a) from Aplicacao a where a.prestadorId = :prestadorId and a.escolhidaEm >= :inicio "
+            + "and a.escolhidaEm < :fimExclusivo and a.cotaEstornadaEm is null")
+    long contarEscolhidasQueContamNaCota(@Param("prestadorId") UUID prestadorId, @Param("inicio") Instant inicio,
+            @Param("fimExclusivo") Instant fimExclusivo);
 
     Page<Aplicacao> findByPrestadorIdAndStatusIn(UUID prestadorId, List<StatusAplicacao> status, Pageable pageable);
 
