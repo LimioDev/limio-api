@@ -42,5 +42,8 @@ public enum EscopoTrava {
      * mesmo quando a linha do mês ainda não existe e quando o mesmo Prestador é escolhido em anúncios diferentes
      * ao mesmo tempo (o lock {@link #ANUNCIO} é por anúncio e não o cobre). Sempre depois de {@link #ANUNCIO}.
      */
-    COTA_PRESTADOR
+    COTA_PRESTADOR,
+
+    /** Assinar o plano GOLD por usuário (ETI-81): clique duplo não chama o gateway duas vezes. */
+    ASSINATURA_GOLD
 }
