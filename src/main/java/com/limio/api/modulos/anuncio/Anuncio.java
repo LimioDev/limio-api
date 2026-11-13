@@ -203,11 +203,34 @@ public class Anuncio extends BaseEntity {
         this.observacoes = novos.observacoes;
     }
 
-    public boolean permiteCheckout() {
+    /**
+     * ETI-92: o serviço ainda não passou pelo check-out — {@code PUBLICADO} (o passo opcional "iniciar" nunca
+     * rodou) ou {@code EM_ANDAMENTO}. Dois usos: permite validação presencial (quem chama já confirmou que
+     * existe candidatura escolhida) e, quando a validação pela foto nega, decide o {@code CodigoErro} certo
+     * ({@code VALIDACAO_SEM_CHECKOUT} aqui, {@code SERVICO_ESTADO_INVALIDO} se já concluído ou encerrado).
+     */
+    public boolean servicoEmAberto() {
         return switch (status) {
             case PUBLICADO, EM_ANDAMENTO -> true;
             case AGUARDANDO_VALIDACAO, CONCLUIDO, ENCERRADO -> false;
         };
+    }
+
+    /** ETI-92: validação pela foto exige o check-out do Prestador feito antes (ETI-90). */
+    public boolean permiteValidacaoPelaFoto() {
+        return switch (status) {
+            case AGUARDANDO_VALIDACAO -> true;
+            case PUBLICADO, EM_ANDAMENTO, CONCLUIDO, ENCERRADO -> false;
+        };
+    }
+
+    /**
+     * ETI-92: Empregador validou o serviço, presencial ou pela foto. Quem chama já validou o estado do
+     * anúncio. Não registra nem confere pagamento (UC) — só encerra o ciclo do anúncio.
+     */
+    public void validar(Instant agora) {
+        this.status = StatusAnuncio.CONCLUIDO;
+        this.validadoEm = agora;
     }
 
     public void registrarCheckout(Instant agora, String observacao) {

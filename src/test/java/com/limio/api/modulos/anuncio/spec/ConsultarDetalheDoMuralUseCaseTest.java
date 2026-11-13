@@ -26,7 +26,6 @@ import com.limio.api.comum.midia.ArmazenamentoService;
 import com.limio.api.comum.midia.LinkTemporario;
 import com.limio.api.comum.midia.Midia;
 import com.limio.api.comum.midia.MidiaService;
-import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
 import com.limio.api.comum.portas.ConsultaCategoria;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.ConsultaPerfilEmpregador;
@@ -156,8 +155,9 @@ class ConsultarDetalheDoMuralUseCaseTest {
         Midia foto1 = Midia.fotoAnuncio(EMPREGADOR_ID, ANUNCIO_ID, "fotos-anuncio/1", "image/jpeg", 10, 10, 100);
         Midia foto2 = Midia.fotoAnuncio(EMPREGADOR_ID, ANUNCIO_ID, "fotos-anuncio/2", "image/jpeg", 10, 10, 100);
         when(midiaService.buscarFotosAtivasDoAnuncio(ANUNCIO_ID)).thenReturn(List.of(foto1, foto2));
-        when(armazenamentoService.gerarLink("fotos-anuncio/1")).thenReturn(new LinkTemporario("https://bucket/1", Instant.now()));
-        when(armazenamentoService.gerarLink("fotos-anuncio/2")).thenThrow(new ArmazenamentoIndisponivelException());
+        when(armazenamentoService.gerarLinkSeDisponivel("fotos-anuncio/1"))
+                .thenReturn(Optional.of(new LinkTemporario("https://bucket/1", Instant.now())));
+        when(armazenamentoService.gerarLinkSeDisponivel("fotos-anuncio/2")).thenReturn(Optional.empty());
 
         DetalheDoMural detalhe = executar();
 

@@ -86,7 +86,7 @@ public class RealizarCheckoutUseCase {
                 .filter(Aplicacao::isEscolhida)
                 .orElseThrow(ServicoNaoEncontradoException::new);
 
-        if (!anuncio.permiteCheckout()) {
+        if (!anuncio.servicoEmAberto()) {
             throw new ServicoEstadoInvalidoException();
         }
 

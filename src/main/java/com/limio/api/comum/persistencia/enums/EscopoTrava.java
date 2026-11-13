@@ -26,10 +26,10 @@ public enum EscopoTrava {
 
     /**
      * Mudança do conteúdo ou do estado de um anúncio e de suas candidaturas (ETI-61, ETI-69): editar, cancelar,
-     * iniciar o serviço, candidatar-se, desistir, recusar e escolher candidato. É o mecanismo único do
-     * agregado: advisory lock não bloqueia linha nenhuma, só quem também o toma, por isso todo escritor do
-     * anúncio ou das suas candidaturas trava este escopo como PRIMEIRA instrução da transação, antes de ler o
-     * estado que vai decidir.
+     * iniciar o serviço, candidatar-se, desistir, recusar, escolher candidato e validar o serviço (ETI-92). É o
+     * mecanismo único do agregado: advisory lock não bloqueia linha nenhuma, só quem também o toma, por isso
+     * todo escritor do anúncio ou das suas candidaturas trava este escopo como PRIMEIRA instrução da
+     * transação, antes de ler o estado que vai decidir.
      *
      * <p>Ordem de aquisição quando um usecase precisa de mais de um recurso (sem deadlock): {@code ANUNCIO} →
      * linhas de {@code aplicacao} ({@code SELECT ... FOR UPDATE}, por id crescente) → {@link #COTA_PRESTADOR}.

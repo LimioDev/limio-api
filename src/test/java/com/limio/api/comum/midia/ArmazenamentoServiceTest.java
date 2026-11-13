@@ -52,4 +52,26 @@ class ArmazenamentoServiceTest {
                 .isInstanceOf(ArmazenamentoIndisponivelException.class);
         assertThatCode(() -> service.remover("x.jpg")).doesNotThrowAnyException();
     }
+
+    @Test
+    void dadoStorageConfigurado_quandoGeraLinkSeDisponivel_entaoDevolveOLink() {
+        StaticListableBeanFactory beans = new StaticListableBeanFactory();
+        beans.addBean("s3Presigner", new StorageConfig().s3Presigner(PROPS));
+        beans.addBean("storageProperties", PROPS);
+        ArmazenamentoService service = new ArmazenamentoService(beans.getBeanProvider(S3Client.class),
+                beans.getBeanProvider(S3Presigner.class), beans.getBeanProvider(StorageProperties.class),
+                Duration.ofHours(1));
+
+        assertThat(service.gerarLinkSeDisponivel("fotos-perfil/u1/foto.jpg")).isPresent();
+    }
+
+    @Test
+    void dadoStorageNaoConfigurado_quandoGeraLinkSeDisponivel_entaoVazioSemLancar() {
+        StaticListableBeanFactory vazio = new StaticListableBeanFactory();
+        ArmazenamentoService service = new ArmazenamentoService(vazio.getBeanProvider(S3Client.class),
+                vazio.getBeanProvider(S3Presigner.class), vazio.getBeanProvider(StorageProperties.class),
+                Duration.ofHours(1));
+
+        assertThat(service.gerarLinkSeDisponivel("x.jpg")).isEmpty();
+    }
 }
