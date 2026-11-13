@@ -213,7 +213,8 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
 
     /**
      * A candidatura que foi escolhida pro anúncio, se alguma já foi — vale mesmo depois do serviço concluir ou
-     * o anúncio cancelar (ETI-86): {@code escolhidaEm} é permanente, diferente do {@code status} atual.
+     * o anúncio cancelar ou encerrar (ETI-86, ETI-92): {@code escolhidaEm} é permanente, diferente do {@code status}
+     * atual.
      */
     public Optional<Aplicacao> buscarEscolhidaDoAnuncio(UUID anuncioId) {
         return repository.findFirstByAnuncioIdAndEscolhidaEmIsNotNull(anuncioId);

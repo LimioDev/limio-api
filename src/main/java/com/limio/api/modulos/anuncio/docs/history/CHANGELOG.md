@@ -309,6 +309,31 @@ outra branch (avaliações).
 para lista vazia. A limpeza de objetos em rollback reaproveita `FotoAnuncioEnviadaEvent`.
 `CheckoutEnviadoEvent` fica em `comum/eventos/` e ainda não tem consumidor (aviso ao Empregador, ETI-112).
 
+## 2026-11-10 — ETI-92: validar o serviço, presencial ou pela foto
+
+`GET /anuncios/{id}/validacao` e `POST /anuncios/{id}/validar` (`{ "modo": "PRESENCIAL"|"PELA_FOTO" }`):
+o anúncio vai pra `CONCLUIDO`, grava `validadoEm` e publica `ServicoConcluidoEvent` (único consumidor
+previsto, ainda não implementado: `notificacao`, ETI-112 — `moderacao`/ETI-107, que já está na `develop`,
+não escuta esse evento, lê `validadoEm` pela porta `ConsultaServico`). `PRESENCIAL` aceita
+`PUBLICADO`/`EM_ANDAMENTO`; `PELA_FOTO` só `AGUARDANDO_VALIDACAO`, senão `VALIDACAO_SEM_CHECKOUT`
+(distinto de `SERVICO_ESTADO_INVALIDO` quando já concluído/encerrado) — os dois modos compartilham o
+critério de "serviço ainda em aberto" num método só (`Anuncio.servicoEmAberto`, que substitui o
+`permiteCheckout` da ETI-90 — review da PR #31: existiam dois `switch` idênticos, um deles só pra
+escolher o `CodigoErro`). `permiteCheckout` some, `RealizarCheckoutUseCase` passa a chamar
+`servicoEmAberto`. Trava `EscopoTrava.ANUNCIO` contra clique duplo — a mesma trava que a #32 (ETI-69) já
+estendeu a todo escritor do agregado (editar, cancelar, iniciar, candidatar-se, desistir, recusar,
+escolher); validar entra na mesma fila. `GET .../validacao` lê o que o check-out (ETI-90, já na `develop`)
+gravou em `TipoMidia.EVIDENCIA_CHECKOUT` via `MidiaService.buscarFotosAtivasDoCheckout`; sem check-out, a
+consulta devolve lista vazia. Detalhe completo em `docs/features/ETI-92-validar-o-servico.md`.
+
+## 2026-11 — UC04 (OTP por SMS) fora de escopo em definitivo (ETI-134)
+
+Publicar anúncio, mural (listar/detalhar) e candidatar-se passam a exigir só `emailConfirmadoEm`
+(`DadosUsuario.emailConfirmado()`). Telefone não é mais pré-condição — nunca teve confirmação de fato
+implementada (campo e enum eram andaime morto). `ContatosNaoConfirmadosException` manteve nome e
+`CodigoErro.CONTATOS_NAO_CONFIRMADOS` (contrato estável com o front), só a mensagem padrão mudou para "Confirme
+seu e-mail para continuar." Decisão completa em `auth/docs/history/CHANGELOG.md`.
+
 ## 2026-11-11 — ETI-94: Empregador cancelar o serviço combinado
 
 `POST /anuncios/{anuncioId}/servico/cancelar`. Detalhe completo em

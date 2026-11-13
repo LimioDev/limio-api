@@ -26,7 +26,6 @@ import com.limio.api.comum.midia.ArmazenamentoService;
 import com.limio.api.comum.midia.LinkTemporario;
 import com.limio.api.comum.midia.Midia;
 import com.limio.api.comum.midia.MidiaService;
-import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
 import com.limio.api.comum.portas.ConsultaCategoria;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.ConsultaPerfilEmpregador;
@@ -88,7 +87,7 @@ class ConsultarDetalheDoMuralUseCaseTest {
 
     private void prestadorHabilitado() {
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(
-                new DadosUsuario("Rafael", "r@example.com", "+5511999998888", CONFIRMADO, CONFIRMADO)));
+                new DadosUsuario("Rafael", "r@example.com", "+5511999998888", CONFIRMADO)));
         when(consultaPerfilPrestador.buscarCompleto(PRESTADOR_ID)).thenReturn(Optional.of(PERFIL));
     }
 
@@ -121,9 +120,9 @@ class ConsultarDetalheDoMuralUseCaseTest {
     }
 
     @Test
-    void dadoContatoNaoConfirmado_quandoDetalha_entaoContatosNaoConfirmados() {
+    void dadoEmailNaoConfirmado_quandoDetalha_entaoContatosNaoConfirmados() {
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(
-                new DadosUsuario("Rafael", "r@example.com", "+5511999998888", CONFIRMADO, null)));
+                new DadosUsuario("Rafael", "r@example.com", "+5511999998888", null)));
 
         assertThatThrownBy(this::executar).isInstanceOf(ContatosNaoConfirmadosException.class);
     }
@@ -131,7 +130,7 @@ class ConsultarDetalheDoMuralUseCaseTest {
     @Test
     void dadoPerfilIncompleto_quandoDetalha_entaoPerfilIncompleto() {
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(
-                new DadosUsuario("Rafael", "r@example.com", "+5511999998888", CONFIRMADO, CONFIRMADO)));
+                new DadosUsuario("Rafael", "r@example.com", "+5511999998888", CONFIRMADO)));
         when(consultaPerfilPrestador.buscarCompleto(PRESTADOR_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(this::executar).isInstanceOf(PerfilIncompletoException.class);
@@ -156,8 +155,9 @@ class ConsultarDetalheDoMuralUseCaseTest {
         Midia foto1 = Midia.fotoAnuncio(EMPREGADOR_ID, ANUNCIO_ID, "fotos-anuncio/1", "image/jpeg", 10, 10, 100);
         Midia foto2 = Midia.fotoAnuncio(EMPREGADOR_ID, ANUNCIO_ID, "fotos-anuncio/2", "image/jpeg", 10, 10, 100);
         when(midiaService.buscarFotosAtivasDoAnuncio(ANUNCIO_ID)).thenReturn(List.of(foto1, foto2));
-        when(armazenamentoService.gerarLink("fotos-anuncio/1")).thenReturn(new LinkTemporario("https://bucket/1", Instant.now()));
-        when(armazenamentoService.gerarLink("fotos-anuncio/2")).thenThrow(new ArmazenamentoIndisponivelException());
+        when(armazenamentoService.gerarLinkSeDisponivel("fotos-anuncio/1"))
+                .thenReturn(Optional.of(new LinkTemporario("https://bucket/1", Instant.now())));
+        when(armazenamentoService.gerarLinkSeDisponivel("fotos-anuncio/2")).thenReturn(Optional.empty());
 
         DetalheDoMural detalhe = executar();
 

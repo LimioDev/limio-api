@@ -37,12 +37,13 @@ public enum CodigoErro {
     FOTO_OBRIGATORIA("Envie ao menos uma foto do serviço."),
     ARQUIVO_GRANDE_DEMAIS("O arquivo é maior que o permitido."),
     ARMAZENAMENTO_INDISPONIVEL("Não foi possível guardar o arquivo agora. Tente novamente em instantes."),
-    CONTATOS_NAO_CONFIRMADOS("Confirme seu e-mail e seu telefone para continuar."),
+    CONTATOS_NAO_CONFIRMADOS("Confirme seu e-mail para continuar."),
     DATA_NO_PASSADO("A data e a hora do serviço precisam estar no futuro."),
     ANUNCIO_NAO_ENCONTRADO("Anúncio não encontrado."),
     ANUNCIO_ESTADO_INVALIDO("O anúncio não permite esta ação no estado atual."),
     SERVICO_NAO_ENCONTRADO("Serviço não encontrado."),
     SERVICO_ESTADO_INVALIDO("O serviço não permite esta ação no estado atual."),
+    VALIDACAO_SEM_CHECKOUT("A validação pela foto exige o check-out do Prestador antes."),
     ANUNCIO_PROPRIO("Você não pode se candidatar ao próprio anúncio."),
     CANDIDATURA_DUPLICADA("Você já tem uma candidatura em aberto para este anúncio."),
     COTA_ESGOTADA("Você atingiu o limite de candidaturas escolhidas do plano gratuito neste mês."),
@@ -60,6 +61,12 @@ public enum CodigoErro {
     JANELA_AVALIACAO_ENCERRADA("O prazo para avaliar este serviço terminou."),
     AVALIACAO_DUPLICADA("Você já avaliou este serviço."),
     COMENTARIO_SEM_NOTA("Escolha uma nota para enviar o comentário."),
+    PLANO_NAO_ENCONTRADO("Plano não encontrado."),
+    ASSINATURA_JA_ATIVA("Você já é assinante do plano GOLD."),
+    COBRANCA_EM_ANDAMENTO("Já existe uma cobrança em andamento. Tente novamente em instantes."),
+    PAGAMENTO_RECUSADO("Pagamento recusado. Verifique os dados do cartão e tente novamente."),
+    GATEWAY_INDISPONIVEL("Não foi possível processar o pagamento agora. Tente novamente em instantes."),
+    CARTAO_INVALIDO("Dados do cartão inválidos. Confira número, validade e CVV."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;

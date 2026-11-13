@@ -19,8 +19,9 @@ import lombok.Setter;
  * relação JPA pro {@code Usuario} de {@code modulos.auth} (ADR-0001 §1.6).
  *
  * Canais são {@link Boolean} (não primitivo), no mesmo tipo do
- * {@code PreferenciaNotificacaoRequest}; no banco os quatro são
- * {@code NOT NULL}.
+ * {@code PreferenciaNotificacaoRequest}; no banco os três são
+ * {@code NOT NULL}. SMS saiu dos canais (ETI-134): nenhum fluxo do app depende
+ * de confirmação por SMS, e o canal nunca chegou a disparar nada.
  */
 @Entity
 @Table(name = "preferencia_notificacao")
@@ -39,9 +40,6 @@ public class PreferenciaNotificacao extends BaseEntity {
 
     @Column(name = "email", nullable = false)
     private Boolean email;
-
-    @Column(name = "sms", nullable = false)
-    private Boolean sms;
 
     @Column(name = "whatsapp", nullable = false)
     private Boolean whatsapp;

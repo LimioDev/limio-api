@@ -437,6 +437,7 @@ class TrocarEmailETelefoneStoryTest {
 
     // ---------- troca de telefone ----------
 
+    /** ETI-134: trocar o telefone não zera nem bloqueia nada — telefone não tem etapa de confirmação. */
     @Test
     void dadoCelularValido_quandoTrocaTelefone_entaoBancoGuardaDigitosEApiDevolveMaisCinquentaECinco() throws Exception {
         String token = cadastrarELogar(MARIA);
@@ -446,13 +447,12 @@ class TrocarEmailETelefoneStoryTest {
 
         trocarTelefone(token, "(21) 98888-7777", SENHA)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.telefone", is("+5521988887777")))
-                .andExpect(jsonPath("$.telefoneConfirmadoEm", nullValue()));
+                .andExpect(jsonPath("$.telefone", is("+5521988887777")));
 
         assertThat(telefoneNoBanco(id)).isEqualTo("21988887777");
         assertThat(jdbc.queryForObject("select length(telefone) from usuario where id = ?", Integer.class, id))
                 .isEqualTo(11);
-        assertThat(telefoneConfirmado(id)).isFalse();
+        assertThat(telefoneConfirmado(id)).as("trocar telefone não zera nada (ETI-134)").isTrue();
         assertThat(emailConfirmado(id)).as("troca de telefone não toca o e-mail").isTrue();
         assertThat(tokens(id)).as("sem OTP/SMS: nenhum token é criado").isZero();
         verifyNoInteractions(emailService);

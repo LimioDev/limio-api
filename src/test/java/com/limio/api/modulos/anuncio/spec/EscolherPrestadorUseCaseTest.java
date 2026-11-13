@@ -177,8 +177,7 @@ class EscolherPrestadorUseCaseTest {
         cenario(Plano.FREE, escolhida, outra);
         when(consumoCotaPrestador.consumirEscolha(any(), any())).thenReturn(false);
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(
-                new DadosUsuario("Rafael da Silva Souza", "r@example.com", "+5511999998888", Instant.now(),
-                        Instant.now())));
+                new DadosUsuario("Rafael da Silva Souza", "r@example.com", "+5511999998888", Instant.now())));
 
         assertThatThrownBy(() -> useCase.executar(CONTRATANTE_ID, ANUNCIO_ID, escolhida.getId()))
                 .isInstanceOf(CotaEsgotadaCandidatoException.class)

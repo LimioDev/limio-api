@@ -57,6 +57,15 @@ public class MidiaService extends BaseService<Midia, UUID, MidiaRepository> {
                 TipoMidia.FOTO_ANUNCIO);
     }
 
+    /**
+     * Fotos ativas do check-out do anúncio, na ordem em que foram enviadas (ETI-92). Vazio enquanto nenhum
+     * usecase grava {@code EVIDENCIA_CHECKOUT} — o check-out (ETI-90) ainda não existe.
+     */
+    public List<Midia> buscarFotosAtivasDoCheckout(UUID anuncioId) {
+        return repository.findByAnuncioIdAndTipoAndExpurgoEmIsNullOrderByCriadoEmAscIdAsc(anuncioId,
+                TipoMidia.EVIDENCIA_CHECKOUT);
+    }
+
     public Optional<Midia> buscarFotoAtivaDoAnuncio(UUID anuncioId, UUID fotoId) {
         return repository.findByIdAndAnuncioIdAndTipoAndExpurgoEmIsNull(fotoId, anuncioId, TipoMidia.FOTO_ANUNCIO);
     }

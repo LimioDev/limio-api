@@ -48,6 +48,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, PaginasWebConfig.ROTAS_PUBLICAS).permitAll()
                         // health check do Railway: sem isso todo deploy falha com 401
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        // webhook do Asaas (ETI-81): autenticidade é o header asaas-access-token, não JWT
+                        .requestMatchers(HttpMethod.POST, "/financeiro/gold/webhook/asaas").permitAll()
                         // handshake do canal em tempo real: o token é conferido no CONNECT (WebSocketAuthInterceptor)
                         .requestMatchers(WebSocketConfig.ROTA_WEBSOCKET).permitAll()
                         .anyRequest().authenticated())

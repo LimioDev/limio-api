@@ -92,9 +92,9 @@ class PublicarAnuncioUseCaseTest {
         return candidato(Instant.now().plus(Duration.ofDays(2)));
     }
 
-    private void contatos(Instant emailConfirmadoEm, Instant telefoneConfirmadoEm) {
+    private void contatos(Instant emailConfirmadoEm) {
         when(consultaDadosUsuario.buscarPorId(USUARIO_ID)).thenReturn(Optional.of(new DadosUsuario("Maria Souza",
-                "maria@example.com", "+5511999998888", emailConfirmadoEm, telefoneConfirmadoEm)));
+                "maria@example.com", "+5511999998888", emailConfirmadoEm)));
     }
 
     private void categoria(boolean ativa) {
@@ -112,7 +112,7 @@ class PublicarAnuncioUseCaseTest {
 
     @Test
     void dadoEnderecoSalvo_quandoPublica_entaoGravaPublicadoComRetratoDoEnderecoEPublicaEvento() {
-        contatos(Instant.now(), Instant.now());
+        contatos(Instant.now());
         categoria(true);
         when(consultaEndereco.buscarSalvo(USUARIO_ID, ENDERECO_SALVO_ID)).thenReturn(LOCALIZADO);
         salvarDevolvendoComId();
@@ -136,7 +136,7 @@ class PublicarAnuncioUseCaseTest {
 
     @Test
     void dadoEnderecoAvulso_quandoPublica_entaoLocalizaPeloGeocodificadorESemEnderecoSalvo() {
-        contatos(Instant.now(), Instant.now());
+        contatos(Instant.now());
         categoria(true);
         when(consultaEndereco.localizar(AVULSO)).thenReturn(LOCALIZADO);
         salvarDevolvendoComId();
@@ -166,22 +166,13 @@ class PublicarAnuncioUseCaseTest {
     }
 
     @Test
-    void dadoTelefoneNaoConfirmado_quandoPublica_entaoRecusa() {
-        contatos(Instant.now(), null);
+    void dadoEmailNaoConfirmado_quandoPublica_entaoRecusa() {
+        contatos(null);
 
         assertThatThrownBy(() -> useCase.executar(USUARIO_ID, PapelUsuario.EMPREGADOR, candidato(),
                 new EnderecoDoAnuncio.Avulso(AVULSO)))
                 .isInstanceOf(ContatosNaoConfirmadosException.class);
         verifyNoInteractions(consultaEndereco, anuncioService);
-    }
-
-    @Test
-    void dadoEmailNaoConfirmado_quandoPublica_entaoRecusa() {
-        contatos(null, Instant.now());
-
-        assertThatThrownBy(() -> useCase.executar(USUARIO_ID, PapelUsuario.EMPREGADOR, candidato(),
-                new EnderecoDoAnuncio.Avulso(AVULSO)))
-                .isInstanceOf(ContatosNaoConfirmadosException.class);
     }
 
     @Test
@@ -195,7 +186,7 @@ class PublicarAnuncioUseCaseTest {
 
     @Test
     void dadoCategoriaInativa_quandoPublica_entaoRecusaSemGeocodificar() {
-        contatos(Instant.now(), Instant.now());
+        contatos(Instant.now());
         categoria(false);
 
         assertThatThrownBy(() -> useCase.executar(USUARIO_ID, PapelUsuario.EMPREGADOR, candidato(),
@@ -206,7 +197,7 @@ class PublicarAnuncioUseCaseTest {
 
     @Test
     void dadoCategoriaInexistente_quandoPublica_entaoRecusa() {
-        contatos(Instant.now(), Instant.now());
+        contatos(Instant.now());
         when(consultaCategoria.buscarPorId(CATEGORIA_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.executar(USUARIO_ID, PapelUsuario.EMPREGADOR, candidato(),

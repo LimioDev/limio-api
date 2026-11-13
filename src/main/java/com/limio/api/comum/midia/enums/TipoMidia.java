@@ -4,5 +4,6 @@ package com.limio.api.comum.midia.enums;
 public enum TipoMidia {
     FOTO_PERFIL,
     FOTO_ANUNCIO,
+    /** Foto do check-out (ETI-90), lida por {@code ConsultarValidacaoUseCase} (ETI-92). */
     EVIDENCIA_CHECKOUT
 }
