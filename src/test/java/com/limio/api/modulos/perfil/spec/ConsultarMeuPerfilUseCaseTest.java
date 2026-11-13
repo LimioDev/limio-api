@@ -36,7 +36,7 @@ class ConsultarMeuPerfilUseCaseTest {
 
     @Test
     void deveDevolverOPerfilGarantidoPeloService() {
-        DadosUsuario dados = new DadosUsuario("Maria da Silva", "maria@example.com", "+5511999998888", null, null);
+        DadosUsuario dados = new DadosUsuario("Maria da Silva", "maria@example.com", "+5511999998888", null);
         PerfilEmpregador perfil = PerfilEmpregador.builder().usuarioId(USUARIO_ID).nomeExibicao("Maria").build();
         MeuPerfilEmpregador meuPerfil = new MeuPerfilEmpregador(perfil, dados);
         when(perfilEmpregadorService.garantirPerfil(USUARIO_ID)).thenReturn(meuPerfil);

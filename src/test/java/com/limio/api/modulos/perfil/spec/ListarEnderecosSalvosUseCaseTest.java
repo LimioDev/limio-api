@@ -48,7 +48,7 @@ class ListarEnderecosSalvosUseCaseTest {
     void deveListarSoOsEnderecosAtivosDoPerfilDoUsuarioLogado() {
         PerfilEmpregador perfil = PerfilEmpregador.builder().usuarioId(USUARIO_ID).nomeExibicao("Maria").build();
         ReflectionTestUtils.setField(perfil, "id", PERFIL_ID);
-        DadosUsuario dados = new DadosUsuario("Maria", "m@example.com", "+5511999998888", Instant.now(), null);
+        DadosUsuario dados = new DadosUsuario("Maria", "m@example.com", "+5511999998888", Instant.now());
         when(perfilEmpregadorService.garantirPerfil(USUARIO_ID)).thenReturn(new MeuPerfilEmpregador(perfil, dados));
         List<EnderecoSalvo> ativos = List.of(EnderecoSalvo.builder().apelido("Casa").build());
         when(enderecoSalvoService.listarEnderecosAtivos(PERFIL_ID)).thenReturn(ativos);
