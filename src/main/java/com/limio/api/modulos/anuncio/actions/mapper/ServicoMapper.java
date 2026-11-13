@@ -8,6 +8,7 @@ import com.limio.api.comum.midia.LinkTemporario;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.FotoDoCheckout;
 import com.limio.api.modulos.anuncio.ValidacaoDoServico;
+import com.limio.api.modulos.anuncio.records.CheckoutResponse;
 import com.limio.api.modulos.anuncio.records.ConsultaValidacaoResponse;
 import com.limio.api.modulos.anuncio.records.FotoCheckoutResponse;
 import com.limio.api.modulos.anuncio.records.ServicoIniciadoResponse;
@@ -33,5 +34,10 @@ public class ServicoMapper {
         LinkTemporario link = foto.link();
         return new FotoCheckoutResponse(foto.id(), link == null ? null : link.url(),
                 link == null ? null : link.expiraEm());
+    }
+
+    public CheckoutResponse toCheckoutResponse(Anuncio anuncio) {
+        return new CheckoutResponse(anuncio.getStatus(), anuncio.getCheckoutEm(),
+                anuncio.prazoDeValidacao().orElse(null));
     }
 }

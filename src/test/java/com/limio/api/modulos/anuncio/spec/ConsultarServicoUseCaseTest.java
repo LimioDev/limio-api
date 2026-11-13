@@ -127,7 +127,7 @@ class ConsultarServicoUseCaseTest {
         categoria();
         semReagendamentosNemChat();
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(
-                Optional.of(new DadosUsuario("Rafael Souza", "rafael@example.com", "+5511999990000", null, null)));
+                Optional.of(new DadosUsuario("Rafael Souza", "rafael@example.com", "+5511999990000", null)));
         when(consultaFotoPerfil.buscarFoto(PRESTADOR_ID)).thenReturn(Optional.empty());
         when(consultaPlanoPrestador.planoAtual(PRESTADOR_ID)).thenReturn(Plano.FREE);
 
@@ -147,7 +147,7 @@ class ConsultarServicoUseCaseTest {
         categoria();
         semReagendamentosNemChat();
         when(consultaDadosUsuario.buscarPorId(EMPREGADOR_ID)).thenReturn(
-                Optional.of(new DadosUsuario("Maria Silva", "maria@example.com", "+5511988880000", null, null)));
+                Optional.of(new DadosUsuario("Maria Silva", "maria@example.com", "+5511988880000", null)));
         when(consultaFotoPerfil.buscarFoto(EMPREGADOR_ID)).thenReturn(Optional.empty());
 
         ServicoCombinado servico = useCase.executar(PRESTADOR_ID, ANUNCIO_ID);
@@ -189,7 +189,7 @@ class ConsultarServicoUseCaseTest {
         categoria();
         semReagendamentosNemChat();
         when(consultaDadosUsuario.buscarPorId(EMPREGADOR_ID)).thenReturn(
-                Optional.of(new DadosUsuario("Maria Silva", "maria@example.com", "+5511988880000", null, null)));
+                Optional.of(new DadosUsuario("Maria Silva", "maria@example.com", "+5511988880000", null)));
         when(consultaFotoPerfil.buscarFoto(EMPREGADOR_ID)).thenReturn(Optional.empty());
 
         ServicoCombinado servico = useCase.executar(PRESTADOR_ID, ANUNCIO_ID);
@@ -218,7 +218,7 @@ class ConsultarServicoUseCaseTest {
         categoria();
         when(consultaChatDoServico.buscar(any(), any())).thenReturn(Optional.empty());
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(
-                Optional.of(new DadosUsuario("Rafael Souza", "rafael@example.com", "+5511999990000", null, null)));
+                Optional.of(new DadosUsuario("Rafael Souza", "rafael@example.com", "+5511999990000", null)));
         when(consultaFotoPerfil.buscarFoto(PRESTADOR_ID)).thenReturn(Optional.empty());
         when(consultaPlanoPrestador.planoAtual(PRESTADOR_ID)).thenReturn(Plano.FREE);
         Instant dataProposta = DATA_PRETENDIDA.plus(Duration.ofDays(2));
@@ -246,7 +246,7 @@ class ConsultarServicoUseCaseTest {
         when(reagendamentoService.buscarPendentesDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of());
         when(reagendamentoService.contarAceitos(ANUNCIO_ID)).thenReturn(0);
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(
-                Optional.of(new DadosUsuario("Rafael Souza", "rafael@example.com", "+5511999990000", null, null)));
+                Optional.of(new DadosUsuario("Rafael Souza", "rafael@example.com", "+5511999990000", null)));
         when(consultaFotoPerfil.buscarFoto(PRESTADOR_ID)).thenReturn(Optional.empty());
         when(consultaPlanoPrestador.planoAtual(PRESTADOR_ID)).thenReturn(Plano.FREE);
         UUID chatId = UUID.randomUUID();
@@ -266,7 +266,7 @@ class ConsultarServicoUseCaseTest {
         categoria();
         semReagendamentosNemChat();
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(
-                Optional.of(new DadosUsuario("Rafael Souza", "rafael@example.com", "+5511999990000", null, null)));
+                Optional.of(new DadosUsuario("Rafael Souza", "rafael@example.com", "+5511999990000", null)));
         LinkTemporario foto = new LinkTemporario("https://bucket/assinado", Instant.parse("2026-10-27T18:00:00Z"));
         when(consultaFotoPerfil.buscarFoto(PRESTADOR_ID)).thenReturn(Optional.of(foto));
         when(consultaPlanoPrestador.planoAtual(PRESTADOR_ID)).thenReturn(Plano.FREE);

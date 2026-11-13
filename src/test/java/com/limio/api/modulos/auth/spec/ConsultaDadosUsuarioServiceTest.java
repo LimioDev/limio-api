@@ -45,16 +45,15 @@ class ConsultaDadosUsuarioServiceTest {
     }
 
     @Test
-    void deveMapearSoOsCincoCamposDaPorta() {
+    void deveMapearSoOsQuatroCamposDaPorta() {
         Instant emailConfirmado = Instant.parse("2026-10-01T10:00:00Z");
-        Instant telefoneConfirmado = Instant.parse("2026-10-02T10:00:00Z");
-        Usuario maria = usuario().emailConfirmadoEm(emailConfirmado).telefoneConfirmadoEm(telefoneConfirmado).build();
+        Usuario maria = usuario().emailConfirmadoEm(emailConfirmado).build();
         when(usuarioService.buscarPorId(USUARIO_ID)).thenReturn(Optional.of(maria));
 
         Optional<DadosUsuario> dados = service.buscarPorId(USUARIO_ID);
 
         assertThat(dados).contains(new DadosUsuario("Maria da Silva", "maria@example.com", "+5511999998888",
-                emailConfirmado, telefoneConfirmado));
+                emailConfirmado));
     }
 
     @Test
@@ -66,13 +65,12 @@ class ConsultaDadosUsuarioServiceTest {
     }
 
     @Test
-    void deveManterNuloQuandoContatoNaoFoiConfirmado() {
+    void deveManterNuloQuandoEmailNaoFoiConfirmado() {
         when(usuarioService.buscarPorId(USUARIO_ID)).thenReturn(Optional.of(usuario().build()));
 
         DadosUsuario dados = service.buscarPorId(USUARIO_ID).orElseThrow();
 
         assertThat(dados.emailConfirmadoEm()).isNull();
-        assertThat(dados.telefoneConfirmadoEm()).isNull();
     }
 
     @Test

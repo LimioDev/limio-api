@@ -24,8 +24,7 @@ escolhido, pro Empregador ver antes de confirmar.
 `CONCLUIDO` e grava `validadoEm`; `ServicoConcluidoEvent` é publicado. Sem migration: `validado_em` já
 existe desde a V13.
 
-**Fora**: UI (card par `[FRONT-END]`), o check-out em si (`ETI-90`, ainda não implementado — por isso
-`EVIDENCIA_CHECKOUT` existe em `TipoMidia` mas nada grava esse tipo ainda), o aviso ao Prestador (`ETI-112`,
+**Fora**: UI (card par `[FRONT-END]`), o aviso ao Prestador (`ETI-112`,
 escuta `ServicoConcluidoEvent` quando existir), registro e conferência de pagamento (fora do LIMIO, UC),
 denúncia de não pagamento (`ETI-114`/`115`). A avaliação (`ETI-107`, já na `develop`) não depende deste
 evento: lê `validadoEm` direto pela porta `ConsultaServico`/`ResumoServico`.
@@ -44,9 +43,10 @@ evento: lê `validadoEm` direto pela porta `ConsultaServico`/`ResumoServico`.
 - **`PRESENCIAL` aceita `PUBLICADO` ou `EM_ANDAMENTO`.** O passo "iniciar o serviço" (ETI-88) é opcional —
   mesma observação já deixada na doc do ETI-88 ("nada aqui bloqueia a validação presencial... a partir de
   `PUBLICADO`").
-- **`EVIDENCIA_CHECKOUT` e a leitura das fotos já existem, a escrita não.** `TipoMidia.EVIDENCIA_CHECKOUT` e
-  `MidiaService.buscarFotosAtivasDoCheckout` ficam prontos pro ETI-90 gravar; até lá, `GET .../validacao`
-  sempre devolve `fotosCheckout: []` e `checkoutEm: null`.
+- **`EVIDENCIA_CHECKOUT` e a leitura das fotos.** `TipoMidia.EVIDENCIA_CHECKOUT` é gravado pelo check-out
+  (`ETI-90`, já na `develop`); `MidiaService.buscarFotosAtivasDoCheckout` lê o que foi gravado. Sem
+  check-out (validação `PRESENCIAL` sem passar por `AGUARDANDO_VALIDACAO`), `GET .../validacao` devolve
+  `fotosCheckout: []` e `checkoutEm: null`.
 - **`AplicacaoService.buscarEscolhidaDoAnuncio`**, usada aqui e por `ConsultarServicoUseCase` (ETI-86, já
   na `develop` desde a #29) — mesma busca, uma assinatura só.
 - **Trava no anúncio contra clique duplo.** `trava.travar(EscopoTrava.ANUNCIO, anuncioId)` antes de ler o

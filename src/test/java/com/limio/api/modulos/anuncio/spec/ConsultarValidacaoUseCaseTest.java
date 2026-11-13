@@ -99,7 +99,7 @@ class ConsultarValidacaoUseCaseTest {
         when(armazenamentoService.gerarLinkSeDisponivel(anyString())).thenReturn(Optional.of(LINK));
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID))
                 .thenReturn(Optional.of(new DadosUsuario("Carlos Souza", "carlos@example.com", "+5511988887777",
-                        Instant.now(), Instant.now())));
+                        Instant.now())));
 
         ValidacaoDoServico validacao = useCase.executar(ANUNCIO_ID, CONTRATANTE_ID);
 
@@ -116,7 +116,7 @@ class ConsultarValidacaoUseCaseTest {
         when(midiaService.buscarFotosAtivasDoCheckout(ANUNCIO_ID)).thenReturn(List.of());
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID))
                 .thenReturn(Optional.of(new DadosUsuario("Carlos Souza", "carlos@example.com", "+5511988887777",
-                        Instant.now(), Instant.now())));
+                        Instant.now())));
 
         ValidacaoDoServico validacao = useCase.executar(ANUNCIO_ID, CONTRATANTE_ID);
 

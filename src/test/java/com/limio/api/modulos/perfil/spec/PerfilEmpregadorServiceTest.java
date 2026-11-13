@@ -47,7 +47,7 @@ class PerfilEmpregadorServiceTest {
 
     private static DadosUsuario dados(String nomeCompleto) {
         return new DadosUsuario(nomeCompleto, "maria@example.com", "+5511999998888",
-                Instant.parse("2026-10-01T10:00:00Z"), null);
+                Instant.parse("2026-10-01T10:00:00Z"));
     }
 
     private static PerfilEmpregador perfil(String nome) {

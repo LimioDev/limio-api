@@ -290,6 +290,24 @@ ADR-0003, registrada aqui e no card; a ADR não foi alterada.
 Pendências conhecidas: o `CandidatarSe` ainda conta aplicações por `escolhidaEm` com outro teto
 (`anuncio.candidatura.max-escolhas-gratuitas`) em vez de usar `cota_mensal`; o `financeiro` é stub (sempre FREE); sem
 `lock_timeout`. Detalhe completo em `docs/features/ETI-69-escolher-prestador.md`.
+## 2026-11-07 — ETI-90: fazer o check-out com foto
+
+`POST /anuncios/{anuncioId}/checkout` (multipart). Detalhe completo em
+`docs/features/ETI-90-fazer-o-check-out-com-foto.md`.
+
+O "combinado" do UC40 não existe como status: é `PUBLICADO` com candidatura escolhida. O check-out parte de
+`EM_ANDAMENTO` ou de `PUBLICADO`, porque iniciar o serviço (ETI-88) é opcional. `Anuncio` ganhou
+`permiteCheckout`, `registrarCheckout` e `prazoDeValidacao`; `Aplicacao` ganhou `registrarCheckout` (vai para
+`AGUARDANDO_VALIDACAO`). `checkoutEm` passa a ser preenchido pela primeira vez.
+
+`TipoMidia.EVIDENCIA_CHECKOUT` e a V30: a constraint da V20 só deixava `anuncio_id` em `FOTO_ANUNCIO`, e foi
+trocada por uma que vale para os dois tipos ligados a anúncio. A V31 cria `anuncio.observacao_checkout`
+(decisão do usuário: o card não dizia onde guardar a observação). A numeração pula V28/V29, reservadas por
+outra branch (avaliações).
+
+`CodigoErro.FOTO_OBRIGATORIA` é exclusivo do check-out; as demais rotas de foto seguem com `FOTO_INVALIDA`
+para lista vazia. A limpeza de objetos em rollback reaproveita `FotoAnuncioEnviadaEvent`.
+`CheckoutEnviadoEvent` fica em `comum/eventos/` e ainda não tem consumidor (aviso ao Empregador, ETI-112).
 
 ## 2026-11-10 — ETI-92: validar o serviço, presencial ou pela foto
 
@@ -299,9 +317,19 @@ previsto, ainda não implementado: `notificacao`, ETI-112 — `moderacao`/ETI-10
 não escuta esse evento, lê `validadoEm` pela porta `ConsultaServico`). `PRESENCIAL` aceita
 `PUBLICADO`/`EM_ANDAMENTO`; `PELA_FOTO` só `AGUARDANDO_VALIDACAO`, senão `VALIDACAO_SEM_CHECKOUT`
 (distinto de `SERVICO_ESTADO_INVALIDO` quando já concluído/encerrado) — os dois modos compartilham o
-critério de "serviço ainda em aberto" num método só (`Anuncio.servicoEmAberto`, review da PR #31: existiam
-dois `switch` idênticos, um deles só pra escolher o `CodigoErro`). Trava `EscopoTrava.ANUNCIO` contra
-clique duplo — a mesma trava que a #32 (ETI-69) já estendeu a todo escritor do agregado (editar, cancelar,
-iniciar, candidatar-se, desistir, recusar, escolher); validar entra na mesma fila. `TipoMidia.EVIDENCIA_CHECKOUT` e
-`MidiaService.buscarFotosAtivasDoCheckout` ficam prontos pro check-out (ETI-90) gravar; até lá a consulta
-devolve lista vazia. Detalhe completo em `docs/features/ETI-92-validar-o-servico.md`.
+critério de "serviço ainda em aberto" num método só (`Anuncio.servicoEmAberto`, que substitui o
+`permiteCheckout` da ETI-90 — review da PR #31: existiam dois `switch` idênticos, um deles só pra
+escolher o `CodigoErro`). `permiteCheckout` some, `RealizarCheckoutUseCase` passa a chamar
+`servicoEmAberto`. Trava `EscopoTrava.ANUNCIO` contra clique duplo — a mesma trava que a #32 (ETI-69) já
+estendeu a todo escritor do agregado (editar, cancelar, iniciar, candidatar-se, desistir, recusar,
+escolher); validar entra na mesma fila. `GET .../validacao` lê o que o check-out (ETI-90, já na `develop`)
+gravou em `TipoMidia.EVIDENCIA_CHECKOUT` via `MidiaService.buscarFotosAtivasDoCheckout`; sem check-out, a
+consulta devolve lista vazia. Detalhe completo em `docs/features/ETI-92-validar-o-servico.md`.
+
+## 2026-11 — UC04 (OTP por SMS) fora de escopo em definitivo (ETI-134)
+
+Publicar anúncio, mural (listar/detalhar) e candidatar-se passam a exigir só `emailConfirmadoEm`
+(`DadosUsuario.emailConfirmado()`). Telefone não é mais pré-condição — nunca teve confirmação de fato
+implementada (campo e enum eram andaime morto). `ContatosNaoConfirmadosException` manteve nome e
+`CodigoErro.CONTATOS_NAO_CONFIRMADOS` (contrato estável com o front), só a mensagem padrão mudou para "Confirme
+seu e-mail para continuar." Decisão completa em `auth/docs/history/CHANGELOG.md`.

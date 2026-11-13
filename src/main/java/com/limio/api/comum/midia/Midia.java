@@ -35,7 +35,7 @@ public class Midia extends BaseEntity {
     @Column(nullable = false, updatable = false, length = 30)
     private TipoMidia tipo;
 
-    /** Anúncio da foto, só em {@code FOTO_ANUNCIO}. Coluna crua, sem FK pra {@code anuncio} (ADR-0001 §1.6). */
+    /** Anúncio da mídia, só em {@code FOTO_ANUNCIO} e {@code EVIDENCIA_CHECKOUT}. Coluna crua, sem FK pra {@code anuncio} (ADR-0001 §1.6). */
     @Column(name = "anuncio_id", updatable = false)
     private UUID anuncioId;
 
@@ -68,6 +68,11 @@ public class Midia extends BaseEntity {
     public static Midia fotoAnuncio(UUID usuarioId, UUID anuncioId, String urlS3, String mime, int largura, int altura,
             long bytes) {
         return foto(TipoMidia.FOTO_ANUNCIO, usuarioId, anuncioId, urlS3, mime, largura, altura, bytes);
+    }
+
+    public static Midia evidenciaCheckout(UUID usuarioId, UUID anuncioId, String urlS3, String mime, int largura,
+            int altura, long bytes) {
+        return foto(TipoMidia.EVIDENCIA_CHECKOUT, usuarioId, anuncioId, urlS3, mime, largura, altura, bytes);
     }
 
     private static Midia foto(TipoMidia tipo, UUID usuarioId, UUID anuncioId, String urlS3, String mime, int largura,

@@ -82,7 +82,7 @@ public class ListarMuralUseCase {
     public Page<ItemDoMural> executar(UUID usuarioId, PapelUsuario papelAtivo, Set<UUID> categorias, Integer raioKm,
             QuandoMural quando, int pagina, int tamanho) {
         exigirPrestador(papelAtivo);
-        exigirContatosConfirmados(usuarioId);
+        exigirEmailConfirmado(usuarioId);
         ResumoPerfilPrestador perfil = consultaPerfilPrestador.buscarCompleto(usuarioId)
                 .orElseThrow(PerfilIncompletoException::new);
 
@@ -135,12 +135,12 @@ public class ListarMuralUseCase {
         }
     }
 
-    private void exigirContatosConfirmados(UUID usuarioId) {
-        boolean confirmados = consultaDadosUsuario.buscarPorId(usuarioId)
-                .map(DadosUsuario::contatosConfirmados)
+    private void exigirEmailConfirmado(UUID usuarioId) {
+        boolean confirmado = consultaDadosUsuario.buscarPorId(usuarioId)
+                .map(DadosUsuario::emailConfirmado)
                 .orElse(false);
-        if (!confirmados) {
-            throw new ContatosNaoConfirmadosException("Confirme seu e-mail e seu telefone para ver os anúncios.");
+        if (!confirmado) {
+            throw new ContatosNaoConfirmadosException("Confirme seu e-mail para ver os anúncios.");
         }
     }
 }

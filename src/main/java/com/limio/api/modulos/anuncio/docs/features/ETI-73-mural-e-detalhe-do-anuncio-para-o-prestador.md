@@ -84,7 +84,7 @@ Os dois exigem login e papel ativo `PRESTADOR`.
 | Sucesso | 200 (mural: `content` vazio e total 0 se nada é compatível) |
 | Sem token | 401 `NAO_AUTENTICADO` |
 | Papel ativo ≠ `PRESTADOR` | 403 `ACESSO_NEGADO` ("Só o Prestador pode ver o mural de anúncios.") |
-| E-mail ou telefone não confirmado, ou conta encerrada | 403 `CONTATOS_NAO_CONFIRMADOS` |
+| E-mail não confirmado, ou conta encerrada (ETI-134: telefone não exige) | 403 `CONTATOS_NAO_CONFIRMADOS` |
 | Sem perfil de atuação completo | 403 `PERFIL_INCOMPLETO` — o front leva ao perfil de atuação |
 | Detalhe: anúncio inexistente ou não visível | 404 `ANUNCIO_NAO_ENCONTRADO` |
 | `raio`/`pagina`/`tamanho` fora da faixa, `quando` ou id inválido | 400 |
@@ -160,7 +160,7 @@ consultas, permitiriam triangular o endereço).
 - **Cidade no retrato do anúncio**: coluna nova `cidade_snapshot` preenchida na publicação (`EnderecoLocalizado`
   ganhou `cidade`), em vez de extrair do endereço de uma linha na leitura — essa linha só o dono e o escolhido veem, e
   parsear texto formatado é frágil. Backfill por regex na migração; se não casar, fica `NULL`.
-- **Regra de contatos compartilhada**: `DadosUsuario.contatosConfirmados()` (de `comum/portas`), a mesma de
+- **Regra de contatos compartilhada**: `DadosUsuario.emailConfirmado()` (de `comum/portas`), a mesma de
   `PublicarAnuncioUseCase`; `ContatosNaoConfirmadosException` ganhou construtor com mensagem (a padrão fala em "publicar").
 - **Papel inválido reaproveita `ACESSO_NEGADO`**, como `SomenteEmpregadorPublicaException`; o card sugere
   `PAPEL_INVALIDO`, que não existe e foi descartado (**a confirmar** com o front).
@@ -185,7 +185,7 @@ consultas, permitiriam triangular o endereço).
 
 ## Testes
 
-- `spec/ListarMuralUseCaseTest` (12): papel, contatos (e-mail, telefone, conta encerrada), perfil incompleto,
+- `spec/ListarMuralUseCaseTest`: papel, e-mail confirmado, conta encerrada, perfil incompleto,
   composição do critério (raio mínimo, categorias, janela), página vazia sem consultas em lote, montagem em lote e
   storage indisponível.
 - `spec/ConsultarDetalheDoMuralUseCaseTest` (11): pré-condições, inexistente, dados completos e fotos,

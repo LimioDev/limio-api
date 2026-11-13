@@ -15,18 +15,17 @@ Implementado: `PATCH /auth/email` e `PATCH /auth/telefone`.
 - **Confirmação de e-mail (UC05) NÃO está implementada.** A troca de e-mail emite um link, mas **não existe endpoint
   que o consuma**: o link enviado **não permite concluir a confirmação** hoje, e `emailConfirmadoEm` continua `null`
   até a UC05 existir. Gerar e enviar o token não é confirmar.
-- **SMS/OTP (UC04) NÃO existe e NADA é simulado.** A troca de telefone grava o número e limpa `telefoneConfirmadoEm`;
-  não envia código, não cria `VerificacaoContato`, não há `SmsService` nem stub. O telefone fica "não confirmado" até
-  existir esse fluxo.
-- Bloqueio de anúncio/candidatura enquanto o contato não está confirmado: depende do módulo `anuncio` (inexistente);
-  aqui só se garante o dado (`*ConfirmadoEm = null`).
+- **SMS/OTP (UC04) saiu de escopo em definitivo (ETI-134).** Telefone não tem etapa de confirmação: é dado de
+  contato obrigatório/editável, sem código, sem `VerificacaoContato`, sem `SmsService`. A troca só grava o número.
+- Bloqueio de anúncio/candidatura por contato não confirmado (módulo `anuncio`) depende só de `emailConfirmadoEm`
+  (ETI-134) — aqui só se garante o dado (`emailConfirmadoEm = null` na troca de e-mail).
 
 ## Contrato da API
 
 | Operação | Rota | Autenticação | Entrada | Saída |
 |---|---|---|---|---|
-| Trocar e-mail | `PATCH /auth/email` | `Bearer <token>` | `{ novoEmail, senhaAtual }` | 200 `{ email, telefone, emailConfirmadoEm, telefoneConfirmadoEm }` |
-| Trocar telefone | `PATCH /auth/telefone` | `Bearer <token>` | `{ novoTelefone, senhaAtual }` | 200 `{ email, telefone, emailConfirmadoEm, telefoneConfirmadoEm }` |
+| Trocar e-mail | `PATCH /auth/email` | `Bearer <token>` | `{ novoEmail, senhaAtual }` | 200 `{ email, telefone, emailConfirmadoEm }` |
+| Trocar telefone | `PATCH /auth/telefone` | `Bearer <token>` | `{ novoTelefone, senhaAtual }` | 200 `{ email, telefone, emailConfirmadoEm }` |
 
 `senhaAtual` é exigida nas duas (decisão D1): o e-mail é o canal de recuperação de senha, então token de acesso
 roubado + troca de e-mail seria tomada de conta. Mesmo padrão de `PATCH /auth/senha`.
@@ -59,13 +58,13 @@ mensagem sempre genérica) e `TROCA_CONTATO_LIMITE_EXCEDIDO` (429).
 - **Formato**: o **banco guarda só os dígitos nacionais** (`11999998888`, `VARCHAR(11)`, o mesmo do cadastro); o `+55`
   existe apenas no **contrato da API** e nas integrações. As respostas (`PATCH /auth/email`, `PATCH /auth/telefone`) e
   a porta `ConsultaDadosUsuario` (logo, o `GET /conta/perfil-empregador`) devolvem `+5511999998888`. A conversão mora em
-  um único lugar: `TelefoneHelper.normalizar` (entrada → dígitos) e `TelefoneHelper.paraInternacional` (saída e futuras
-  integrações, como o gateway de SMS). Não há coexistência de formatos nem migration.
-- Linhas legadas de 10 dígitos (fixo, aceitas pelo cadastro) continuam como estão e saem como `+55` + 10 dígitos; podem
-  ser substituídas por um celular válido, mas seguem sem OTP possível. A decisão do PO sobre o cadastro recusar fixo
-  continua pendente e não bloqueia esta feature.
-- Número igual ao atual → não faz nada (não há código a reenviar); como o formato é o mesmo do banco, a comparação vale
-  também para números cadastrados antes. Não toca `emailConfirmadoEm`.
+  um único lugar: `TelefoneHelper.normalizar` (entrada → dígitos) e `TelefoneHelper.paraInternacional` (saída). Não há
+  coexistência de formatos nem migration.
+- Linhas legadas de 10 dígitos (fixo, aceitas pelo cadastro) continuam como estão e saem como `+55` + 10 dígitos;
+  podem ser substituídas por um celular válido. A decisão do PO sobre o cadastro recusar fixo continua pendente e
+  não bloqueia esta feature.
+- Número igual ao atual → não faz nada; como o formato é o mesmo do banco, a comparação vale também para números
+  cadastrados antes. Não toca `emailConfirmadoEm` nem bloqueia nada (ETI-134: telefone sem etapa de confirmação).
 
 ## Decisão técnica
 
@@ -123,8 +122,8 @@ numeração da `V9` do perfil e, se a D10 for aprovada, a migration do `destino_
   Resolver exige guardar o novo endereço como pendente e promovê-lo na UC05 (coluna/migration nova); não implementado.
 - ~~UC05 (endpoint de consumo do link)~~: `POST /auth/confirmar-email` (TICKET-0047).
 - ~~`app.frontend.url` vs `app.deeplink.url`~~: os dois saíram; o link é `https` em `app.web.url` (ADR-0002).
-- UC04 (OTP/SMS e gateway) e regra de telefone do UC01 (PO: recusar fixo?) continuam pendentes. A numeração das
-  migrations se resolveu sozinha (V14 a V17, `out-of-order=true`).
+- UC04 (OTP/SMS) saiu de escopo em definitivo (ETI-134); regra de telefone do UC01 (PO: recusar fixo?) continua
+  pendente. A numeração das migrations se resolveu sozinha (V14 a V17, `out-of-order=true`).
 - Riscos aceitos: recusa por e-mail em uso tem status diferente do sucesso e não consome limite (igual ao cadastro).
   ~~O cadastro não trata a violação de `uk_usuario_email` (500)~~: resolvido no TICKET-0047
   (`UsuarioService.salvarNovo` → 409 `CADASTRO_DADOS_INDISPONIVEIS`).
