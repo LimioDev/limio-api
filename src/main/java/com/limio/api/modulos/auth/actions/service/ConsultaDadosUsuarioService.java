@@ -1,7 +1,10 @@
 package com.limio.api.modulos.auth.actions.service;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
@@ -25,6 +28,13 @@ public class ConsultaDadosUsuarioService implements ConsultaDadosUsuario {
         return usuarioService.buscarPorId(usuarioId)
                 .filter(usuario -> !usuario.isEncerrada())
                 .map(ConsultaDadosUsuarioService::toDados);
+    }
+
+    @Override
+    public Map<UUID, DadosUsuario> buscarPorIds(Collection<UUID> usuarioIds) {
+        return usuarioService.buscarPorIds(usuarioIds).stream()
+                .filter(usuario -> !usuario.isEncerrada())
+                .collect(Collectors.toMap(Usuario::getId, ConsultaDadosUsuarioService::toDados));
     }
 
     @Override

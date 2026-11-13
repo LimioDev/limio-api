@@ -9,6 +9,14 @@ import java.util.Locale;
  */
 public final class NomeHelper {
 
+    /**
+     * Nome de exibição de uma conta encerrada (LGPD, UC10) — mesmo literal em {@code Usuario.encerrar}
+     * (auth), {@code PerfilEmpregador.anonimizar} e {@code ConsultaAvaliacoesService} (moderacao).
+     * Distinto de {@code OutraParte.NOME_CONTA_ENCERRADA} ("Usuário excluído") usado por {@code chat} e
+     * {@code moderacao} — telas diferentes, texto escolhido à parte.
+     */
+    public static final String CONTA_ENCERRADA = "Conta encerrada";
+
     private NomeHelper() {
     }
 

@@ -1,10 +1,9 @@
 package com.limio.api.modulos.moderacao.actions.service;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -21,18 +20,16 @@ import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.comum.texto.NomeHelper;
 import com.limio.api.modulos.moderacao.avaliacao.Avaliacao;
 import com.limio.api.modulos.moderacao.avaliacao.AvaliacaoRepository;
+import com.limio.api.modulos.moderacao.avaliacao.AvaliacaoService;
 import com.limio.api.modulos.moderacao.avaliacao.ResumoAvaliacaoProjecao;
 
 /**
  * Implementa {@link ConsultaAvaliacoes} para os candidatos do anúncio ({@code modulos.anuncio}, ETI-67) e o perfil
- * público ({@code modulos.perfil}, ETI-105). Avaliador com conta encerrada aparece como "Conta encerrada" (mesmo
- * literal de {@code Usuario.encerrar}/{@code PerfilEmpregador.anonimizar}) em vez de desaparecer da lista — a nota
- * e o comentário continuam valendo.
+ * público ({@code modulos.perfil}, ETI-105). Avaliador com conta encerrada aparece como
+ * {@link NomeHelper#CONTA_ENCERRADA} em vez de desaparecer da lista — a nota e o comentário continuam valendo.
  */
 @Component
 public class ConsultaAvaliacoesService implements ConsultaAvaliacoes {
-
-    private static final String AVALIADOR_CONTA_ENCERRADA = "Conta encerrada";
 
     private final AvaliacaoRepository avaliacaoRepository;
     private final ConsultaDadosUsuario consultaDadosUsuario;
@@ -56,25 +53,22 @@ public class ConsultaAvaliacoesService implements ConsultaAvaliacoes {
     @Override
     @Transactional(readOnly = true)
     public List<AvaliacaoRecente> listarRecentes(UUID avaliadoId, PapelUsuario papel, int limite) {
-        return avaliacaoRepository
-                .findByAvaliadoIdAndPapelAvaliadoOrderByPublicadaEmDesc(avaliadoId, papel, PageRequest.of(0, limite))
-                .stream()
-                .map(this::toRecente)
-                .toList();
+        List<Avaliacao> avaliacoes = avaliacaoRepository
+                .findByAvaliadoIdAndPapelAvaliadoOrderByPublicadaEmDesc(avaliadoId, papel, PageRequest.of(0, limite));
+        Map<UUID, DadosUsuario> avaliadores = consultaDadosUsuario
+                .buscarPorIds(avaliacoes.stream().map(Avaliacao::getAvaliadorId).toList());
+        return avaliacoes.stream().map(avaliacao -> toRecente(avaliacao, avaliadores)).toList();
     }
 
-    /** Mesmo arredondamento (comercial, uma casa) de {@code AvaliacaoService.recalcular}. */
     private static ResumoAvaliacoes resumoDe(ResumoAvaliacaoProjecao projecao) {
-        Double media = projecao.getMedia();
-        return new ResumoAvaliacoes(projecao.getQtd(),
-                media == null ? null : BigDecimal.valueOf(media).setScale(1, RoundingMode.HALF_UP));
+        return new ResumoAvaliacoes(projecao.getQtd(), AvaliacaoService.arredondar(projecao.getMedia()));
     }
 
-    private AvaliacaoRecente toRecente(Avaliacao avaliacao) {
-        String nome = consultaDadosUsuario.buscarPorId(avaliacao.getAvaliadorId())
+    private static AvaliacaoRecente toRecente(Avaliacao avaliacao, Map<UUID, DadosUsuario> avaliadores) {
+        String nome = Optional.ofNullable(avaliadores.get(avaliacao.getAvaliadorId()))
                 .map(DadosUsuario::nomeCompleto)
                 .map(NomeHelper::abreviar)
-                .orElse(AVALIADOR_CONTA_ENCERRADA);
+                .orElse(NomeHelper.CONTA_ENCERRADA);
         return new AvaliacaoRecente(nome, avaliacao.getNota(), avaliacao.getComentario(), avaliacao.getPublicadaEm());
     }
 }

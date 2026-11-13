@@ -1,5 +1,7 @@
 package com.limio.api.comum.portas;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,6 +28,16 @@ public interface ConsultaDadosUsuario {
      * @return os dados do usuário, ou vazio se ele não existe ou a conta foi encerrada
      */
     Optional<DadosUsuario> buscarPorId(UUID usuarioId);
+
+    /**
+     * Em lote, pra quem precisa resolver vários ids de uma vez (ex.: nome de quem avaliou, até N por
+     * chamada) sem uma consulta por id. Mesmo critério de {@link #buscarPorId}: id inexistente ou de
+     * conta encerrada simplesmente não aparece no mapa devolvido.
+     *
+     * @param usuarioIds ids a resolver
+     * @return mapa só com os ids encontrados (conta ativa)
+     */
+    Map<UUID, DadosUsuario> buscarPorIds(Collection<UUID> usuarioIds);
 
     /**
      * Diferente de {@link #buscarPorId}: aqui conta encerrada conta como existente. Pro perfil público

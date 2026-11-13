@@ -121,9 +121,13 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
                 fimExclusivo);
     }
 
-    /** Quantos serviços {@code prestadorId} já concluiu como prestador escolhido (histórico do perfil público, ETI-105). */
+    /**
+     * Quantos serviços {@code prestadorId} já concluiu como prestador escolhido (histórico do perfil
+     * público, ETI-105). Conta pelo {@code Anuncio} concluído, não por {@code Aplicacao.status}: nenhum
+     * fluxo marca a candidatura como {@code CONCLUIDA} (ver {@code AplicacaoRepository}).
+     */
     public long contarConcluidasDoPrestador(UUID prestadorId) {
-        return repository.countByPrestadorIdAndStatus(prestadorId, StatusAplicacao.CONCLUIDA);
+        return repository.countConcluidosPorAnuncioDoPrestador(prestadorId);
     }
 
     /**

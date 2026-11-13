@@ -1,5 +1,6 @@
 package com.limio.api.modulos.perfil.actions.usecase;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -95,37 +96,35 @@ public class ConsultarPerfilPublicoUseCase {
 
     /** Nome, especialidades e avaliações dependem do mesmo registro (perfil do papel) — uma busca só por papel. */
     private DadosDoPapel dadosDoPapel(UUID usuarioId, PapelUsuario papel, Optional<DadosUsuario> dados) {
+        String nomeCompleto = dados.map(DadosUsuario::nomeCompleto).orElse(null);
         return switch (papel) {
             case EMPREGADOR -> {
                 Optional<PerfilEmpregador> perfil = perfilEmpregadorService.buscarPorUsuario(usuarioId);
-                String nomeExibicao = dados.isPresent()
-                        ? perfil.map(PerfilEmpregador::getNomeExibicao)
-                                .orElseGet(() -> PerfilEmpregador.nomeExibicaoInicialDe(dados.get().nomeCompleto()))
-                        : PerfilEmpregador.NOME_CONTA_ENCERRADA;
-                yield new DadosDoPapel(nomeExibicao, List.of(), avaliacoesDoEmpregador(perfil));
+                String nomeExibicao = nomeCompleto == null ? NomeHelper.CONTA_ENCERRADA
+                        : perfil.map(PerfilEmpregador::getNomeExibicao)
+                                .orElseGet(() -> PerfilEmpregador.nomeExibicaoInicialDe(nomeCompleto));
+                yield new DadosDoPapel(nomeExibicao, List.of(),
+                        avaliacoesDe(perfil.map(PerfilEmpregador::getQtdAvaliacoes),
+                                perfil.map(PerfilEmpregador::getMediaAvaliacoes)));
             }
             case PRESTADOR -> {
                 Optional<PerfilPrestador> perfil = perfilPrestadorService.buscarPorUsuario(usuarioId);
-                String nomeExibicao = dados.map(d -> NomeHelper.abreviar(d.nomeCompleto()))
-                        .orElse(PerfilEmpregador.NOME_CONTA_ENCERRADA);
+                String nomeExibicao = nomeCompleto == null ? NomeHelper.CONTA_ENCERRADA
+                        : NomeHelper.abreviar(nomeCompleto);
                 List<String> especialidades = perfil.map(p -> p.getEspecialidades().stream()
                         .sorted(Categoria.ORDEM_EXIBICAO)
                         .map(Categoria::getNome)
                         .toList())
                         .orElse(List.of());
-                yield new DadosDoPapel(nomeExibicao, especialidades, avaliacoesDoPrestador(perfil));
+                yield new DadosDoPapel(nomeExibicao, especialidades,
+                        avaliacoesDe(perfil.map(PerfilPrestador::getQtdAvaliacoes),
+                                perfil.map(PerfilPrestador::getMediaAvaliacoes)));
             }
         };
     }
 
-    private static ResumoAvaliacoes avaliacoesDoEmpregador(Optional<PerfilEmpregador> perfil) {
-        return perfil.map(p -> new ResumoAvaliacoes(p.getQtdAvaliacoes(), p.getMediaAvaliacoes()))
-                .orElse(ResumoAvaliacoes.SEM_AVALIACOES);
-    }
-
-    private static ResumoAvaliacoes avaliacoesDoPrestador(Optional<PerfilPrestador> perfil) {
-        return perfil.map(p -> new ResumoAvaliacoes(p.getQtdAvaliacoes(), p.getMediaAvaliacoes()))
-                .orElse(ResumoAvaliacoes.SEM_AVALIACOES);
+    private static ResumoAvaliacoes avaliacoesDe(Optional<Integer> qtd, Optional<BigDecimal> media) {
+        return qtd.isEmpty() ? ResumoAvaliacoes.SEM_AVALIACOES : new ResumoAvaliacoes(qtd.get(), media.orElse(null));
     }
 
     private record DadosDoPapel(String nomeExibicao, List<String> especialidades, ResumoAvaliacoes avaliacoes) {

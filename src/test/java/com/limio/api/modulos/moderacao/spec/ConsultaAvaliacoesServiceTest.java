@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -94,8 +93,8 @@ class ConsultaAvaliacoesServiceTest {
                 5, "Ótimo serviço!", Instant.parse("2026-10-20T14:00:00Z"));
         when(avaliacaoRepository.findByAvaliadoIdAndPapelAvaliadoOrderByPublicadaEmDesc(AVALIADO_ID,
                 PapelUsuario.PRESTADOR, PageRequest.of(0, 5))).thenReturn(List.of(avaliacao));
-        when(consultaDadosUsuario.buscarPorId(AVALIADOR_ID))
-                .thenReturn(Optional.of(new DadosUsuario("Camila Rocha", "camila@example.com", null, null)));
+        when(consultaDadosUsuario.buscarPorIds(List.of(AVALIADOR_ID)))
+                .thenReturn(Map.of(AVALIADOR_ID, new DadosUsuario("Camila Rocha", "camila@example.com", null, null)));
 
         List<AvaliacaoRecente> recentes = service.listarRecentes(AVALIADO_ID, PapelUsuario.PRESTADOR, 5);
 
@@ -109,7 +108,7 @@ class ConsultaAvaliacoesServiceTest {
                 4, null, Instant.parse("2026-10-20T14:00:00Z"));
         when(avaliacaoRepository.findByAvaliadoIdAndPapelAvaliadoOrderByPublicadaEmDesc(AVALIADO_ID,
                 PapelUsuario.EMPREGADOR, PageRequest.of(0, 5))).thenReturn(List.of(avaliacao));
-        when(consultaDadosUsuario.buscarPorId(AVALIADOR_ID)).thenReturn(Optional.empty());
+        when(consultaDadosUsuario.buscarPorIds(List.of(AVALIADOR_ID))).thenReturn(Map.of());
 
         List<AvaliacaoRecente> recentes = service.listarRecentes(AVALIADO_ID, PapelUsuario.EMPREGADOR, 5);
 

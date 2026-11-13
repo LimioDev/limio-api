@@ -149,11 +149,17 @@ class PerfilPublicoStoryTest {
                 .build());
     }
 
+    /**
+     * Nenhum fluxo marca {@code Aplicacao} como {@code CONCLUIDA} (ver {@code AplicacaoRepository}): o
+     * histórico conta pelo {@code Anuncio} concluído com {@code escolhidaEm} preenchido, então o seed
+     * cria os dois, não força o status direto.
+     */
     private Aplicacao aplicacaoConcluidaDe(UUID prestadorId) {
+        Anuncio anuncio = anuncioConcluidoDe(UUID.randomUUID());
         return aplicacaoRepository.save(Aplicacao.builder()
-                .anuncioId(UUID.randomUUID())
+                .anuncioId(anuncio.getId())
                 .prestadorId(prestadorId)
-                .status(StatusAplicacao.CONCLUIDA)
+                .status(StatusAplicacao.ESCOLHIDA)
                 .dataAplicacao(Instant.now().minus(Duration.ofDays(10)))
                 .escolhidaEm(Instant.now().minus(Duration.ofDays(9)))
                 .build());
