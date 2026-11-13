@@ -1,5 +1,7 @@
 package com.limio.api.modulos.auth.usuario;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,6 +27,10 @@ public class UsuarioService extends BaseService<Usuario, UUID, UsuarioRepository
 
     public Optional<Usuario> buscarPorId(UUID id) {
         return repository.findById(id);
+    }
+
+    public List<Usuario> buscarPorIds(Collection<UUID> ids) {
+        return repository.findAllById(ids);
     }
 
     public Usuario buscarParaAtualizarOuFalhar(UUID id) {

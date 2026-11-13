@@ -59,8 +59,16 @@ public class AvaliacaoService extends BaseService<Avaliacao, UUID, AvaliacaoRepo
     public AvaliacoesRecebidas recalcular(UUID avaliadoId, PapelUsuario papel) {
         int qtd = Math.toIntExact(repository.countByAvaliadoIdAndPapelAvaliado(avaliadoId, papel));
         Double media = repository.mediaDasNotas(avaliadoId, papel);
-        return new AvaliacoesRecebidas(
-                media == null ? null : BigDecimal.valueOf(media).setScale(1, RoundingMode.HALF_UP), qtd);
+        return new AvaliacoesRecebidas(arredondar(media), qtd);
+    }
+
+    /**
+     * Mesmo arredondamento usado aqui e em {@code ConsultaAvaliacoesService.resumir} (candidatos do
+     * anúncio, ETI-67) — uma fonte só pra regra, ainda que as duas consultas tenham motivos distintos
+     * pra recalcular da tabela {@code avaliacao} em vez de ler a coluna já gravada do perfil (ETI-107).
+     */
+    public static BigDecimal arredondar(Double media) {
+        return media == null ? null : BigDecimal.valueOf(media).setScale(1, RoundingMode.HALF_UP);
     }
 
     private static boolean violaUmaPorAvaliador(Throwable erro) {

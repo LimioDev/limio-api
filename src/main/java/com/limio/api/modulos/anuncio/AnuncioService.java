@@ -60,6 +60,11 @@ public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository
         return repository.findAllById(ids);
     }
 
+    /** Quantos anúncios {@code contratanteId} já concluiu como contratante (histórico do perfil público, ETI-105). */
+    public long contarConcluidosDoContratante(UUID contratanteId) {
+        return repository.countByContratanteIdAndStatus(contratanteId, StatusAnuncio.CONCLUIDO);
+    }
+
     /**
      * Página do mural: anúncios PUBLICADO, sem candidatura ESCOLHIDA, de outro contratante, compatíveis com
      * o {@code criterio} (especialidade/"Outros" e raio) e dentro dos filtros opcionais. Distância, filtros,
