@@ -33,6 +33,7 @@ public class Aplicacao extends BaseEntity {
 
     private static final String MOTIVO_DESISTENCIA = "Desistência do Prestador";
     private static final String MOTIVO_OUTRA_ESCOLHA = "Outro prestador escolhido";
+    private static final String MOTIVO_SERVICO_CANCELADO = "Serviço cancelado pelo Empregador";
 
     @Column(name = "anuncio_id", nullable = false)
     private UUID anuncioId;
@@ -59,6 +60,12 @@ public class Aplicacao extends BaseEntity {
     @Column(name = "motivo_encerramento")
     private String motivoEncerramento;
 
+    @Column(name = "cota_consumida", nullable = false)
+    private boolean cotaConsumida;
+
+    @Column(name = "cota_estornada_em")
+    private Instant cotaEstornadaEm;
+
     /** Prestador já escolhido pelo contratante: combinado ou aguardando validação (TICKET-0052). */
     public boolean isEscolhida() {
         return status.isEscolhida();
@@ -79,9 +86,10 @@ public class Aplicacao extends BaseEntity {
         this.recusadaEm = agora;
     }
 
-    public void escolher(Instant agora) {
+    public void escolher(Instant agora, boolean cotaConsumida) {
         this.status = StatusAplicacao.ESCOLHIDA;
         this.escolhidaEm = agora;
+        this.cotaConsumida = cotaConsumida;
     }
 
     public void encerrarPorOutraEscolha(Instant agora) {
@@ -90,6 +98,14 @@ public class Aplicacao extends BaseEntity {
 
     public void registrarCheckout() {
         this.status = StatusAplicacao.AGUARDANDO_VALIDACAO;
+    }
+
+    public void encerrarPorCancelamentoDoServico(Instant agora) {
+        encerrar(agora, MOTIVO_SERVICO_CANCELADO);
+    }
+
+    public void registrarEstornoDeCota(Instant agora) {
+        this.cotaEstornadaEm = agora;
     }
 
     public void encerrar(Instant agora, String motivo) {

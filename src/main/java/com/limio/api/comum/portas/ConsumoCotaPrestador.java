@@ -26,4 +26,19 @@ public interface ConsumoCotaPrestador {
      * @return {@code true} se consumiu; {@code false} se a cota do mês já estava esgotada (nada é alterado)
      */
     boolean consumirEscolha(UUID prestadorId, Instant ocorridaEm);
+
+    /**
+     * Devolve uma escolha à cota do mês em que ela foi consumida — o mês de {@code escolhidaEm}, não o atual (RB17:
+     * "a escolha daquele mês"). Mesma serialização por Prestador do consumo, e mesma exigência de transação do
+     * chamador: o estorno confirma ou desfaz junto com o cancelamento do serviço (ETI-94).
+     *
+     * <p>Quem chama decide se há o que estornar (só escolha que consumiu cota FREE, e só no cancelamento normal), e
+     * garante que não chama duas vezes pela mesma escolha — esta porta não guarda histórico. Piso em zero.
+     *
+     * @param prestadorId id do usuário Prestador
+     * @param escolhidaEm instante em que a escolha consumiu a cota
+     * @return {@code true} se decrementou; {@code false} se não havia o que devolver (mês sem linha ou já zerado;
+     *         nada é alterado)
+     */
+    boolean estornarEscolha(UUID prestadorId, Instant escolhidaEm);
 }

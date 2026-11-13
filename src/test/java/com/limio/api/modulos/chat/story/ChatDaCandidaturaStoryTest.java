@@ -56,6 +56,8 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 import com.limio.api.TestcontainersConfiguration;
 import com.limio.api.comum.eventos.AnuncioCanceladoEvent;
 import com.limio.api.comum.eventos.CandidaturaCriadaEvent;
+import com.limio.api.comum.eventos.ServicoCanceladoEvent;
+import com.limio.api.comum.eventos.enums.TipoCancelamento;
 import com.limio.api.comum.seguranca.JwtAuthFilter;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.anuncio.Anuncio;
@@ -420,6 +422,32 @@ class ChatDaCandidaturaStoryTest {
                 .andExpect(jsonPath("$.isSomenteLeitura", is(true)))
                 .andExpect(jsonPath("$.motivoSomenteLeitura", is("ANUNCIO_CANCELADO")))
                 .andExpect(jsonPath("$.historico.mensagens", hasSize(1)));
+    }
+
+    @Test
+    void dadoServicoCancelado_quandoEnvia_entaoRecusadoEHistoricoContinuaParaOsDois() throws Exception {
+        UUID chatId = candidaturaCriada();
+        String tokenEmpregador = logar(empregador);
+        enviar(tokenEmpregador, chatId, "Combinado, te espero no sábado.", 201);
+
+        transacao.executeWithoutResult(status -> eventos.publishEvent(new ServicoCanceladoEvent(anuncio.getId(),
+                anuncio.getTitulo(), candidatura.getId(), empregador.getId(), prestador.getId(),
+                TipoCancelamento.NORMAL, true, Instant.now().plus(Duration.ofDays(3)), Instant.now())));
+
+        mockMvc.perform(post("/chats/{chatId}/mensagens", chatId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenEmpregador)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("texto", "Mudei de ideia."))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo", is("CHAT_SOMENTE_LEITURA")));
+        for (Usuario parte : List.of(empregador, prestador)) {
+            mockMvc.perform(get("/candidaturas/{id}/chat", candidatura.getId())
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + logar(parte)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.isSomenteLeitura", is(true)))
+                    .andExpect(jsonPath("$.motivoSomenteLeitura", is("SERVICO_CANCELADO")))
+                    .andExpect(jsonPath("$.historico.mensagens", hasSize(1)));
+        }
     }
 
     @Test

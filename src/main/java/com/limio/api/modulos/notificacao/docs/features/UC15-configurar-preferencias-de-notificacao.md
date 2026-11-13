@@ -54,7 +54,7 @@ rota. Sem token válido, o `SecurityConfig` responde `401` (`NAO_AUTENTICADO`) a
 - **Tabela `preferencia_notificacao` com um registro por usuário** (unicidade em `usuario_id`; colunas `push`,
   `email`, `whatsapp` `BOOLEAN NOT NULL`, `criado_em`, `atualizado_em`), no padrão de `usuario` e
   `cpf_bloqueado`. Alternativa descartada: colunas de preferência dentro de `usuario` — acoplaria um assunto de
-  notificação ao cadastro de conta. Coluna `sms` existiu até o ETI-134 (removida, `V32`): nenhum fluxo a lia além
+  notificação ao cadastro de conta. Coluna `sms` existiu até o ETI-134 (removida, `V36`): nenhum fluxo a lia além
   da própria preferência.
 - **Atualização de estado completo** (`PUT` com os três campos obrigatórios), em vez de `PATCH` parcial: casa com o
   critério "booleanos e obrigatórios" e evita ambiguidade entre "ausente" e "false".

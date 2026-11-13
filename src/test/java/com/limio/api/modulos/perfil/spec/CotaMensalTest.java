@@ -79,4 +79,23 @@ class CotaMensalTest {
         assertThatThrownBy(cota::consumirEscolha).isInstanceOf(IllegalStateException.class);
         assertThat(cota.getEscolhasConsumidas()).isEqualTo(4);
     }
+
+    @Test
+    void estornarEscolhaDesceAContagemEReabreCotaEsgotada() {
+        CotaMensal cota = cota(YearMonth.of(2026, 10), 4, 4);
+
+        assertThat(cota.estornarEscolha()).isTrue();
+
+        assertThat(cota.getEscolhasConsumidas()).isEqualTo(3);
+        assertThat(cota.isEsgotada()).isFalse();
+    }
+
+    @Test
+    void estornarEscolhaComCotaZeradaNaoDesceAbaixoDeZero() {
+        CotaMensal cota = CotaMensal.zerada(PERFIL_ID, YearMonth.of(2026, 10), 4);
+
+        assertThat(cota.estornarEscolha()).isFalse();
+
+        assertThat(cota.getEscolhasConsumidas()).isZero();
+    }
 }

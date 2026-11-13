@@ -95,9 +95,9 @@ public class EscolherPrestadorUseCase {
                 .orElseThrow(() -> motivoDeNaoEstarEnviada(anuncioId, candidaturaId));
 
         Instant agora = Instant.now();
-        consumirCotaSeFree(escolhida.getPrestadorId(), agora);
+        boolean consumiuCota = consumirCotaSeFree(escolhida.getPrestadorId(), agora);
 
-        escolhida.escolher(agora);
+        escolhida.escolher(agora, consumiuCota);
         aplicacaoService.salvarEscolha(escolhida);
 
         List<UUID> naoEscolhidas = new ArrayList<>();
@@ -115,16 +115,16 @@ public class EscolherPrestadorUseCase {
         return anuncio;
     }
 
-    private void consumirCotaSeFree(UUID prestadorId, Instant agora) {
-        switch (consultaPlanoPrestador.planoAtual(prestadorId)) {
-            case GOLD -> {
-            }
+    private boolean consumirCotaSeFree(UUID prestadorId, Instant agora) {
+        return switch (consultaPlanoPrestador.planoAtual(prestadorId)) {
+            case GOLD -> false;
             case FREE -> {
                 if (!consumoCotaPrestador.consumirEscolha(prestadorId, agora)) {
                     throw new CotaEsgotadaCandidatoException(nomeDoCandidato(prestadorId));
                 }
+                yield true;
             }
-        }
+        };
     }
 
     private String nomeDoCandidato(UUID prestadorId) {
