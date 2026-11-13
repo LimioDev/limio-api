@@ -99,7 +99,7 @@ class ConsultarMeuAnuncioUseCaseTest {
 
     private void prestador(UUID id, String nome) {
         when(consultaDadosUsuario.buscarPorId(id))
-                .thenReturn(Optional.of(new DadosUsuario(nome, "p@example.com", null, null, null)));
+                .thenReturn(Optional.of(new DadosUsuario(nome, "p@example.com", null, null)));
     }
 
     @Test

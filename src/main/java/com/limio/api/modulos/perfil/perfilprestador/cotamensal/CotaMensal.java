@@ -22,8 +22,8 @@ import lombok.NoArgsConstructor;
  * "zera" na virada: nada é apagado, a contagem do mês novo só começa quando a primeira escolha a cria.
  *
  * <p>{@code perfilPrestadorId} é UUID cru (com FK no banco): a cota não é carregada junto do perfil, então não
- * entra na coleção dele como as janelas. Sem setter: a contagem só muda pela escolha (ETI-69/ETI-70) e pelo
- * estorno (ETI-94/ETI-95), que ganham método próprio aqui quando entrarem.
+ * entra na coleção dele como as janelas. Sem setter: a contagem só muda por {@link #consumirEscolha()} (ETI-69) e
+ * pelo estorno (ETI-94/ETI-95), que ganha método próprio aqui quando entrar.
  */
 @Entity
 @Table(name = "cota_mensal")
@@ -80,5 +80,12 @@ public class CotaMensal extends BaseEntity {
     /** Escolhas consumidas chegaram ao teto: nova candidatura é recusada até {@link #renovaEm()} (ETI-75/ETI-76). */
     public boolean isEsgotada() {
         return escolhasConsumidas >= tetoAplicado;
+    }
+
+    public void consumirEscolha() {
+        if (isEsgotada()) {
+            throw new IllegalStateException("Cota do mês " + anoMes + " já esgotada (" + tetoAplicado + ")");
+        }
+        escolhasConsumidas++;
     }
 }

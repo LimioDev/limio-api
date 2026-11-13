@@ -95,7 +95,7 @@ class ConsultaAvaliacoesServiceTest {
         when(avaliacaoRepository.findByAvaliadoIdAndPapelAvaliadoOrderByPublicadaEmDesc(AVALIADO_ID,
                 PapelUsuario.PRESTADOR, PageRequest.of(0, 5))).thenReturn(List.of(avaliacao));
         when(consultaDadosUsuario.buscarPorId(AVALIADOR_ID))
-                .thenReturn(Optional.of(new DadosUsuario("Camila Rocha", "camila@example.com", null, null, null)));
+                .thenReturn(Optional.of(new DadosUsuario("Camila Rocha", "camila@example.com", null, null)));
 
         List<AvaliacaoRecente> recentes = service.listarRecentes(AVALIADO_ID, PapelUsuario.PRESTADOR, 5);
 

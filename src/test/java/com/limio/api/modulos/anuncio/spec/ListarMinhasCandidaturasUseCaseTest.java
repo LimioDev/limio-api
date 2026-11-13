@@ -88,7 +88,7 @@ class ListarMinhasCandidaturasUseCaseTest {
     }
 
     private static DadosUsuario dados(String nome) {
-        return new DadosUsuario(nome, "x@example.com", "+5511999998888", Instant.now(), Instant.now());
+        return new DadosUsuario(nome, "x@example.com", "+5511999998888", Instant.now());
     }
 
     @Test

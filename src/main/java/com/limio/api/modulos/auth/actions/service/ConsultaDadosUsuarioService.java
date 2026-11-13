@@ -37,7 +37,6 @@ public class ConsultaDadosUsuarioService implements ConsultaDadosUsuario {
                 usuario.getNomeCompleto(),
                 usuario.getEmail(),
                 TelefoneHelper.paraInternacional(usuario.getTelefone()).orElse(null),
-                usuario.getEmailConfirmadoEm(),
-                usuario.getTelefoneConfirmadoEm());
+                usuario.getEmailConfirmadoEm());
     }
 }

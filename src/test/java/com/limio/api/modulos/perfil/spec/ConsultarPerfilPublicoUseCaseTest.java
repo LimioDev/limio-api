@@ -43,9 +43,9 @@ import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestadorService;
 class ConsultarPerfilPublicoUseCaseTest {
 
     private static final UUID USUARIO_ID = UUID.randomUUID();
-    private static final DadosUsuario MARIA = new DadosUsuario("Maria da Silva", "maria@example.com", null, null, null);
+    private static final DadosUsuario MARIA = new DadosUsuario("Maria da Silva", "maria@example.com", null, null);
     private static final DadosUsuario RAFAEL = new DadosUsuario("Rafael da Silva Souza", "rafael@example.com", null,
-            null, null);
+            null);
 
     @Mock
     private ConsultaDadosUsuario consultaDadosUsuario;

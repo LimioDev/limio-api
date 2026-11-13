@@ -57,3 +57,10 @@ em vez de colunas em `usuario`.
 Resolvida a pendência do item 8 do UC15: `RemoverPreferenciaDaContaEncerradaUseCase` escuta `ContaEncerradaEvent`
 (`AFTER_COMMIT` + `REQUIRES_NEW`, mesmo padrão do listener de `anuncio`) e apaga a linha de
 `preferencia_notificacao`. Falha é logada e não volta para quem encerrou a conta.
+
+## 2026-11 — SMS sai dos canais de notificação (ETI-134)
+
+`PreferenciaNotificacao` perdeu a coluna `sms` (`V32`) e o campo correspondente em entity, request, response,
+mapper e usecases — canais passam a ser só `push`, `email`, `whatsapp`. O canal nunca chegou a disparar
+nenhuma notificação de fato (ETI-112 não implementado); não tem relação com a confirmação de telefone por OTP
+(UC04), que saiu de escopo no mesmo card por motivo independente — ver `auth/docs/history/CHANGELOG.md`.

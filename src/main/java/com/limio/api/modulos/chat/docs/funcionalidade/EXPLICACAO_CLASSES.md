@@ -15,6 +15,11 @@
 `anuncio` publica `CandidaturaRecusadaEvent` → `DeixarChatSomenteLeituraUseCase.aoRecusarCandidatura` →
 `Chat.deixarSomenteLeitura(CANDIDATURA_RECUSADA, ...)` no chat daquela candidatura (nada, se ainda não existe).
 
+**Prestador escolhido → chats dos não escolhidos somente leitura**
+`anuncio` publica `PrestadorEscolhidoEvent` → `DeixarChatSomenteLeituraUseCase.aoEscolherPrestador` →
+`executarDasCandidaturas` → `Chat.deixarSomenteLeitura(OUTRO_PRESTADOR_ESCOLHIDO, ...)` nos chats das candidaturas em
+`candidaturasNaoEscolhidasIds`. O chat do escolhido não é consultado.
+
 **Conta encerrada → chats somente leitura**
 `auth` publica `ContaEncerradaEvent` → `DeixarChatSomenteLeituraUseCase.aoEncerrarConta` →
 `Chat.deixarSomenteLeitura(CONTA_ENCERRADA, ...)` em cada chat aberto em que a pessoa é uma das partes.

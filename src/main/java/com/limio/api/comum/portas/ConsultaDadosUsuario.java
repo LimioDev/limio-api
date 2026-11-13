@@ -15,9 +15,8 @@ import java.util.UUID;
  *   <li>{@code DadosUsuario.telefone()} sai em formato internacional, {@code +55} seguido dos dígitos
  *       nacionais (ex.: {@code +5511999998888}). O formato armazenado no banco não é exposto. É
  *       {@code null} se o usuário não tem telefone.</li>
- *   <li>{@code emailConfirmadoEm()} e {@code telefoneConfirmadoEm()} são {@code null} enquanto o
- *       contato não foi confirmado; uma troca de e-mail ou telefone volta o respectivo valor a
- *       {@code null}.</li>
+ *   <li>{@code emailConfirmadoEm()} é {@code null} enquanto o e-mail não foi confirmado; uma troca de
+ *       e-mail volta o valor a {@code null}. Telefone não tem confirmação (ETI-134).</li>
  * </ul>
  */
 public interface ConsultaDadosUsuario {

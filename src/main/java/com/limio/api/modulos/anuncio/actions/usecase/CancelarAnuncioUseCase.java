@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.eventos.AnuncioCanceladoEvent;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
@@ -32,16 +34,22 @@ public class CancelarAnuncioUseCase {
     private final AnuncioService anuncioService;
     private final AplicacaoService aplicacaoService;
     private final ApplicationEventPublisher eventos;
+    private final TravaTransacional trava;
 
     public CancelarAnuncioUseCase(AnuncioService anuncioService, AplicacaoService aplicacaoService,
-            ApplicationEventPublisher eventos) {
+            ApplicationEventPublisher eventos, TravaTransacional trava) {
         this.anuncioService = anuncioService;
         this.aplicacaoService = aplicacaoService;
         this.eventos = eventos;
+        this.trava = trava;
     }
 
     @Transactional
     public void executar(UUID anuncioId, UUID contratanteId) {
+        // O lock vem antes de ler o anúncio e a existência de escolhida: cancelar não pode decidir com estado
+        // velho enquanto uma escolha concorrente commita (ver EscopoTrava.ANUNCIO).
+        trava.travar(EscopoTrava.ANUNCIO, anuncioId.toString());
+
         Anuncio anuncio = anuncioService.buscarPorId(anuncioId)
                 .filter(encontrado -> encontrado.pertenceA(contratanteId))
                 .orElseThrow(AnuncioNaoEncontradoException::new);

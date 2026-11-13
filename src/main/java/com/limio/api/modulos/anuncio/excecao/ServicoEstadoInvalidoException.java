@@ -5,7 +5,10 @@ import org.springframework.http.HttpStatus;
 import com.limio.api.comum.excecao.NegocioException;
 import com.limio.api.comum.excecao.enums.CodigoErro;
 
-/** Serviço fora de {@code PUBLICADO}: já iniciado, em validação, concluído ou encerrado (ETI-88). */
+/**
+ * Serviço num estado que não permite a ação: já iniciado, em validação, concluído ou encerrado (ETI-88);
+ * check-out fora de {@code PUBLICADO}/{@code EM_ANDAMENTO} (ETI-90).
+ */
 public class ServicoEstadoInvalidoException extends NegocioException {
 
     public ServicoEstadoInvalidoException() {

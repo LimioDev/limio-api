@@ -25,7 +25,7 @@ public class AtualizarPreferenciaNotificacaoUseCase {
     }
 
     @Transactional
-    public PreferenciaNotificacao executar(UUID usuarioId, boolean push, boolean email, boolean sms, boolean whatsapp) {
+    public PreferenciaNotificacao executar(UUID usuarioId, boolean push, boolean email, boolean whatsapp) {
         // Dependência externa: ligar o WhatsApp deve gravar o consentimento em AceiteTermo (documento, versao,
         // origem = configuracoes, ip, aceitoEm). AceiteTermo ainda não existe (reservado pra modulos.auth pelo
         // TICKET-0044), então rejeita true até lá — ver "Dependências externas" em docs/features/UC15-...md.
@@ -33,7 +33,7 @@ public class AtualizarPreferenciaNotificacaoUseCase {
             throw new WhatsappConsentimentoIndisponivelException();
         }
 
-        preferenciaNotificacaoService.gravarCanais(usuarioId, push, email, sms, whatsapp);
+        preferenciaNotificacaoService.gravarCanais(usuarioId, push, email, whatsapp);
 
         return preferenciaNotificacaoService.buscarPorUsuario(usuarioId).orElseThrow();
     }

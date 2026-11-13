@@ -338,14 +338,11 @@ class ListarMuralStoryTest {
     }
 
     @Test
-    void dadoEmailOuTelefoneNaoConfirmado_quandoListaMural_entao403ContatosNaoConfirmados() throws Exception {
+    void dadoEmailNaoConfirmado_quandoListaMural_entao403ContatosNaoConfirmados() throws Exception {
         Usuario semEmail = usuario("Sem Email", "sememail@example.com", "39053344705", PapelUsuario.PRESTADOR, false, true);
-        Usuario semTelefone = usuario("Sem Fone", "semfone@example.com", "12345678909", PapelUsuario.PRESTADOR, true, false);
         perfil(semEmail, 10, "Elétrica");
-        perfil(semTelefone, 10, "Elétrica");
 
         listar(semEmail, "").andExpect(status().isForbidden()).andExpect(jsonPath("$.codigo", is("CONTATOS_NAO_CONFIRMADOS")));
-        listar(semTelefone, "").andExpect(status().isForbidden()).andExpect(jsonPath("$.codigo", is("CONTATOS_NAO_CONFIRMADOS")));
     }
 
     @Test

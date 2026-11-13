@@ -88,7 +88,7 @@ class ConsultarDetalheDoMuralUseCaseTest {
 
     private void prestadorHabilitado() {
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(
-                new DadosUsuario("Rafael", "r@example.com", "+5511999998888", CONFIRMADO, CONFIRMADO)));
+                new DadosUsuario("Rafael", "r@example.com", "+5511999998888", CONFIRMADO)));
         when(consultaPerfilPrestador.buscarCompleto(PRESTADOR_ID)).thenReturn(Optional.of(PERFIL));
     }
 
@@ -121,9 +121,9 @@ class ConsultarDetalheDoMuralUseCaseTest {
     }
 
     @Test
-    void dadoContatoNaoConfirmado_quandoDetalha_entaoContatosNaoConfirmados() {
+    void dadoEmailNaoConfirmado_quandoDetalha_entaoContatosNaoConfirmados() {
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(
-                new DadosUsuario("Rafael", "r@example.com", "+5511999998888", CONFIRMADO, null)));
+                new DadosUsuario("Rafael", "r@example.com", "+5511999998888", null)));
 
         assertThatThrownBy(this::executar).isInstanceOf(ContatosNaoConfirmadosException.class);
     }
@@ -131,7 +131,7 @@ class ConsultarDetalheDoMuralUseCaseTest {
     @Test
     void dadoPerfilIncompleto_quandoDetalha_entaoPerfilIncompleto() {
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(
-                new DadosUsuario("Rafael", "r@example.com", "+5511999998888", CONFIRMADO, CONFIRMADO)));
+                new DadosUsuario("Rafael", "r@example.com", "+5511999998888", CONFIRMADO)));
         when(consultaPerfilPrestador.buscarCompleto(PRESTADOR_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(this::executar).isInstanceOf(PerfilIncompletoException.class);
