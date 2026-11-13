@@ -21,10 +21,10 @@ public class ReciboEventosService {
 
     private static final Logger log = LoggerFactory.getLogger(ReciboEventosService.class);
 
-    private final EmailService emailService;
+    private final ReciboGoldEmailService emailService;
     private final ConsultaDadosUsuario consultaDadosUsuario;
 
-    public ReciboEventosService(EmailService emailService, ConsultaDadosUsuario consultaDadosUsuario) {
+    public ReciboEventosService(ReciboGoldEmailService emailService, ConsultaDadosUsuario consultaDadosUsuario) {
         this.emailService = emailService;
         this.consultaDadosUsuario = consultaDadosUsuario;
     }

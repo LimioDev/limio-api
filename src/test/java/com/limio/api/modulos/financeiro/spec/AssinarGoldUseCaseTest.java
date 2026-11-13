@@ -24,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionOperations;
 
 import com.limio.api.comum.persistencia.TravaTransacional;
 import com.limio.api.comum.persistencia.enums.EscopoTrava;
@@ -40,6 +41,7 @@ import com.limio.api.modulos.financeiro.assinaturagold.cobranca.documentofiscal.
 import com.limio.api.modulos.financeiro.assinaturagold.enums.StatusAssinatura;
 import com.limio.api.modulos.financeiro.eventos.GoldAssinadoEvent;
 import com.limio.api.modulos.financeiro.excecao.AssinaturaJaAtivaException;
+import com.limio.api.modulos.financeiro.excecao.CobrancaEmAndamentoException;
 import com.limio.api.modulos.financeiro.excecao.PagamentoRecusadoException;
 import com.limio.api.modulos.financeiro.excecao.PlanoNaoEncontradoException;
 import com.limio.api.modulos.financeiro.excecao.SomentePrestadorAssinaGoldException;
@@ -86,7 +88,7 @@ class AssinarGoldUseCaseTest {
     void montarUseCase() {
         useCase = new AssinarGoldUseCase(planoService, assinaturaGoldService, meioPagamentoService, cobrancaService,
                 documentoFiscalService, gatewayPagamento, travaTransacional, eventos,
-                Clock.fixed(AGORA, ZoneOffset.UTC));
+                TransactionOperations.withoutTransaction(), Clock.fixed(AGORA, ZoneOffset.UTC));
     }
 
     private static Plano planoGold() {
@@ -102,12 +104,18 @@ class AssinarGoldUseCaseTest {
         return plano;
     }
 
-    /** Monta os mocks do caminho feliz; cada teste sobrescreve só o que precisa mudar. */
+    /** Monta os mocks do caminho feliz (assinatura nova); cada teste sobrescreve só o que precisa mudar. */
     private void prepararCaminhoFeliz() {
         when(planoService.buscarAtivoPorCodigo(Plano.CODIGO_GOLD)).thenReturn(Optional.of(planoGold()));
         when(assinaturaGoldService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.empty());
         when(gatewayPagamento.cobrar(eq(USUARIO_ID), eq(TOKEN), eq(2990L), eq("BRL"), anyString()))
                 .thenReturn(new ResultadoCobranca(true, "SIM-123", "VISA", "9876"));
+        stubarPersistencia();
+        when(documentoFiscalService.salvar(any())).thenAnswer(chamada -> chamada.getArgument(0));
+    }
+
+    /** {@code salvar}/{@code buscarPorIdOuFalhar} devolvem a mesma instância através das duas transações. */
+    private void stubarPersistencia() {
         when(assinaturaGoldService.salvar(any())).thenAnswer(chamada -> {
             AssinaturaGold a = chamada.getArgument(0);
             if (a.getId() == null) {
@@ -115,12 +123,32 @@ class AssinarGoldUseCaseTest {
             }
             return a;
         });
+        when(assinaturaGoldService.buscarPorIdOuFalhar(any())).thenAnswer(chamada -> {
+            UUID id = chamada.getArgument(0);
+            return ultimaAssinaturaSalva(id);
+        });
         when(cobrancaService.salvar(any())).thenAnswer(chamada -> {
             Cobranca c = chamada.getArgument(0);
-            ReflectionTestUtils.setField(c, "id", UUID.randomUUID());
+            if (c.getId() == null) {
+                ReflectionTestUtils.setField(c, "id", UUID.randomUUID());
+            }
             return c;
         });
-        when(documentoFiscalService.salvar(any())).thenAnswer(chamada -> chamada.getArgument(0));
+        when(cobrancaService.buscarPorIdOuFalhar(any())).thenAnswer(chamada -> ultimaCobrancaSalva(chamada.getArgument(0)));
+    }
+
+    private AssinaturaGold ultimaAssinaturaSalva(UUID id) {
+        ArgumentCaptor<AssinaturaGold> captor = ArgumentCaptor.forClass(AssinaturaGold.class);
+        verify(assinaturaGoldService, org.mockito.Mockito.atLeastOnce()).salvar(captor.capture());
+        return captor.getAllValues().stream().filter(a -> a.getId().equals(id)).reduce((primeira, ultima) -> ultima)
+                .orElseThrow();
+    }
+
+    private Cobranca ultimaCobrancaSalva(UUID id) {
+        ArgumentCaptor<Cobranca> captor = ArgumentCaptor.forClass(Cobranca.class);
+        verify(cobrancaService, org.mockito.Mockito.atLeastOnce()).salvar(captor.capture());
+        return captor.getAllValues().stream().filter(c -> c.getId().equals(id)).reduce((primeira, ultima) -> ultima)
+                .orElseThrow();
     }
 
     @Test
@@ -139,9 +167,10 @@ class AssinarGoldUseCaseTest {
         verify(meioPagamentoService).salvarOuSubstituir(USUARIO_ID, TOKEN, "VISA", "9876");
 
         ArgumentCaptor<Cobranca> cobrancaCaptor = ArgumentCaptor.forClass(Cobranca.class);
-        verify(cobrancaService).salvar(cobrancaCaptor.capture());
-        assertThat(cobrancaCaptor.getValue().getValorCentavos()).isEqualTo(2990L);
-        assertThat(cobrancaCaptor.getValue().getGatewayCobrancaId()).isEqualTo("SIM-123");
+        verify(cobrancaService, org.mockito.Mockito.times(2)).salvar(cobrancaCaptor.capture());
+        Cobranca cobrancaFinal = cobrancaCaptor.getAllValues().get(1);
+        assertThat(cobrancaFinal.getValorCentavos()).isEqualTo(2990L);
+        assertThat(cobrancaFinal.getGatewayCobrancaId()).isEqualTo("SIM-123");
 
         verify(documentoFiscalService).salvar(any());
 
@@ -152,30 +181,50 @@ class AssinarGoldUseCaseTest {
     }
 
     @Test
-    void dadoPagamentoRecusado_quandoAssina_entaoRecusaSemPersistirNada() {
+    void dadoPagamentoRecusado_quandoAssina_entaoCancelaPendenciaSemAtivar() {
         when(planoService.buscarAtivoPorCodigo(Plano.CODIGO_GOLD)).thenReturn(Optional.of(planoGold()));
         when(assinaturaGoldService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.empty());
         when(gatewayPagamento.cobrar(eq(USUARIO_ID), eq(TOKEN), eq(2990L), eq("BRL"), anyString()))
                 .thenReturn(ResultadoCobranca.recusada());
+        stubarPersistencia();
 
         assertThatThrownBy(() -> useCase.executar(USUARIO_ID, PapelUsuario.PRESTADOR, Plano.CODIGO_GOLD, TOKEN))
                 .isInstanceOf(PagamentoRecusadoException.class);
 
         verify(meioPagamentoService, never()).salvarOuSubstituir(any(), any(), any(), any());
-        verify(assinaturaGoldService, never()).salvar(any());
-        verify(cobrancaService, never()).salvar(any());
         verify(eventos, never()).publishEvent(any());
+
+        ArgumentCaptor<AssinaturaGold> assinaturaCaptor = ArgumentCaptor.forClass(AssinaturaGold.class);
+        verify(assinaturaGoldService, org.mockito.Mockito.times(2)).salvar(assinaturaCaptor.capture());
+        assertThat(assinaturaCaptor.getAllValues().get(1).estaAtiva()).isFalse();
+
+        ArgumentCaptor<Cobranca> cobrancaCaptor = ArgumentCaptor.forClass(Cobranca.class);
+        verify(cobrancaService, org.mockito.Mockito.times(2)).salvar(cobrancaCaptor.capture());
+        assertThat(cobrancaCaptor.getAllValues().get(1).getStatus().name()).isEqualTo("RECUSADA");
     }
 
     @Test
     void dadoPrestadorJaGold_quandoAssinaDeNovo_entaoAssinaturaJaAtivaSemChamarGateway() {
         AssinaturaGold ativa = AssinaturaGold.nova(USUARIO_ID, PLANO_ID, AGORA.minusSeconds(3600),
                 AGORA.plusSeconds(3600));
+        ReflectionTestUtils.setField(ativa, "status", StatusAssinatura.ATIVA);
         when(planoService.buscarAtivoPorCodigo(Plano.CODIGO_GOLD)).thenReturn(Optional.of(planoGold()));
         when(assinaturaGoldService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.of(ativa));
 
         assertThatThrownBy(() -> useCase.executar(USUARIO_ID, PapelUsuario.PRESTADOR, Plano.CODIGO_GOLD, TOKEN))
                 .isInstanceOf(AssinaturaJaAtivaException.class);
+
+        verify(gatewayPagamento, never()).cobrar(any(), any(), anyLong(), any(), any());
+    }
+
+    @Test
+    void dadoCobrancaPendenteDoMesmoUsuario_quandoAssinaDeNovo_entaoRecusaSemChamarGateway() {
+        AssinaturaGold pendente = AssinaturaGold.nova(USUARIO_ID, PLANO_ID, AGORA.minusSeconds(60), AGORA);
+        when(planoService.buscarAtivoPorCodigo(Plano.CODIGO_GOLD)).thenReturn(Optional.of(planoGold()));
+        when(assinaturaGoldService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.of(pendente));
+
+        assertThatThrownBy(() -> useCase.executar(USUARIO_ID, PapelUsuario.PRESTADOR, Plano.CODIGO_GOLD, TOKEN))
+                .isInstanceOf(CobrancaEmAndamentoException.class);
 
         verify(gatewayPagamento, never()).cobrar(any(), any(), anyLong(), any(), any());
     }
@@ -212,11 +261,15 @@ class AssinarGoldUseCaseTest {
         when(gatewayPagamento.cobrar(eq(USUARIO_ID), eq(TOKEN), eq(2990L), eq("BRL"), anyString()))
                 .thenReturn(new ResultadoCobranca(true, "SIM-999", "VISA", "1111"));
         when(assinaturaGoldService.salvar(any())).thenAnswer(chamada -> chamada.getArgument(0));
+        when(assinaturaGoldService.buscarPorIdOuFalhar(idExistente)).thenReturn(cancelada);
         when(cobrancaService.salvar(any())).thenAnswer(chamada -> {
             Cobranca c = chamada.getArgument(0);
-            ReflectionTestUtils.setField(c, "id", UUID.randomUUID());
+            if (c.getId() == null) {
+                ReflectionTestUtils.setField(c, "id", UUID.randomUUID());
+            }
             return c;
         });
+        when(cobrancaService.buscarPorIdOuFalhar(any())).thenAnswer(chamada -> ultimaCobrancaSalva(chamada.getArgument(0)));
         when(documentoFiscalService.salvar(any())).thenAnswer(chamada -> chamada.getArgument(0));
 
         AssinaturaGold resultado = useCase.executar(USUARIO_ID, PapelUsuario.PRESTADOR, Plano.CODIGO_GOLD, TOKEN);

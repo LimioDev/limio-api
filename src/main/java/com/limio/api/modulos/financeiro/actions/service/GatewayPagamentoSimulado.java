@@ -49,4 +49,12 @@ public class GatewayPagamentoSimulado implements GatewayPagamento {
         String ultimos4 = String.format("%04d", Math.abs(gatewayToken.hashCode()) % 10_000);
         return new ResultadoCobranca(true, "SIM-" + UUID.randomUUID(), "VISA", ultimos4);
     }
+
+    @Override
+    public ResultadoTokenizacao tokenizar(UUID usuarioId, DadosCartao cartao, TitularCartao titular,
+            String remoteIp) {
+        String numero = cartao.numero();
+        String ultimos4 = numero == null || numero.length() < 4 ? "0000" : numero.substring(numero.length() - 4);
+        return new ResultadoTokenizacao("SIM-TOK-" + UUID.randomUUID(), "VISA", ultimos4);
+    }
 }

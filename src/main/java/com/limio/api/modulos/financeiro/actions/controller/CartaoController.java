@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.limio.api.comum.seguranca.UsuarioAutenticado;
 import com.limio.api.modulos.financeiro.actions.mapper.GoldMapper;
+import com.limio.api.modulos.financeiro.actions.service.DadosCartao;
+import com.limio.api.modulos.financeiro.actions.service.TitularCartao;
 import com.limio.api.modulos.financeiro.actions.usecase.TokenizarCartaoUseCase;
 import com.limio.api.modulos.financeiro.records.TokenizarCartaoRequest;
 import com.limio.api.modulos.financeiro.records.TokenizarCartaoResponse;
@@ -40,10 +42,12 @@ public class CartaoController {
     @PostMapping
     public ResponseEntity<TokenizarCartaoResponse> tokenizar(@Valid @RequestBody TokenizarCartaoRequest request,
             @AuthenticationPrincipal UsuarioAutenticado usuario, HttpServletRequest httpRequest) {
-        var meioPagamento = tokenizarCartaoUseCase.executar(usuario.id(), usuario.papel(), request.holderName(),
-                request.numero(), request.expiryMonth(), request.expiryYear(), request.ccv(), request.holderNome(),
-                request.holderEmail(), request.holderCpf(), request.holderCep(), request.holderNumeroEndereco(),
-                request.holderTelefone(), httpRequest.getRemoteAddr());
+        var cartao = new DadosCartao(request.holderName(), request.numero(), request.expiryMonth(),
+                request.expiryYear(), request.ccv());
+        var titular = new TitularCartao(request.holderNome(), request.holderEmail(), request.holderCpf(),
+                request.holderCep(), request.holderNumeroEndereco(), request.holderTelefone());
+        var meioPagamento = tokenizarCartaoUseCase.executar(usuario.id(), usuario.papel(), cartao, titular,
+                httpRequest.getRemoteAddr());
         return ResponseEntity.status(HttpStatus.CREATED).body(goldMapper.toResponse(meioPagamento));
     }
 }

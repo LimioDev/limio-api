@@ -216,16 +216,19 @@ class GoldStoryTest {
     }
 
     @Test
-    void dadoPagamentoRecusado_quandoAssina_entao402ENadaPersiste() throws Exception {
-        prestador("Rafael Souza", "rafael@example.com", "11144477735");
+    void dadoPagamentoRecusado_quandoAssina_entao402ECancelaAPendencia() throws Exception {
+        Usuario rafael = prestador("Rafael Souza", "rafael@example.com", "11144477735");
         String token = logar("rafael@example.com");
 
         assinar(token, TOKEN_RECUSADO)
                 .andExpect(status().is(402))
                 .andExpect(jsonPath("$.codigo", is("PAGAMENTO_RECUSADO")));
 
-        assertThat(assinaturaGoldRepository.findAll()).isEmpty();
-        assertThat(cobrancaRepository.findAll()).isEmpty();
+        AssinaturaGold assinatura = assinaturaGoldRepository.findByUsuarioId(rafael.getId()).orElseThrow();
+        assertThat(assinatura.estaAtiva()).isFalse();
+        assertThat(cobrancaRepository.findAll()).hasSize(1);
+        assertThat(meioPagamentoRepository.findByUsuarioId(rafael.getId())).isEmpty();
+        assertThat(documentoFiscalRepository.findAll()).isEmpty();
     }
 
     @Test
@@ -243,12 +246,29 @@ class GoldStoryTest {
         Usuario rafael = prestador("Rafael Souza", "rafael@example.com", "11144477735");
         Plano gold = planoRepository.findByCodigoAndAtivoTrue(Plano.CODIGO_GOLD).orElseThrow();
         Instant agora = relogio.instant();
-        assinaturaGoldRepository.save(
-                AssinaturaGold.nova(rafael.getId(), gold.getId(), agora, agora.atZone(ZoneOffset.UTC).plusMonths(1).toInstant()));
+        AssinaturaGold ativa = AssinaturaGold.nova(rafael.getId(), gold.getId(), agora,
+                agora.atZone(ZoneOffset.UTC).plusMonths(1).toInstant());
+        ativa.confirmarAtiva();
+        assinaturaGoldRepository.save(ativa);
 
         assinar(logar("rafael@example.com"), TOKEN_APROVADO)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.codigo", is("ASSINATURA_JA_ATIVA")));
+
+        assertThat(cobrancaRepository.findAll()).isEmpty();
+    }
+
+    @Test
+    void dadoCobrancaPendenteDoMesmoPrestador_quandoAssinaDeNovo_entao409CobrancaEmAndamento() throws Exception {
+        Usuario rafael = prestador("Rafael Souza", "rafael@example.com", "11144477735");
+        Plano gold = planoRepository.findByCodigoAndAtivoTrue(Plano.CODIGO_GOLD).orElseThrow();
+        Instant agora = relogio.instant();
+        assinaturaGoldRepository.save(AssinaturaGold.nova(rafael.getId(), gold.getId(), agora,
+                agora.atZone(ZoneOffset.UTC).plusMonths(1).toInstant()));
+
+        assinar(logar("rafael@example.com"), TOKEN_APROVADO)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo", is("COBRANCA_EM_ANDAMENTO")));
 
         assertThat(cobrancaRepository.findAll()).isEmpty();
     }

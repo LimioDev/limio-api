@@ -5,8 +5,11 @@ import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import com.limio.api.modulos.financeiro.actions.service.DadosCartao;
 import com.limio.api.modulos.financeiro.actions.service.GatewayPagamento;
 import com.limio.api.modulos.financeiro.actions.service.ResultadoCobranca;
+import com.limio.api.modulos.financeiro.actions.service.ResultadoTokenizacao;
+import com.limio.api.modulos.financeiro.actions.service.TitularCartao;
 
 /**
  * Gateway real via Asaas (ETI-81), ativo quando {@code financeiro.gateway.provedor=asaas} (Railway
@@ -42,5 +45,16 @@ public class GatewayPagamentoAsaas implements GatewayPagamento {
         String bandeira = resposta.creditCard() == null ? null : resposta.creditCard().creditCardBrand();
         String ultimos4 = resposta.creditCard() == null ? null : resposta.creditCard().ultimos4();
         return new ResultadoCobranca(true, resposta.id(), bandeira, ultimos4);
+    }
+
+    @Override
+    public ResultadoTokenizacao tokenizar(UUID usuarioId, DadosCartao cartao, TitularCartao titular,
+            String remoteIp) {
+        String customerId = clienteAsaasResolver.resolverOuCriar(usuarioId);
+        AsaasClient.TokenizarResposta resposta = asaasClient.tokenizarCartao(customerId, cartao.holderName(),
+                cartao.numero(), cartao.expiryMonth(), cartao.expiryYear(), cartao.ccv(), titular.nome(),
+                titular.email(), titular.cpf(), titular.cep(), titular.numeroEndereco(), titular.telefone(),
+                remoteIp);
+        return new ResultadoTokenizacao(resposta.creditCardToken(), resposta.creditCardBrand(), resposta.ultimos4());
     }
 }

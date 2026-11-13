@@ -8,6 +8,8 @@ import org.springframework.stereotype.Component;
 import com.limio.api.comum.portas.ConsultaCpfUsuario;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.DadosUsuario;
+import com.limio.api.modulos.financeiro.clienteasaas.ClienteAsaas;
+import com.limio.api.modulos.financeiro.clienteasaas.ClienteAsaasService;
 import com.limio.api.modulos.financeiro.excecao.GatewayIndisponivelException;
 
 /**

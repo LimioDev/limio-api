@@ -20,6 +20,12 @@ import lombok.NoArgsConstructor;
  * Usuario} de {@code modulos.auth} (ADR-0001 §1.6). No máximo uma por usuário: reassinar depois de
  * cancelada ({@link StatusAssinatura#CANCELADA}, card futuro US26/US27) reativa esta mesma linha em vez
  * de criar outra, pra manter o GOLD sem interrupção quando o ciclo ainda está vigente.
+ *
+ * <p>Nasce/reinicia {@link StatusAssinatura#PENDENTE} numa transação curta, antes de chamar o gateway
+ * (ver {@code AssinarGoldUseCase}): o índice único em {@code usuario_id} é a trava contra uma segunda
+ * tentativa concorrente enquanto a primeira ainda não confirmou. {@link #confirmarAtiva()} e
+ * {@link #cancelarPendencia()} resolvem a pendência numa segunda transação curta, fora da chamada ao
+ * gateway.
  */
 @Entity
 @Table(name = "assinatura_gold")
@@ -46,7 +52,7 @@ public class AssinaturaGold extends BaseEntity {
     private AssinaturaGold(UUID usuarioId, UUID planoId, Instant dataInicioCiclo, Instant dataFimCiclo) {
         this.usuarioId = usuarioId;
         this.planoId = planoId;
-        this.status = StatusAssinatura.ATIVA;
+        this.status = StatusAssinatura.PENDENTE;
         this.dataInicioCiclo = dataInicioCiclo;
         this.dataFimCiclo = dataFimCiclo;
     }
@@ -55,15 +61,29 @@ public class AssinaturaGold extends BaseEntity {
         return new AssinaturaGold(usuarioId, planoId, dataInicioCiclo, dataFimCiclo);
     }
 
-    /** Reativa uma assinatura cancelada no mesmo ciclo em vez de criar outra linha para o usuário. */
-    public void reativar(UUID planoId, Instant dataInicioCiclo, Instant dataFimCiclo) {
+    /** Reinicia a cobrança numa linha {@code CANCELADA} existente em vez de criar outra para o usuário. */
+    public void reiniciarPendencia(UUID planoId, Instant dataInicioCiclo, Instant dataFimCiclo) {
         this.planoId = planoId;
-        this.status = StatusAssinatura.ATIVA;
+        this.status = StatusAssinatura.PENDENTE;
         this.dataInicioCiclo = dataInicioCiclo;
         this.dataFimCiclo = dataFimCiclo;
     }
 
+    /** Pagamento aprovado: a pendência criada por {@link #nova} ou {@link #reiniciarPendencia} confirma. */
+    public void confirmarAtiva() {
+        this.status = StatusAssinatura.ATIVA;
+    }
+
+    /** Pagamento recusado: a pendência não vira assinatura — a linha fica como se nunca tivesse sido ativada. */
+    public void cancelarPendencia() {
+        this.status = StatusAssinatura.CANCELADA;
+    }
+
     public boolean estaAtiva() {
         return status == StatusAssinatura.ATIVA;
+    }
+
+    public boolean estaPendente() {
+        return status == StatusAssinatura.PENDENTE;
     }
 }

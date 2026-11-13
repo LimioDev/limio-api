@@ -20,4 +20,14 @@ public interface GatewayPagamento {
      */
     ResultadoCobranca cobrar(UUID usuarioId, String gatewayToken, long valorCentavos, String moeda,
             String chaveIdempotencia);
+
+    /**
+     * Tokeniza o cartão do usuário {@code usuarioId} e devolve um {@code gatewayToken} que
+     * {@link #cobrar} aceita depois. Dados crus do cartão passam só por aqui e pelo provedor concreto —
+     * nunca são persistidos. {@code remoteIp} é o IP de quem está cadastrando o cartão (antifraude).
+     *
+     * @throws com.limio.api.modulos.financeiro.excecao.CartaoInvalidoException dados do cartão recusados
+     * @throws com.limio.api.modulos.financeiro.excecao.GatewayIndisponivelException gateway fora do ar ou sem resposta
+     */
+    ResultadoTokenizacao tokenizar(UUID usuarioId, DadosCartao cartao, TitularCartao titular, String remoteIp);
 }

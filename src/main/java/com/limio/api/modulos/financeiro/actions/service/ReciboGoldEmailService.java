@@ -17,19 +17,21 @@ import com.resend.services.emails.model.CreateEmailOptions;
 /**
  * Envio do recibo da assinatura GOLD via Resend — mesmo provedor e mesma chave de {@code auth}
  * (TICKET-0033), mas instância própria: {@code financeiro} não importa classe de outro módulo
- * (ADR-0001). Com {@code email.enviar=false} (padrão fora de produção) só loga em vez de chamar a API.
+ * (ADR-0001). Nome específico (em vez de {@code EmailService}) evita colidir com o bean de {@code auth}
+ * sem precisar de qualificador. Com {@code email.enviar=false} (padrão fora de produção) só loga em vez
+ * de chamar a API.
  */
-@Component("financeiroEmailService")
-public class EmailService {
+@Component
+public class ReciboGoldEmailService {
 
-    private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+    private static final Logger log = LoggerFactory.getLogger(ReciboGoldEmailService.class);
     private static final DateTimeFormatter FORMATO_DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final Resend resend;
     private final String remetente;
     private final boolean envioHabilitado;
 
-    public EmailService(@Value("${email.resend.api-key}") String apiKey,
+    public ReciboGoldEmailService(@Value("${email.resend.api-key}") String apiKey,
             @Value("${email.resend.remetente}") String remetente,
             @Value("${email.enviar}") boolean envioHabilitado) {
         this.resend = new Resend(apiKey);

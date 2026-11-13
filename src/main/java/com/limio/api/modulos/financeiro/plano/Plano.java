@@ -1,5 +1,8 @@
 package com.limio.api.modulos.financeiro.plano;
 
+import java.time.Instant;
+import java.time.ZoneOffset;
+
 import com.limio.api.comum.base.BaseEntity;
 import com.limio.api.modulos.financeiro.plano.enums.CicloPlano;
 
@@ -47,4 +50,11 @@ public class Plano extends BaseEntity {
 
     @Column(name = "ativo", nullable = false)
     private boolean ativo;
+
+    /** Fim do ciclo a partir de {@code inicio} — regra do próprio plano, não do usecase que assina. */
+    public Instant fimDoCiclo(Instant inicio) {
+        return switch (ciclo) {
+            case MENSAL -> inicio.atZone(ZoneOffset.UTC).plusMonths(1).toInstant();
+        };
+    }
 }

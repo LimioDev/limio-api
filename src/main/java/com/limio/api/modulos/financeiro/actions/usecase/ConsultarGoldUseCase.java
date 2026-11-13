@@ -6,8 +6,8 @@ import org.springframework.stereotype.Service;
 
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.financeiro.ConsultaGold;
+import com.limio.api.modulos.financeiro.actions.helper.ExigirPrestadorHelper;
 import com.limio.api.modulos.financeiro.excecao.PlanoNaoEncontradoException;
-import com.limio.api.modulos.financeiro.excecao.SomentePrestadorAssinaGoldException;
 import com.limio.api.modulos.financeiro.meiopagamento.MeioPagamentoService;
 import com.limio.api.modulos.financeiro.plano.Plano;
 import com.limio.api.modulos.financeiro.plano.PlanoService;
@@ -28,17 +28,9 @@ public class ConsultarGoldUseCase {
     }
 
     public ConsultaGold executar(UUID usuarioId, PapelUsuario papelAtivo) {
-        exigirPrestador(papelAtivo);
+        ExigirPrestadorHelper.exigirPrestador(papelAtivo);
 
         Plano plano = planoService.buscarAtivoPorCodigo(Plano.CODIGO_GOLD).orElseThrow(PlanoNaoEncontradoException::new);
         return new ConsultaGold(plano, meioPagamentoService.buscarPorUsuario(usuarioId));
-    }
-
-    private static void exigirPrestador(PapelUsuario papelAtivo) {
-        switch (papelAtivo) {
-            case PRESTADOR -> {
-            }
-            case EMPREGADOR -> throw new SomentePrestadorAssinaGoldException();
-        }
     }
 }

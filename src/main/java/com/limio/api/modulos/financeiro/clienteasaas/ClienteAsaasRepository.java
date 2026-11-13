@@ -1,4 +1,4 @@
-package com.limio.api.modulos.financeiro.actions.service.asaas;
+package com.limio.api.modulos.financeiro.clienteasaas;
 
 import java.util.Optional;
 import java.util.UUID;

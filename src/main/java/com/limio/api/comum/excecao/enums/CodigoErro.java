@@ -60,6 +60,7 @@ public enum CodigoErro {
     COMENTARIO_SEM_NOTA("Escolha uma nota para enviar o comentário."),
     PLANO_NAO_ENCONTRADO("Plano não encontrado."),
     ASSINATURA_JA_ATIVA("Você já é assinante do plano GOLD."),
+    COBRANCA_EM_ANDAMENTO("Já existe uma cobrança em andamento. Tente novamente em instantes."),
     PAGAMENTO_RECUSADO("Pagamento recusado. Verifique os dados do cartão e tente novamente."),
     GATEWAY_INDISPONIVEL("Não foi possível processar o pagamento agora. Tente novamente em instantes."),
     CARTAO_INVALIDO("Dados do cartão inválidos. Confira número, validade e CVV."),
