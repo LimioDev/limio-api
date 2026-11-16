@@ -66,6 +66,7 @@ public enum CodigoErro {
     PAGAMENTO_RECUSADO("Pagamento recusado. Verifique os dados do cartão e tente novamente."),
     GATEWAY_INDISPONIVEL("Não foi possível processar o pagamento agora. Tente novamente em instantes."),
     CARTAO_INVALIDO("Dados do cartão inválidos. Confira número, validade e CVV."),
+    NOTIFICACAO_NAO_ENCONTRADA("Notificação não encontrada."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;
