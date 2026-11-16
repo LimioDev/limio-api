@@ -1,9 +1,21 @@
-package com.limio.api.modulos.anuncio.actions.helper;
+package com.limio.api.comum.texto;
 
 import java.util.Locale;
 
-/** Nome de pessoa como aparece pra outra parte de um anúncio. */
+/**
+ * Nome de pessoa como aparece pra outra parte — anúncio ({@code modulos.anuncio}) e perfil público
+ * ({@code modulos.perfil}, ETI-105). Promovido pra {@code comum/} quando o segundo módulo passou a precisar
+ * da mesma regra (critério do ADR-0001: usado por 2+ módulos hoje).
+ */
 public final class NomeHelper {
+
+    /**
+     * Nome de exibição de uma conta encerrada (LGPD, UC10) — mesmo literal em {@code Usuario.encerrar}
+     * (auth), {@code PerfilEmpregador.anonimizar} e {@code ConsultaAvaliacoesService} (moderacao).
+     * Distinto de {@code OutraParte.NOME_CONTA_ENCERRADA} ("Usuário excluído") usado por {@code chat} e
+     * {@code moderacao} — telas diferentes, texto escolhido à parte.
+     */
+    public static final String CONTA_ENCERRADA = "Conta encerrada";
 
     private NomeHelper() {
     }

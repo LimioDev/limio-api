@@ -1,10 +1,8 @@
-package com.limio.api.modulos.anuncio.spec;
+package com.limio.api.comum.texto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
-
-import com.limio.api.modulos.anuncio.actions.helper.NomeHelper;
 
 class NomeHelperTest {
 

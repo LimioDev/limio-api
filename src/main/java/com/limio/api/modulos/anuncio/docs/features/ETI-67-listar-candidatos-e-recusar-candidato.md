@@ -61,8 +61,9 @@ desistir (ETI-77).
   `ConsultaChat` (por `chat`, porque `Aplicacao` guarda só a ligação inversa `Chat.aplicacaoId` e `anuncio` não importa
   `chat`) e `ConsultaAvaliacoes`. Nome, foto e GOLD reaproveitam `ConsultaDadosUsuario`, `ConsultaFotoPerfil` e
   `ConsultaPlanoPrestador`.
-- **`ConsultaAvaliacoes` é provisória.** Não existe módulo nem tabela de avaliações, então a implementação, em
-  `perfil`, devolve sempre "sem avaliações". Quando o módulo chegar, só `ConsultaAvaliacoesService` muda.
+- **`ConsultaAvaliacoes`** é implementada em `moderacao` (`ConsultaAvaliacoesService`, ETI-107/ETI-105), dono da
+  entity `Avaliacao`. Antes do ETI-107 era um stub em `perfil` (nem módulo nem tabela existiam) que sempre
+  devolvia "sem avaliações" — histórico em `docs/history/CHANGELOG.md`.
 - **GOLD** vem de `ConsultaPlanoPrestador`, que hoje é um stub do `financeiro` e devolve sempre `FREE`.
 - **Follow-up (N+1 na listagem):** `ListarCandidatosUseCase` busca em lote especialidades, avaliações e chat, mas
   ainda chama por candidato `ConsultaDadosUsuario.buscarPorId`, `ConsultaFotoPerfil.buscarFoto` e
