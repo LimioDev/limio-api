@@ -20,6 +20,9 @@ public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
 
     List<Aplicacao> findByPrestadorIdAndStatusIn(UUID prestadorId, List<StatusAplicacao> status);
 
+    /** Usa {@code idx_aplicacao_prestador_status} — histórico resumido do perfil público (ETI-105). */
+    long countByPrestadorIdAndStatus(UUID prestadorId, StatusAplicacao status);
+
     /** @param fimExclusivo limite superior do período, não incluso */
     List<Aplicacao> findByPrestadorIdAndEscolhidaEmGreaterThanEqualAndEscolhidaEmLessThanOrderByEscolhidaEmDesc(
             UUID prestadorId, Instant inicio, Instant fimExclusivo);
@@ -65,4 +68,13 @@ public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
 
     /** {@code escolhidaEm} nunca é limpo, mesmo depois do serviço concluir ou cancelar (ETI-86). */
     Optional<Aplicacao> findFirstByAnuncioIdAndEscolhidaEmIsNotNull(UUID anuncioId);
+
+    /**
+     * Conta pelo {@code Anuncio.status = CONCLUIDO}, não por um status próprio da candidatura: nenhum
+     * fluxo marca {@code Aplicacao} como {@code CONCLUIDA} hoje — o ETI-92 só conclui o {@code Anuncio}
+     * (ver o CHANGELOG do módulo). {@code escolhidaEm} identifica o escolhido porque nunca é limpo.
+     */
+    @Query("select count(a) from Aplicacao a, Anuncio an where a.anuncioId = an.id and a.prestadorId = :prestadorId "
+            + "and a.escolhidaEm is not null and an.status = com.limio.api.modulos.anuncio.enums.StatusAnuncio.CONCLUIDO")
+    long countConcluidosPorAnuncioDoPrestador(@Param("prestadorId") UUID prestadorId);
 }

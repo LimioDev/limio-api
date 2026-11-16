@@ -14,6 +14,12 @@ concluído, janela, `AvaliacaoService.travarRecebidas`, duplicata, `Avaliacao.pu
 publica `AvaliacaoPublicadaEvent` → no `perfil`, `RegistrarMediaAvaliacoesUseCase` grava a média na mesma transação →
 `AvaliacaoMapper` → `AvaliacaoResponse`.
 
+**Porta `ConsultaAvaliacoes` (ETI-105, perfil público em `perfil`)**
+`actions/service/ConsultaAvaliacoesService` implementa a porta de `comum/portas/`: `resumir` (lote, só papel
+`PRESTADOR`, via `AvaliacaoRepository.resumirPorAvaliados`/`ResumoAvaliacaoProjecao` — consumida também por
+`ListarCandidatosUseCase`, ETI-67) e `listarRecentes` (top-N por avaliado+papel, nome do avaliador abreviado por
+`comum/texto/NomeHelper`; conta encerrada do avaliador aparece como "Conta encerrada", nunca cai da lista).
+
 ## Classes
 
 | Classe | Papel |
@@ -29,6 +35,10 @@ publica `AvaliacaoPublicadaEvent` → no `perfil`, `RegistrarMediaAvaliacoesUseC
 | `actions/controller/AvaliacaoController` | As duas rotas. Sem checagem de papel: o acesso é ser uma das partes. |
 | `actions/mapper/AvaliacaoMapper` | `AvaliacaoPendente` e `Avaliacao` para os records de resposta. |
 | `excecao/*` | Uma por cenário: `ServicoNaoEncontrado` (404), `ServicoNaoConcluido`, `JanelaAvaliacaoEncerrada` e `AvaliacaoDuplicada` (409), `ComentarioSemNota` e `NotaObrigatoria` (400). |
+| `actions/service/ConsultaAvaliacoesService` | Implementa `comum/portas/ConsultaAvaliacoes` (ETI-105): resumo em lote e avaliações recentes, lidas direto de `Avaliacao`. |
+| `avaliacao/ResumoAvaliacaoProjecao` | Projeção de `resumirPorAvaliados` — id, média e quantidade, direto do banco, sem carregar a entity. |
 
 Fora do módulo: a porta `comum/portas/ConsultaServico` (implementada por `anuncio/actions/service/ConsultaServicoService`)
 e o evento `comum/eventos/AvaliacaoPublicadaEvent` (ouvido por `perfil/actions/usecase/RegistrarMediaAvaliacoesUseCase`).
+`comum/portas/ConsultaAvaliacoes` também é consumida por `anuncio/actions/usecase/ListarCandidatosUseCase` (ETI-67)
+e `perfil/actions/usecase/ConsultarPerfilPublicoUseCase` (ETI-105).

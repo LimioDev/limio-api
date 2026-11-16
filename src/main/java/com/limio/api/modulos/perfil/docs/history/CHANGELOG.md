@@ -219,6 +219,26 @@ O `anuncio` chama isso pela porta `comum/portas/ConsumoCotaPrestador`, implement
 `ConsumoCotaPrestadorService` (`Propagation.MANDATORY`: só roda na transação da escolha). É a primeira porta de
 **escrita** do projeto, exceção ao "só leitura" da ADR-0003, que não foi alterada; a justificativa está no card
 `anuncio/docs/features/ETI-69-escolher-prestador.md`.
+
+## 2026-11-10 — ETI-105: perfil público e reputação; `NomeHelper` sobe pra `comum/`
+
+`GET /perfis-publicos/{usuarioId}?papel=`. Reaproveita o que já existia em vez de criar um modelo de dados
+novo: quantidade/média de avaliações vêm das colunas de `PerfilEmpregador`/`PerfilPrestador` (ETI-107 deu ao
+Prestador as mesmas colunas que o Empregador já tinha desde o TICKET-0048, mantidas depois do encerramento,
+de propósito). `ConsultaAvaliacoes` ganhou `listarRecentes(avaliadoId, papel, limite)` e sua implementação
+migrou do stub provisório em `perfil` pra `moderacao` (dono real da entity `Avaliacao`, que chegou junto
+nesta mesma janela pelo ETI-107) — não dá pra ter duas implementações da porta no contexto. Nova porta
+`ConsultaHistoricoDeServicos` (`anuncio`) conta serviços concluídos pelos índices que já existiam, sem
+migration. `ConsultaDadosUsuario` ganhou `existe`, pra diferenciar usuário que nunca existiu (404) de conta
+encerrada (200, com nome "Conta encerrada" — não o "Usuário excluído" do Figma, pra não duplicar o literal
+que o TICKET-0034 já fixou em dois lugares).
+
+`comum/texto/NomeHelper` (antes `modulos.anuncio.actions.helper`): o Prestador aparece pro perfil público
+abreviado, mesma regra de "candidatos do anúncio" (ETI-67) — com dois módulos precisando da mesma lógica, o
+próprio critério do ADR-0001 pra subir algo a `comum/` (2+ módulos hoje) deixou de ser "talvez" e passou a
+valer. Mudança mecânica, sem tocar a lógica nem os testes (só pacote e imports). Detalhe em
+`../features/ETI-105-consultar-perfil-publico-e-reputacao.md`.
+
 ## 2026-11 — UC04 (OTP por SMS) fora de escopo em definitivo (ETI-134)
 
 `PerfilEmpregadorResponse` e `comum/portas/DadosUsuario` deixaram de expor `telefoneConfirmadoEm` — a tela "Meu
