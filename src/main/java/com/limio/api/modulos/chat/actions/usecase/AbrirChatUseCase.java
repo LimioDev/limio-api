@@ -78,14 +78,15 @@ public class AbrirChatUseCase {
         PapelNoChat papel = chat.papelDaOutraParte(usuarioId);
         Optional<OutraParte> encontrada = switch (papel) {
             case EMPREGADOR -> consultaPerfilEmpregador.buscarResumoSemCriar(outraParteId)
-                    .map(perfil -> new OutraParte(perfil.nomeExibicao(), perfil.fotoUrl(), perfil.fotoExpiraEm(),
+                    .map(perfil -> new OutraParte(outraParteId, perfil.nomeExibicao(), perfil.fotoUrl(),
+                            perfil.fotoExpiraEm(),
                             papel));
             case CANDIDATO -> consultaDadosUsuario.buscarPorId(outraParteId).map(dados -> {
                 Optional<LinkTemporario> foto = consultaFotoPerfil.buscarFoto(outraParteId);
-                return new OutraParte(dados.nomeCompleto(), foto.map(LinkTemporario::url).orElse(null),
+                return new OutraParte(outraParteId, dados.nomeCompleto(), foto.map(LinkTemporario::url).orElse(null),
                         foto.map(LinkTemporario::expiraEm).orElse(null), papel);
             });
         };
-        return encontrada.orElseGet(() -> OutraParte.contaEncerrada(papel));
+        return encontrada.orElseGet(() -> OutraParte.contaEncerrada(outraParteId, papel));
     }
 }
