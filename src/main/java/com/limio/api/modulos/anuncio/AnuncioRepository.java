@@ -18,7 +18,6 @@ public interface AnuncioRepository extends BaseRepository<Anuncio, UUID> {
     @Query(value = """
             SELECT a.id FROM anuncio a
             WHERE a.status = 'PUBLICADO'
-              AND a.encerrado_em IS NULL
               AND a.data_hora_pretendida <= :agora
               AND NOT EXISTS (SELECT 1 FROM aplicacao ap WHERE ap.anuncio_id = a.id)
             ORDER BY a.data_hora_pretendida, a.id

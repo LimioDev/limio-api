@@ -22,11 +22,11 @@ Uma rotina periódica encerra por expiração o anúncio que está `PUBLICADO`, 
 
 Componentes, todos em `modulos/anuncio`:
 
-- `Anuncio.permiteExpiracao(existeAplicacao, agora)` e `Anuncio.expirar(agora)`.
+- `Anuncio.permiteExpiracao(agora)` (status e data; a candidatura é conferida pelo usecase) e `Anuncio.expirar(agora)`.
 - `AnuncioRepository.buscarIdsParaExpirar(agora, lote)`: pré-seleção por `NOT EXISTS` em `aplicacao`.
 - `AplicacaoService.existeAlguma(anuncioId)` (`existsByAnuncioId`).
-- `ExpirarAnunciosSemCandidatosUseCase`: o job (`@Scheduled`), sem transação.
-- `ExpirarAnuncioUseCase`: expira um anúncio, em transação própria, e publica o evento.
+- `ExpirarAnunciosSemCandidatosUseCase`: o job (`@Scheduled`, sem transação própria). Abre uma transação por anúncio com
+  `TransactionTemplate`, expira e publica o evento dentro dela. Um usecase só: nada de um usecase injetar outro (ADR-0001).
 - `comum/eventos/AnuncioExpiradoEvent(anuncioId, contratanteId, titulo, ocorridoEm)`.
 
 Propriedades: `anuncio.expiracao.cron` (padrão `0 */5 * * * *`) e `anuncio.expiracao.lote` (padrão 100).
@@ -44,10 +44,12 @@ consumo de cota, mudança no mural ou no histórico, status novo.
 - **"Combinado" não muda o anúncio.** A escolha só muda a `Aplicacao` (`ESCOLHIDA`); o anúncio segue `PUBLICADO`.
   Por isso a regra é "nenhuma candidatura em qualquer estado": um anúncio com escolhida tem candidatura e nunca
   expira. Anúncio `CONCLUIDO`, `EM_ANDAMENTO`, `AGUARDANDO_VALIDACAO` ou `ENCERRADO` também não.
-- **Regra no domínio, decisão sob trava.** `permiteExpiracao` concentra a regra (`switch` sem `default`). A query do
-  job é só uma pré-seleção barata; quem decide é `ExpirarAnuncioUseCase`, depois de travar o anúncio.
-- **Job e usecase em beans separados.** A transação e o evento `AFTER_COMMIT` dependem de a chamada passar pelo
-  proxy do Spring; uma chamada de dentro do mesmo bean não passa. O job segue o único precedente do projeto
+- **Regra no domínio, decisão sob trava.** `permiteExpiracao` concentra a regra de status e data (`switch` sem `default`); a ausência de
+  candidatura o usecase confere com `existeAlguma`, porque o anúncio não conhece `Aplicacao`. A query do
+  job é só uma pré-seleção barata; quem decide é o próprio usecase, na transação de cada anúncio, depois de travar o anúncio.
+- **Um usecase só, transação por `TransactionTemplate`.** Um usecase não injeta outro (ADR-0001), e uma chamada
+  `@Transactional` de dentro do mesmo bean não passa pelo proxy; por isso cada anúncio abre a própria transação com
+  `TransactionTemplate`, e o evento `AFTER_COMMIT` sai de dentro dela. O job segue o único precedente do projeto
   (`LimparRetencaoUseCase`: `@Scheduled` num usecase, `try/catch` por item). Não há pasta `job/`.
 - **Uma transação por anúncio.** A falha de um é logada e não desfaz nem interrompe os demais.
 - **`NOT EXISTS` na query, `existsByAnuncioId` na conferência.** A query nativa segue o padrão do mural (uma ida ao
@@ -85,7 +87,7 @@ consumo de cota, mudança no mural ou no histórico, status novo.
 
 ## Concorrência
 
-`ExpirarAnuncioUseCase` toma `EscopoTrava.ANUNCIO` (advisory lock por id, solto no fim da transação) antes de ler o
+`ExpirarAnunciosSemCandidatosUseCase` toma `EscopoTrava.ANUNCIO` (advisory lock por id, solto no fim da transação) antes de ler o
 anúncio, como cancelar, escolher e candidatar-se (esta já trava `ANUNCIO` antes de criar a candidatura). Quem chega
 depois vê o resultado da primeira e sai: dois jobs simultâneos geram um encerramento e um evento; job contra
 cancelamento, um vencedor só; job contra candidatura, ou o anúncio expira sem candidatura ou a candidatura vence e ele
@@ -104,14 +106,11 @@ escolha do canal. Nada disso existe hoje.
 
 ## Testes
 
-`spec/ExpiracaoDominioTest`: `permiteExpiracao` (vencido, data igual ao agora, futuro, com candidatura, demais
-status) e `expirar`.
+`spec/ExpiracaoDominioTest`: `permiteExpiracao` (vencido, data igual ao agora, futuro, demais status) e `expirar`.
 
-`spec/ExpirarAnuncioUseCaseTest`: expira, salva e publica um evento (ordem trava, leitura, gravação, evento), com
-candidatura, no futuro, já encerrado e inexistente.
-
-`spec/ExpirarAnunciosSemCandidatosUseCaseTest`: instante do `Clock`, lote vazio e falha em um item sem derrubar os
-demais.
+`spec/ExpirarAnunciosSemCandidatosUseCaseTest`: expira, salva e publica um evento dentro da transação (ordem abrir
+transação, trava, leitura, gravação, evento, commit), com candidatura, no futuro, já encerrado e inexistente; lote vazio
+(sem transação) e falha em um item com rollback, sem derrubar os demais.
 
 `story/ExpirarAnunciosStoryTest` (banco real): expira com um evento; candidatura em cada `StatusAplicacao`; data
 futura; `EM_ANDAMENTO`, `AGUARDANDO_VALIDACAO`, `CONCLUIDO` e `ENCERRADO` intocados; job duas vezes; vários

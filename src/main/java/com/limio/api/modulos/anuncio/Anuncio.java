@@ -256,9 +256,13 @@ public class Anuncio extends BaseEntity {
         encerrar(agora, MOTIVO_CANCELAMENTO_PELO_EMPREGADOR);
     }
 
-    public boolean permiteExpiracao(boolean existeAplicacao, Instant agora) {
+    /**
+     * ETI-66: só um anúncio {@code PUBLICADO} cuja data pretendida já chegou pode expirar. Quem chama confere à parte
+     * que não há nenhuma candidatura (o anúncio não conhece {@code Aplicacao}, ADR-0001 §1.6).
+     */
+    public boolean permiteExpiracao(Instant agora) {
         return switch (status) {
-            case PUBLICADO -> !existeAplicacao && !dataHoraPretendida.isAfter(agora);
+            case PUBLICADO -> !dataHoraPretendida.isAfter(agora);
             case EM_ANDAMENTO, AGUARDANDO_VALIDACAO, CONCLUIDO, ENCERRADO -> false;
         };
     }

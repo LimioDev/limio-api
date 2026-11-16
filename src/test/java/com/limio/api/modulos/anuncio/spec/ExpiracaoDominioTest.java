@@ -21,29 +21,24 @@ class ExpiracaoDominioTest {
     }
 
     @Test
-    void dadoPublicadoVencidoSemCandidatura_quandoPerguntaSePermiteExpiracao_entaoSim() {
-        assertThat(anuncio(StatusAnuncio.PUBLICADO, AGORA.minusSeconds(1)).permiteExpiracao(false, AGORA)).isTrue();
+    void dadoPublicadoVencido_quandoPerguntaSePermiteExpiracao_entaoSim() {
+        assertThat(anuncio(StatusAnuncio.PUBLICADO, AGORA.minusSeconds(1)).permiteExpiracao(AGORA)).isTrue();
     }
 
     @Test
     void dadaDataHoraIgualAoAgora_quandoPerguntaSePermiteExpiracao_entaoSim() {
-        assertThat(anuncio(StatusAnuncio.PUBLICADO, AGORA).permiteExpiracao(false, AGORA)).isTrue();
+        assertThat(anuncio(StatusAnuncio.PUBLICADO, AGORA).permiteExpiracao(AGORA)).isTrue();
     }
 
     @Test
     void dadaDataHoraNoFuturo_quandoPerguntaSePermiteExpiracao_entaoNao() {
-        assertThat(anuncio(StatusAnuncio.PUBLICADO, AGORA.plusSeconds(1)).permiteExpiracao(false, AGORA)).isFalse();
-    }
-
-    @Test
-    void dadoPublicadoVencidoComCandidatura_quandoPerguntaSePermiteExpiracao_entaoNao() {
-        assertThat(anuncio(StatusAnuncio.PUBLICADO, AGORA.minusSeconds(1)).permiteExpiracao(true, AGORA)).isFalse();
+        assertThat(anuncio(StatusAnuncio.PUBLICADO, AGORA.plusSeconds(1)).permiteExpiracao(AGORA)).isFalse();
     }
 
     @ParameterizedTest
     @EnumSource(value = StatusAnuncio.class, names = { "EM_ANDAMENTO", "AGUARDANDO_VALIDACAO", "CONCLUIDO", "ENCERRADO" })
     void dadoAnuncioForaDePublicado_quandoPerguntaSePermiteExpiracao_entaoNao(StatusAnuncio status) {
-        assertThat(anuncio(status, AGORA.minusSeconds(1)).permiteExpiracao(false, AGORA)).isFalse();
+        assertThat(anuncio(status, AGORA.minusSeconds(1)).permiteExpiracao(AGORA)).isFalse();
     }
 
     @Test

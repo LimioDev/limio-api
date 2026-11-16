@@ -341,7 +341,6 @@ nenhuma candidatura. Detalhe completo em `docs/features/ETI-66-expirar-anuncio-s
 
 Não existe status `EXPIRADO`: é `ENCERRADO` com `motivoEncerramento = "Expirado sem candidatos"`, como o ETI-63 já
 deixava previsto. O "combinado" não muda o anúncio (só a candidatura), então "sem nenhuma candidatura" já exclui o
-escolhido. `Anuncio` ganhou `permiteExpiracao` e `expirar`; `ExpirarAnuncioUseCase` (bean à parte, por causa do proxy
-transacional) trava `ANUNCIO`, confere de novo e publica `AnuncioExpiradoEvent` (`comum/eventos/`, sem consumidor
+escolhido. `Anuncio` ganhou `permiteExpiracao` e `expirar`; `ExpirarAnunciosSemCandidatosUseCase` (uma transação por anúncio, via `TransactionTemplate`) trava `ANUNCIO`, confere de novo e publica `AnuncioExpiradoEvent` (`comum/eventos/`, sem consumidor
 até a US56). Sem migration, sem mudança no mural e sem tocar na cota. Propriedades `anuncio.expiracao.cron` e
 `anuncio.expiracao.lote`; o cron fica desligado (`-`) nos testes.
