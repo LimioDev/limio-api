@@ -22,6 +22,7 @@ public class ServicoCombinadoMapper {
         ResumoChatDoServico chat = servico.chat();
         return new ServicoCombinadoResponse(
                 anuncio.getId(),
+                servico.candidaturaId(),
                 anuncio.getStatus(),
                 anuncio.getTitulo(),
                 anuncio.getDescricao(),
@@ -47,6 +48,7 @@ public class ServicoCombinadoMapper {
     private static OutraParteServicoResponse toResponse(OutraParteDoServico outraParte) {
         LinkTemporario foto = outraParte.foto();
         return new OutraParteServicoResponse(outraParte.nome(), foto == null ? null : foto.url(),
-                foto == null ? null : foto.expiraEm(), outraParte.telefone(), outraParte.gold());
+                foto == null ? null : foto.expiraEm(), outraParte.telefone(), outraParte.gold(),
+                outraParte.qtdAvaliacoes(), outraParte.mediaAvaliacoes());
     }
 }

@@ -9,12 +9,15 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.limio.api.comum.midia.LinkTemporario;
+import com.limio.api.comum.portas.ConsultaAvaliacoes;
 import com.limio.api.comum.portas.ConsultaCategoria;
 import com.limio.api.comum.portas.ConsultaChatDoServico;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.ConsultaFotoPerfil;
 import com.limio.api.comum.portas.ConsultaPlanoPrestador;
 import com.limio.api.comum.portas.DadosUsuario;
+import com.limio.api.comum.portas.ResumoAvaliacoes;
 import com.limio.api.comum.portas.ResumoCategoria;
 import com.limio.api.comum.portas.ResumoChatDoServico;
 import com.limio.api.comum.portas.enums.Plano;
@@ -54,6 +57,7 @@ public class ConsultarServicoUseCase {
     private final ConsultaFotoPerfil consultaFotoPerfil;
     private final ConsultaPlanoPrestador consultaPlanoPrestador;
     private final ConsultaChatDoServico consultaChatDoServico;
+    private final ConsultaAvaliacoes consultaAvaliacoes;
 
     public ConsultarServicoUseCase(AnuncioService anuncioService,
             AplicacaoService aplicacaoService,
@@ -62,7 +66,8 @@ public class ConsultarServicoUseCase {
             ConsultaDadosUsuario consultaDadosUsuario,
             ConsultaFotoPerfil consultaFotoPerfil,
             ConsultaPlanoPrestador consultaPlanoPrestador,
-            ConsultaChatDoServico consultaChatDoServico) {
+            ConsultaChatDoServico consultaChatDoServico,
+            ConsultaAvaliacoes consultaAvaliacoes) {
         this.anuncioService = anuncioService;
         this.aplicacaoService = aplicacaoService;
         this.reagendamentoService = reagendamentoService;
@@ -71,6 +76,7 @@ public class ConsultarServicoUseCase {
         this.consultaFotoPerfil = consultaFotoPerfil;
         this.consultaPlanoPrestador = consultaPlanoPrestador;
         this.consultaChatDoServico = consultaChatDoServico;
+        this.consultaAvaliacoes = consultaAvaliacoes;
     }
 
     @Transactional(readOnly = true)
@@ -98,18 +104,29 @@ public class ConsultarServicoUseCase {
         ResumoChatDoServico chat = consultaChatDoServico.buscar(escolhida.getId(), usuarioId).orElse(null);
         Instant prazoCancelamentoEm = anuncio.getDataHoraPretendida().minus(PRAZO_CANCELAMENTO);
 
-        return new ServicoCombinado(anuncio, categoria, escolhida.getEscolhidaEm(), prazoCancelamentoEm, outraParte,
-                reagendamentoService.contarAceitos(anuncioId), LIMITE_REAGENDAMENTOS, propostaPendente, chat);
+        return new ServicoCombinado(anuncio, escolhida.getId(), categoria, escolhida.getEscolhidaEm(),
+                prazoCancelamentoEm, outraParte, reagendamentoService.contarAceitos(anuncioId), LIMITE_REAGENDAMENTOS,
+                propostaPendente, chat);
     }
 
-    /** Vazio se a conta da outra parte já foi encerrada. GOLD só é calculado pro Empregador ver do Prestador. */
+    /**
+     * Vazio se a conta da outra parte já foi encerrada. GOLD e reputação só são calculados pro Empregador ver do
+     * Prestador, como na lista de candidatos (ETI-67): não existe GOLD de Empregador, e a reputação dele já
+     * aparece no detalhe do mural.
+     */
     private OutraParteDoServico outraParte(UUID outraParteId, boolean souEmpregador) {
         Optional<DadosUsuario> dados = consultaDadosUsuario.buscarPorId(outraParteId);
         if (dados.isEmpty()) {
             return OutraParteDoServico.CONTA_ENCERRADA;
         }
-        Boolean gold = souEmpregador ? consultaPlanoPrestador.planoAtual(outraParteId) == Plano.GOLD : null;
-        return new OutraParteDoServico(dados.get().nomeCompleto(),
-                consultaFotoPerfil.buscarFoto(outraParteId).orElse(null), dados.get().telefone(), gold);
+        LinkTemporario foto = consultaFotoPerfil.buscarFoto(outraParteId).orElse(null);
+        if (!souEmpregador) {
+            return new OutraParteDoServico(dados.get().nomeCompleto(), foto, dados.get().telefone(), null, null, null);
+        }
+        boolean gold = consultaPlanoPrestador.planoAtual(outraParteId) == Plano.GOLD;
+        ResumoAvaliacoes reputacao = consultaAvaliacoes.resumir(List.of(outraParteId))
+                .getOrDefault(outraParteId, ResumoAvaliacoes.SEM_AVALIACOES);
+        return new OutraParteDoServico(dados.get().nomeCompleto(), foto, dados.get().telefone(), gold,
+                reputacao.quantidade(), reputacao.media());
     }
 }

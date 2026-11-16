@@ -41,7 +41,7 @@ mesmo a coluna já existindo (V13).
 | Status, data/hora vigente, endereço completo e bairro | Lidos direto do `Anuncio` (`enderecoCompletoSnapshot`, `bairroRegiaoSnapshot`). Reagendamento aceito mudaria a data vigente (ETI-99), mas hoje nunca existe um aceito. |
 | Dados da outra parte: nome, foto, telefone | `ConsultaDadosUsuario` + `ConsultaFotoPerfil`, completos (contato já liberado) — diferente do nome abreviado de antes da escolha. Conta encerrada: tudo `null` (`OutraParteDoServico.CONTA_ENCERRADA`). |
 | GOLD só pro Empregador ver do Prestador | `ConsultaPlanoPrestador`, só chamada quando quem consulta é o Empregador; `null` no sentido contrário (não existe GOLD de Empregador). |
-| Média de avaliações | **Não implementado.** Não existe módulo de avaliações (mesma situação da PR#27/ETI-67); como não há nenhum dado real pra abstrair, não criei outra porta `ConsultaAvaliacoes` duplicada — o campo simplesmente não está na resposta ainda. Ver "Pontos em aberto". |
+| Média de avaliações | Implementado no ETI-138: `outraParte.qtdAvaliacoes`/`outraParte.mediaAvaliacoes` pela porta `ConsultaAvaliacoes` (que passou a existir no ETI-107), só pro Empregador vendo o Prestador, como o `gold`. Ver `ETI-138-candidatura-id-no-servico-combinado.md`. |
 | Andamento: `escolhidaEm`, `iniciadoEm`, `checkoutEm`, `validadoEm` | `escolhidaEm` vem da candidatura; os outros três são colunas que já existem em `Anuncio` desde a V13, mas nenhum usecase ainda os preenche (ETI-88, ETI-92/93, ETI-90/91) — saem `null` na prática. |
 | Prazo de cancelamento (data vigente − 24h) | Calculado no usecase (`dataHoraPretendida.minus(24h)`), sem tocar a entity. |
 | Carência de reagendamento aceito (ETI-94/ETI-95) | **Não implementado** — a regra de carência não está definida em nenhum card ainda (`pendente-definicao`). Nenhum campo "falso" foi criado pra não sugerir uma lógica que não existe; ver "Pontos em aberto". |
@@ -66,10 +66,8 @@ mesmo a coluna já existindo (V13).
   lote (`Map<candidaturaId, chatId>`, pra lista de candidatos) e não inclui não-lidas; esta é de um item só,
   com contagem por quem consulta. Nomes diferentes de propósito, pra não colidir com a #27 quando ela
   mergear.
-- **Sem porta de avaliações.** Diferente do chat/especialidades (que têm dado real, só sem a feature de
-  avaliação em si), avaliação não tem módulo nem tabela — criar uma porta que só devolve "vazio" pra sempre
-  seria abstração sem necessidade (e colidiria de novo com a `ConsultaAvaliacoes` da PR#27). Quando o módulo
-  de avaliações existir, aí sim a porta nasce com um consumidor real dos dois lados.
+- **Sem porta de avaliações** (na época do ETI-86). O módulo de avaliações chegou no ETI-107, e o ETI-138 passou a
+  usar a `ConsultaAvaliacoes` aqui.
 - **`ReagendamentoService.contarAceitos` reusa `findByAnuncioIdInAndStatus`** (já existe, usado por
   `buscarPendentesDosAnuncios`) — nenhum método novo no repository.
 
@@ -83,7 +81,7 @@ mesmo a coluna já existindo (V13).
 
 ## Pontos em aberto (decisão do PO / dependência de outro card)
 
-- **Média de avaliações**: aguarda o módulo de avaliações.
+- ~~**Média de avaliações**~~: resolvido no ETI-138.
 - **Carência de reagendamento aceito**: regra ainda não definida em nenhum card (ETI-94/95).
 - **Quem propôs o reagendamento e o prazo de resposta**: schema de `reagendamento` precisa de coluna nova
   (ETI-99).

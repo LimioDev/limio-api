@@ -174,12 +174,15 @@ class ConsultarServicoStoryTest {
         consultar(token, anuncio.getId())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.anuncioId", is(anuncio.getId().toString())))
+                .andExpect(jsonPath("$.candidaturaId", is(candidatura.getId().toString())))
                 .andExpect(jsonPath("$.status", is("EM_ANDAMENTO")))
                 .andExpect(jsonPath("$.enderecoCompleto", is("Rua dos Pinheiros, 100, Pinheiros, São Paulo - SP")))
                 .andExpect(jsonPath("$.bairroRegiao", is("Pinheiros")))
                 .andExpect(jsonPath("$.outraParte.nome", is("Rafael Souza")))
                 .andExpect(jsonPath("$.outraParte.telefone", is("+5511999998888")))
                 .andExpect(jsonPath("$.outraParte.gold", is(false)))
+                .andExpect(jsonPath("$.outraParte.qtdAvaliacoes", is(0)))
+                .andExpect(jsonPath("$.outraParte.mediaAvaliacoes", nullValue()))
                 .andExpect(jsonPath("$.escolhidaEm", notNullValue()))
                 .andExpect(jsonPath("$.reagendamentosAceitos", is(0)))
                 .andExpect(jsonPath("$.limiteReagendamentos", is(2)))
@@ -194,9 +197,29 @@ class ConsultarServicoStoryTest {
 
         consultar(token, anuncio.getId())
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.candidaturaId", is(candidatura.getId().toString())))
                 .andExpect(jsonPath("$.outraParte.nome", is("Maria da Silva")))
                 .andExpect(jsonPath("$.outraParte.telefone", is("+5511999998888")))
-                .andExpect(jsonPath("$.outraParte.gold", nullValue()));
+                .andExpect(jsonPath("$.outraParte.gold", nullValue()))
+                .andExpect(jsonPath("$.outraParte.qtdAvaliacoes", nullValue()))
+                .andExpect(jsonPath("$.outraParte.mediaAvaliacoes", nullValue()));
+    }
+
+    /** ETI-138: "Conversar com (nome)" abre o chat com o candidaturaId devolvido, pelos dois lados. */
+    @Test
+    void dadoCandidaturaIdDoServico_quandoAbreOChatPelosDoisLados_entao200() throws Exception {
+        for (String email : new String[] {"maria@example.com", "rafael@example.com"}) {
+            String token = logar(email);
+            String corpo = consultar(token, anuncio.getId())
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+            String candidaturaId = objectMapper.readTree(corpo).get("candidaturaId").asString();
+
+            mockMvc.perform(get("/candidaturas/{id}/chat", candidaturaId)
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.candidaturaId", is(candidatura.getId().toString())));
+        }
     }
 
     @Test
