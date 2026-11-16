@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.hibernate.annotations.DynamicUpdate;
 
 import com.limio.api.comum.base.BaseEntity;
+import com.limio.api.comum.texto.NomeHelper;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -46,7 +47,7 @@ public class PerfilEmpregador extends BaseEntity {
     private int qtdAvaliacoes = 0;
 
     /** Conta encerrada (UC10): o nome de exibição deixa de identificar a pessoa. */
-    public static final String NOME_CONTA_ENCERRADA = "Conta encerrada";
+    public static final String NOME_CONTA_ENCERRADA = NomeHelper.CONTA_ENCERRADA;
 
     /** Média e quantidade recalculadas por {@code moderacao} (ETI-107); este perfil só guarda. */
     public void registrarAvaliacoes(BigDecimal mediaAvaliacoes, int qtdAvaliacoes) {

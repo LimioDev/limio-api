@@ -9,18 +9,14 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.midia.ArmazenamentoService;
-import com.limio.api.comum.midia.LinkTemporario;
 import com.limio.api.comum.midia.Midia;
 import com.limio.api.comum.midia.MidiaService;
-import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
 import com.limio.api.comum.portas.ConsultaCategoria;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.ConsultaPerfilEmpregador;
@@ -54,8 +50,6 @@ import com.limio.api.modulos.anuncio.excecao.SomentePrestadorVeMuralException;
 @Service
 public class ListarMuralUseCase {
 
-    private static final Logger log = LoggerFactory.getLogger(ListarMuralUseCase.class);
-
     private final AnuncioService anuncioService;
     private final ConsultaDadosUsuario consultaDadosUsuario;
     private final ConsultaPerfilPrestador consultaPerfilPrestador;
@@ -88,7 +82,7 @@ public class ListarMuralUseCase {
     public Page<ItemDoMural> executar(UUID usuarioId, PapelUsuario papelAtivo, Set<UUID> categorias, Integer raioKm,
             QuandoMural quando, int pagina, int tamanho) {
         exigirPrestador(papelAtivo);
-        exigirContatosConfirmados(usuarioId);
+        exigirEmailConfirmado(usuarioId);
         ResumoPerfilPrestador perfil = consultaPerfilPrestador.buscarCompleto(usuarioId)
                 .orElseThrow(PerfilIncompletoException::new);
 
@@ -123,7 +117,9 @@ public class ListarMuralUseCase {
                 linha.getTitulo(),
                 Optional.ofNullable(categorias.get(linha.getCategoriaId())).orElseThrow(() ->
                         new IllegalStateException("categoria do anúncio não existe: " + linha.getId())),
-                Optional.ofNullable(fotos.get(linha.getId())).flatMap(this::link).orElse(null),
+                Optional.ofNullable(fotos.get(linha.getId()))
+                        .flatMap(foto -> armazenamentoService.gerarLinkSeDisponivel(foto.getUrlS3()))
+                        .orElse(null),
                 Optional.ofNullable(empregadores.get(linha.getContratanteId())).orElseThrow(() ->
                         new IllegalStateException("empregador do anúncio não existe: " + linha.getId())),
                 linha.getDataHoraPretendida(),
@@ -139,21 +135,12 @@ public class ListarMuralUseCase {
         }
     }
 
-    private void exigirContatosConfirmados(UUID usuarioId) {
-        boolean confirmados = consultaDadosUsuario.buscarPorId(usuarioId)
-                .map(DadosUsuario::contatosConfirmados)
+    private void exigirEmailConfirmado(UUID usuarioId) {
+        boolean confirmado = consultaDadosUsuario.buscarPorId(usuarioId)
+                .map(DadosUsuario::emailConfirmado)
                 .orElse(false);
-        if (!confirmados) {
-            throw new ContatosNaoConfirmadosException("Confirme seu e-mail e seu telefone para ver os anúncios.");
-        }
-    }
-
-    private Optional<LinkTemporario> link(Midia foto) {
-        try {
-            return Optional.of(armazenamentoService.gerarLink(foto.getUrlS3()));
-        } catch (ArmazenamentoIndisponivelException e) {
-            log.warn("link de mídia indisponível; mural segue sem a foto do anúncio");
-            return Optional.empty();
+        if (!confirmado) {
+            throw new ContatosNaoConfirmadosException("Confirme seu e-mail para ver os anúncios.");
         }
     }
 }

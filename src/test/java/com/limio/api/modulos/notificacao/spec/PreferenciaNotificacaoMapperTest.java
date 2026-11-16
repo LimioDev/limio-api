@@ -15,10 +15,10 @@ class PreferenciaNotificacaoMapperTest {
     private final PreferenciaNotificacaoMapper mapper = new PreferenciaNotificacaoMapper();
 
     @Test
-    void toResponseDeveExporSoOsQuatroCanais() {
+    void toResponseDeveExporSoOsTresCanais() {
         PreferenciaNotificacao entity = PreferenciaNotificacao.builder()
-                .usuarioId(UUID.randomUUID()).push(false).email(true).sms(false).whatsapp(true).build();
+                .usuarioId(UUID.randomUUID()).push(false).email(true).whatsapp(true).build();
 
-        assertThat(mapper.toResponse(entity)).isEqualTo(new PreferenciaNotificacaoResponse(false, true, false, true));
+        assertThat(mapper.toResponse(entity)).isEqualTo(new PreferenciaNotificacaoResponse(false, true, true));
     }
 }

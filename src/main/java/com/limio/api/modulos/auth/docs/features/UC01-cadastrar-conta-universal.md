@@ -15,11 +15,11 @@ Visitante cria uma conta única (CPF + e-mail) via `POST /auth/cadastro`. Crité
 
 ## Decisão técnica
 
-- **Sem OTP nesta primeira implementação.** A planilha UC01 descreve um passo de verificação de telefone por SMS antes
-  de criar a conta; os critérios de aceite do card, porém, não exigem OTP. Implementamos o cadastro síncrono
-  (recusa/cria na mesma requisição) e deixamos `telefone_confirmado_em`/`email_confirmado_em` como colunas nulas,
-  prontas para um módulo de verificação futuro (gateway SMS ainda não escolhido). Ver `docs/history/` quando essa
-  decisão for revisitada.
+- **Sem OTP.** A planilha UC01 descreve um passo de verificação de telefone por SMS antes de criar a conta; os
+  critérios de aceite do card, porém, não exigem OTP. Implementamos o cadastro síncrono (recusa/cria na mesma
+  requisição) e deixamos `email_confirmado_em` nulo até a confirmação por e-mail (TICKET-0047). UC04 (OTP por SMS)
+  saiu de escopo em definitivo no ETI-134: o telefone é dado de contato obrigatório/editável, sem etapa de
+  confirmação — e-mail é o único canal. Ver `docs/history/`.
 - **`cpf_bloqueado` como tabela própria**, não um status `EXCLUIDA` em `usuario`: mantém a regra de cooldown isolada e
   não obriga o módulo de exclusão de conta (fora de escopo deste card) a decidir agora como fica o registro do
   usuário excluído.
@@ -31,7 +31,7 @@ Visitante cria uma conta única (CPF + e-mail) via `POST /auth/cadastro`. Crité
 
 ## Fora de escopo (não implementado aqui)
 
-- Verificação de telefone por OTP/SMS (UC04, ainda pendente). A confirmação de e-mail entrou no TICKET-0047: o
-  cadastro envia o link e `POST /auth/confirmar-email` o consome.
+- Verificação de telefone por OTP/SMS (UC04) — fora de escopo em definitivo (ETI-134). A confirmação de e-mail
+  entrou no TICKET-0047: o cadastro envia o link e `POST /auth/confirmar-email` o consome.
 - Login/autenticação (`POST /auth/login`) e emissão de JWT — entrou no TICKET-0032.
 - Caso de uso de exclusão de conta, que é quem populará `cpf_bloqueado` na prática — entrou no TICKET-0034.

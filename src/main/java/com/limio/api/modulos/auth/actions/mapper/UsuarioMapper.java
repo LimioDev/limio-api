@@ -48,7 +48,6 @@ public class UsuarioMapper implements BaseMapper<Usuario, CadastroRequest, Usuar
         return new ContatoResponse(
                 entity.getEmail(),
                 TelefoneHelper.paraInternacional(entity.getTelefone()).orElse(null),
-                entity.getEmailConfirmadoEm(),
-                entity.getTelefoneConfirmadoEm());
+                entity.getEmailConfirmadoEm());
     }
 }

@@ -75,7 +75,7 @@ class RemoverPreferenciaDaContaEncerradaStoryTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(
-                        Map.of("push", true, "email", false, "sms", false, "whatsapp", false))))
+                        Map.of("push", true, "email", false, "whatsapp", false))))
                 .andExpect(status().isOk());
         assertThat(jdbc.queryForObject("select count(*) from preferencia_notificacao", Integer.class)).isEqualTo(1);
 

@@ -6,14 +6,15 @@
 
 ## Regra de negócio implementada
 
-Usuário autenticado consulta e atualiza os canais de notificação (Push, E-mail, SMS e WhatsApp) da própria conta.
-Critérios de aceite cobertos:
+Usuário autenticado consulta e atualiza os canais de notificação (Push, E-mail e WhatsApp) da própria conta. SMS
+saiu dos canais no ETI-134 (nunca chegou a disparar nada — não tem relação com a confirmação de telefone por
+OTP, UC04, que também saiu de escopo no mesmo card). Critérios de aceite cobertos:
 
-- `push`, `email`, `sms` e `whatsapp` são booleanos e obrigatórios (validação no record de request; ausente ou não
+- `push`, `email` e `whatsapp` são booleanos e obrigatórios (validação no record de request; ausente ou não
   booleano → `400`).
 - Cada canal liga e desliga de forma independente.
 - O usuário só vê e altera as próprias preferências (`PreferenciaNotificacao` do usuário logado).
-- Padrões de conta nova: Push ligado; E-mail, SMS e WhatsApp desligados. O card prevê WhatsApp igual ao opt-in do
+- Padrões de conta nova: Push ligado; E-mail e WhatsApp desligados. O card prevê WhatsApp igual ao opt-in do
   cadastro; enquanto o cadastro não coleta esse opt-in, o padrão é `false` (ver pendências).
 - Consultar: `200` com o estado salvo. Atualizar: `200` com o estado salvo. Sem login: `401`.
 - WhatsApp:
@@ -36,7 +37,7 @@ Critérios de aceite cobertos:
 | Atualizar | `PUT /conta/preferencias-notificacao` | `200` com o estado salvo | `400` validação; `401` sem login |
 
 ```json
-{ "push": true, "email": false, "sms": false, "whatsapp": false }
+{ "push": true, "email": false, "whatsapp": false }
 ```
 
 ### Autenticação
@@ -51,10 +52,11 @@ rota. Sem token válido, o `SecurityConfig` responde `401` (`NAO_AUTENTICADO`) a
 - **Subentidade `preferencianotificacao/` do módulo `modulos/notificacao/`**, seguindo ADR-0001: depende só de
   `comum/`, nunca importa classe interna de `modulos/auth`.
 - **Tabela `preferencia_notificacao` com um registro por usuário** (unicidade em `usuario_id`; colunas `push`,
-  `email`, `sms`, `whatsapp` `BOOLEAN NOT NULL`, `criado_em`, `atualizado_em`), no padrão de `usuario` e
+  `email`, `whatsapp` `BOOLEAN NOT NULL`, `criado_em`, `atualizado_em`), no padrão de `usuario` e
   `cpf_bloqueado`. Alternativa descartada: colunas de preferência dentro de `usuario` — acoplaria um assunto de
-  notificação ao cadastro de conta.
-- **Atualização de estado completo** (`PUT` com os quatro campos obrigatórios), em vez de `PATCH` parcial: casa com o
+  notificação ao cadastro de conta. Coluna `sms` existiu até o ETI-134 (removida, `V32`): nenhum fluxo a lia além
+  da própria preferência.
+- **Atualização de estado completo** (`PUT` com os três campos obrigatórios), em vez de `PATCH` parcial: casa com o
   critério "booleanos e obrigatórios" e evita ambiguidade entre "ausente" e "false".
 - **Sem registro = padrões de conta nova.** O `GET` só consulta: quando o usuário nunca salvou, devolve os padrões sem
   gravar nada. O primeiro `PUT` cria o registro; os seguintes atualizam o mesmo (um por usuário).

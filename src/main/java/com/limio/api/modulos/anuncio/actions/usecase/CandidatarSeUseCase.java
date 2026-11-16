@@ -40,8 +40,8 @@ import com.limio.api.modulos.anuncio.excecao.SomentePrestadorCandidataException;
  * candidatura → cota, do mais genérico ao mais específico):
  * <ol>
  *   <li>papel ativo {@code PRESTADOR} (403 {@code ACESSO_NEGADO}, mesmo padrão de publicar anúncio);</li>
- *   <li>telefone e e-mail confirmados ({@link ConsultaDadosUsuario}, porta pra não importar {@code
- *       modulos.auth} — ADR-0001/0003);</li>
+ *   <li>e-mail confirmado ({@link ConsultaDadosUsuario}, porta pra não importar {@code modulos.auth} —
+ *       ADR-0001/0003; ETI-134, telefone não exige confirmação);</li>
  *   <li>anúncio existe, não é do próprio Prestador, está {@code PUBLICADO} e sem candidatura
  *       escolhida;</li>
  *   <li>Prestador ainda não tem candidatura ativa pra este anúncio;</li>
@@ -80,7 +80,7 @@ public class CandidatarSeUseCase {
     @Transactional
     public Aplicacao executar(UUID anuncioId, UUID prestadorId, PapelUsuario papelAtivo) {
         exigirPrestador(papelAtivo);
-        exigirContatosConfirmados(prestadorId);
+        exigirEmailConfirmado(prestadorId);
 
         // Lock antes de ler o anúncio: sem ele, uma candidatura nasceria ENVIADA depois que a escolha já
         // encerrou as demais, e ficaria órfã num anúncio com escolhida (ver EscopoTrava.ANUNCIO).
@@ -127,11 +127,11 @@ public class CandidatarSeUseCase {
      * Mesmo comportamento de {@code PublicarAnuncioUseCase}: conta sumida/encerrada entre o token ser emitido e
      * esta chamada também cai em {@code CONTATOS_NAO_CONFIRMADOS}.
      */
-    private void exigirContatosConfirmados(UUID prestadorId) {
-        boolean confirmados = consultaDadosUsuario.buscarPorId(prestadorId)
-                .map(DadosUsuario::contatosConfirmados)
+    private void exigirEmailConfirmado(UUID prestadorId) {
+        boolean confirmado = consultaDadosUsuario.buscarPorId(prestadorId)
+                .map(DadosUsuario::emailConfirmado)
                 .orElse(false);
-        if (!confirmados) {
+        if (!confirmado) {
             throw new ContatosNaoConfirmadosException();
         }
     }

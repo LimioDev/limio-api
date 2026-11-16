@@ -79,7 +79,7 @@ aparelho" (o token de acesso/JWT não carrega id de sessão) — mesmo campo que
 - **Provedor de e-mail**: Resend. Comportamento em dev a definir na implementação (ex.: sandbox/log em vez de
   envio real) — não bloqueia este card.
 - **Diferenciar recuperação de senha de confirmação de e-mail**: `CanalVerificacao` continua só o meio de envio
-  (`EMAIL`/`SMS`, sem valor por operação). `VerificacaoContato` ganha campo novo de finalidade — enum
+  (só `EMAIL` — `SMS` saiu do enum no ETI-134, nunca teve uso). `VerificacaoContato` ganha campo novo de finalidade — enum
   `FinalidadeVerificacao` (`CONFIRMACAO_EMAIL`, `RECUPERACAO_SENHA`, ...) — separado do canal. Repõe o que o
   campo `proposito` fazia no diagrama antigo, sem acoplar finalidade ao meio de envio.
 
@@ -102,8 +102,8 @@ aparelho" (o token de acesso/JWT não carrega id de sessão) — mesmo campo que
 
 - ~~`FinalidadeVerificacao.CONFIRMACAO_EMAIL` sem emissor~~: emitida pela troca de e-mail (TICKET-0048) e pelo
   cadastro, e consumida pela UC05 (TICKET-0047).
-- `CanalVerificacao.SMS` idem: não usado por nenhum fluxo hoje (recuperação de senha e confirmação de e-mail
-  saem só por `EMAIL`).
+- ~~`CanalVerificacao.SMS`~~: removido do enum no ETI-134, nunca teve uso (recuperação de senha e confirmação de
+  e-mail saem só por `EMAIL`).
 
 ## Nomenclatura
 

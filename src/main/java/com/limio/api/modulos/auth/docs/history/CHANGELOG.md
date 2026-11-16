@@ -245,3 +245,14 @@ e o código não fazia. Detalhe em `docs/features/TICKET-0047-paginas-web-nova-s
   `auth.login.max-falhas-por-ip` (30/15 min, só IP público).
 - **E-mails de recuperação e de senha alterada em `AFTER_COMMIT`**, como os demais.
 - Aprovadas como estão as decisões "a validar" do TICKET-0032 e do TICKET-0048.
+
+## 2026-11 — UC04 (OTP por SMS) fora de escopo em definitivo (ETI-134)
+
+Confirmação de telefone por SMS nunca chegou a ser implementada (campo `telefone_confirmado_em` e valor
+`CanalVerificacao.SMS` eram andaime morto, nunca escritos/lidos por nenhum fluxo de produção). Decisão do
+PO: telefone segue dado de contato obrigatório/editável (`PATCH /auth/telefone`), sem etapa de confirmação
+nenhuma. `TrocarTelefoneUseCase` parou de zerar `telefoneConfirmadoEm` ao trocar o número (não tinha mais
+sentido zerar uma confirmação que nunca existia de fato). `ContatoResponse`, `PerfilEmpregadorResponse` e
+`comum/portas/DadosUsuario` deixaram de expor `telefoneConfirmadoEm`; `CanalVerificacao.SMS` saiu do enum.
+A coluna `usuario.telefone_confirmado_em` continua no banco (unused), por ser inofensiva e não exigir
+migration — decisão revisável se alguém reintroduzir OTP.

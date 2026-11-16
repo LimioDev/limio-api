@@ -285,6 +285,120 @@ class EncerrarContaStoryTest {
                 .containsExactly("hash-ativa");
     }
 
+    @Test
+    void dadoSessoesRevogadasEAtivas_quandoRodaALimpezaDeRetencao_entaoApagaSoRevogadaHaMaisDe6Meses() {
+        Instant agora = Instant.now();
+        Usuario usuario = cadastrar();
+        Instant expiraNoFuturo = agora.plus(Duration.ofDays(30));
+
+        // expiraEm no futuro isola o ramo "revogadaEm" da query (o ramo "expiraEm" já tem teste próprio).
+        salvarSessao(usuario, "hash-revogada-antiga", expiraNoFuturo, agora.minus(Duration.ofDays(181)));
+        salvarSessao(usuario, "hash-revogada-recente", expiraNoFuturo, agora.minus(Duration.ofDays(170)));
+        Sessao ativaAntiga = salvarSessao(usuario, "hash-ativa-antiga", expiraNoFuturo, null);
+        jdbcTemplate.update("update sessao set criado_em = ? where id = ?",
+                java.sql.Timestamp.from(agora.minus(Duration.ofDays(400))), ativaAntiga.getId());
+
+        limparRetencaoUseCase.executar();
+
+        assertThat(sessaoRepository.findAll())
+                .extracting(Sessao::getRefreshTokenHash)
+                .containsExactlyInAnyOrder("hash-revogada-recente", "hash-ativa-antiga");
+    }
+
+    @Test
+    void dadoLogDentroDoPrazoDe5Anos_quandoRodaALimpezaDeRetencao_entaoMantem() {
+        LogAuditoria logDentroDoPrazo = LogAuditoria.builder()
+                .entidade("Usuario").tipoAcao(TipoAcaoAuditoria.CONTA_ENCERRADA).build();
+        logAuditoriaRepository.save(logDentroDoPrazo);
+        forcarCriadoEm(logDentroDoPrazo.getId(), Instant.now().minus(Duration.ofDays(1820)));
+
+        limparRetencaoUseCase.executar();
+
+        assertThat(logAuditoriaRepository.findAll())
+                .extracting(LogAuditoria::getId)
+                .containsExactly(logDentroDoPrazo.getId());
+    }
+
+    @Test
+    void dadoLimpezaJaExecutada_quandoRodaDeNovoNoMesmoDia_entaoNaoFalhaENaoApagaMais() {
+        Instant agora = Instant.now();
+        Usuario usuario = cadastrar();
+
+        CpfBloqueado liberado = new CpfBloqueado();
+        liberado.setCpfHmac("hmac-liberado");
+        liberado.setBloqueadoEm(agora.minus(Duration.ofDays(400)));
+        liberado.setLiberadoEm(agora.minus(Duration.ofDays(1)));
+        cpfBloqueadoRepository.save(liberado);
+
+        CpfBloqueado aindaBloqueado = new CpfBloqueado();
+        aindaBloqueado.setCpfHmac("hmac-ainda-bloqueado");
+        aindaBloqueado.setBloqueadoEm(agora);
+        aindaBloqueado.setLiberadoEm(agora.plus(Duration.ofDays(300)));
+        cpfBloqueadoRepository.save(aindaBloqueado);
+
+        LogAuditoria logAntigo = LogAuditoria.builder()
+                .entidade("Usuario").tipoAcao(TipoAcaoAuditoria.CONTA_ENCERRADA).build();
+        logAuditoriaRepository.save(logAntigo);
+        forcarCriadoEm(logAntigo.getId(), agora.minus(Duration.ofDays(1826)));
+        logAuditoriaRepository.save(LogAuditoria.builder()
+                .entidade("Usuario").tipoAcao(TipoAcaoAuditoria.CONTA_ENCERRADA).build());
+
+        salvarSessao(usuario, "hash-revogada-antiga", agora.plus(Duration.ofDays(30)), agora.minus(Duration.ofDays(181)));
+        salvarSessao(usuario, "hash-ativa", agora.plus(Duration.ofDays(30)), null);
+
+        limparRetencaoUseCase.executar();
+        long cpfs = cpfBloqueadoRepository.count();
+        long logs = logAuditoriaRepository.count();
+        long sessoes = sessaoRepository.count();
+        assertThat(cpfs).isEqualTo(1);
+        assertThat(logs).isEqualTo(1);
+        assertThat(sessoes).isEqualTo(1);
+
+        limparRetencaoUseCase.executar();
+
+        assertThat(cpfBloqueadoRepository.count()).isEqualTo(cpfs);
+        assertThat(logAuditoriaRepository.count()).isEqualTo(logs);
+        assertThat(sessaoRepository.count()).isEqualTo(sessoes);
+        assertThat(cpfBloqueadoRepository.findAll())
+                .extracting(CpfBloqueado::getCpfHmac)
+                .containsExactly("hmac-ainda-bloqueado");
+        assertThat(sessaoRepository.findAll())
+                .extracting(Sessao::getRefreshTokenHash)
+                .containsExactly("hash-ativa");
+    }
+
+    @Test
+    void dadoCpfDeContaEncerradaComCooldownVencido_quandoRodaALimpezaERecadastra_entaoCadastroConclui()
+            throws Exception {
+        cadastrar();
+        var celular = logar("celular");
+        encerrarConta(celular.token(), true).andExpect(status().isOk());
+
+        // Simula o fim do cooldown de 12 meses: liberado ontem.
+        jdbcTemplate.update("update cpf_bloqueado set liberado_em = ?",
+                java.sql.Timestamp.from(Instant.now().minus(Duration.ofDays(1))));
+
+        limparRetencaoUseCase.executar();
+
+        assertThat(cpfBloqueadoRepository.findAll()).isEmpty();
+
+        CadastroRequest novoCadastro = new CadastroRequest(
+                "Maria Nova", "maria.nova@example.com", "11988887777", "outraSenhaForte1", CPF,
+                LocalDate.now().minusYears(30), "Rio de Janeiro/RJ");
+
+        mockMvc.perform(post("/auth/cadastro")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(novoCadastro)))
+                .andExpect(status().isCreated());
+    }
+
+    private Sessao salvarSessao(Usuario usuario, String hash, Instant expiraEm, Instant revogadaEm) {
+        return sessaoRepository.save(Sessao.builder()
+                .usuario(usuario).refreshTokenHash(hash).ultimoUsoEm(Instant.now())
+                .expiraEm(expiraEm).revogadaEm(revogadaEm)
+                .build());
+    }
+
     /**
      * {@code criadoEm} é {@code @CreationTimestamp}: Hibernate ignora qualquer
      * valor setado em memória e não inclui a coluna num UPDATE normal — só SQL

@@ -90,7 +90,6 @@ class PreferenciaNotificacaoStoryTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.push").value(true))
                 .andExpect(jsonPath("$.email").value(false))
-                .andExpect(jsonPath("$.sms").value(false))
                 .andExpect(jsonPath("$.whatsapp").value(false));
 
         assertThat(repository.count()).isZero();
@@ -99,20 +98,18 @@ class PreferenciaNotificacaoStoryTest {
     @Test
     void dadoUsuarioLogado_quandoAtualiza_entaoRecebe200ComEstadoSalvoEConsultaDevolveOMesmo() throws Exception {
         UUID usuarioId = UUID.randomUUID();
-        String corpo = "{\"push\":false,\"email\":true,\"sms\":true,\"whatsapp\":false}";
+        String corpo = "{\"push\":false,\"email\":true,\"whatsapp\":false}";
 
         atualizar(usuarioId, corpo)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.push").value(false))
                 .andExpect(jsonPath("$.email").value(true))
-                .andExpect(jsonPath("$.sms").value(true))
                 .andExpect(jsonPath("$.whatsapp").value(false));
 
         consultar(usuarioId)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.push").value(false))
                 .andExpect(jsonPath("$.email").value(true))
-                .andExpect(jsonPath("$.sms").value(true))
                 .andExpect(jsonPath("$.whatsapp").value(false));
     }
 
@@ -120,25 +117,24 @@ class PreferenciaNotificacaoStoryTest {
     void dadoUsuario_quandoAtualizaDuasVezes_entaoMantemUmUnicoRegistroComOUltimoEstado() throws Exception {
         UUID usuarioId = UUID.randomUUID();
 
-        atualizar(usuarioId, "{\"push\":true,\"email\":false,\"sms\":false,\"whatsapp\":false}")
+        atualizar(usuarioId, "{\"push\":true,\"email\":false,\"whatsapp\":false}")
                 .andExpect(status().isOk());
-        atualizar(usuarioId, "{\"push\":false,\"email\":true,\"sms\":true,\"whatsapp\":false}")
+        atualizar(usuarioId, "{\"push\":false,\"email\":true,\"whatsapp\":false}")
                 .andExpect(status().isOk());
 
         assertThat(repository.count()).isEqualTo(1);
         PreferenciaNotificacao salva = repository.findByUsuarioId(usuarioId).orElseThrow();
         assertThat(salva.getPush()).isFalse();
         assertThat(salva.getEmail()).isTrue();
-        assertThat(salva.getSms()).isTrue();
     }
 
     @Test
     void dadoRegistroExistente_quandoTentaGravarOutroDoMesmoUsuario_entaoBancoRecusa() {
         UUID usuarioId = UUID.randomUUID();
         repository.saveAndFlush(PreferenciaNotificacao.builder().usuarioId(usuarioId)
-                .push(true).email(false).sms(false).whatsapp(false).build());
+                .push(true).email(false).whatsapp(false).build());
         PreferenciaNotificacao duplicada = PreferenciaNotificacao.builder().usuarioId(usuarioId)
-                .push(false).email(false).sms(false).whatsapp(false).build();
+                .push(false).email(false).whatsapp(false).build();
 
         assertThatThrownBy(() -> repository.saveAndFlush(duplicada))
                 .isInstanceOf(DataIntegrityViolationException.class);
@@ -148,7 +144,7 @@ class PreferenciaNotificacaoStoryTest {
     void dadoWhatsappTrue_quandoAtualiza_entaoRejeitaComWhatsappIndisponivelENadaGrava() throws Exception {
         UUID usuarioId = UUID.randomUUID();
 
-        atualizar(usuarioId, "{\"push\":true,\"email\":false,\"sms\":false,\"whatsapp\":true}")
+        atualizar(usuarioId, "{\"push\":true,\"email\":false,\"whatsapp\":true}")
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.codigo").value("WHATSAPP_INDISPONIVEL"));
 
@@ -160,23 +156,21 @@ class PreferenciaNotificacaoStoryTest {
         UUID usuarioA = UUID.randomUUID();
         UUID usuarioB = UUID.randomUUID();
 
-        atualizar(usuarioA, "{\"push\":false,\"email\":true,\"sms\":true,\"whatsapp\":false}")
+        atualizar(usuarioA, "{\"push\":false,\"email\":true,\"whatsapp\":false}")
                 .andExpect(status().isOk());
 
         consultar(usuarioB)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.push").value(true))
                 .andExpect(jsonPath("$.email").value(false))
-                .andExpect(jsonPath("$.sms").value(false))
                 .andExpect(jsonPath("$.whatsapp").value(false));
-        PreferenciaNotificacao doA = repository.findByUsuarioId(usuarioA).orElseThrow();
-        assertThat(doA.getSms()).isTrue();
+        assertThat(repository.findByUsuarioId(usuarioA)).isPresent();
         assertThat(repository.findByUsuarioId(usuarioB)).isEmpty();
     }
 
     @Test
     void dadoCampoAusente_quandoAtualiza_entao400SemGravar() throws Exception {
-        atualizar(UUID.randomUUID(), "{\"push\":true,\"email\":false,\"sms\":false}")
+        atualizar(UUID.randomUUID(), "{\"push\":true,\"email\":false}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.codigo").value("VALIDACAO_FALHOU"));
 
@@ -185,7 +179,7 @@ class PreferenciaNotificacaoStoryTest {
 
     @Test
     void dadoCampoComTipoInvalido_quandoAtualiza_entao400SemGravar() throws Exception {
-        atualizar(UUID.randomUUID(), "{\"push\":\"talvez\",\"email\":false,\"sms\":false,\"whatsapp\":false}")
+        atualizar(UUID.randomUUID(), "{\"push\":\"talvez\",\"email\":false,\"whatsapp\":false}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.codigo").value("VALIDACAO_FALHOU"));
 
@@ -200,7 +194,7 @@ class PreferenciaNotificacaoStoryTest {
 
         mockMvc.perform(put(ROTA)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"push\":true,\"email\":false,\"sms\":false,\"whatsapp\":false}"))
+                .content("{\"push\":true,\"email\":false,\"whatsapp\":false}"))
                 .andExpect(status().isUnauthorized());
 
         assertThat(repository.count()).isZero();

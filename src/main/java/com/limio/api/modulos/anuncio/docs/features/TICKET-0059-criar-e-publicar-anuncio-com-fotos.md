@@ -70,7 +70,7 @@ vai precisar de rota própria quando o card dele vier.
 |---|---|
 | Campo inválido, sem endereço ou com os dois | 400 `VALIDACAO_FALHOU` (o card sugeria `DADOS_INVALIDOS`; mantido o código que a API já usa) |
 | Papel ativo Prestador | 403 `ACESSO_NEGADO` (o card sugeria `PAPEL_INVALIDO`, que a PR #16 remove; mesmo código das rotas de endereço salvo) |
-| E-mail ou telefone não confirmado | 403 `CONTATOS_NAO_CONFIRMADOS` |
+| E-mail não confirmado (ETI-134: telefone não exige) | 403 `CONTATOS_NAO_CONFIRMADOS` |
 | Data e hora não estão no futuro | 422 `DATA_NO_PASSADO` |
 | Categoria inexistente ou inativa | 422 `CATEGORIA_INVALIDA` |
 | Endereço salvo inexistente, removido ou de outro Empregador | 404 `ENDERECO_NAO_ENCONTRADO` |
@@ -94,7 +94,7 @@ vai precisar de rota própria quando o card dele vier.
 | Retrato do endereço (bairro, endereço completo, lat/long) | `bairro_regiao_snapshot`, `uf_snapshot` (V21), `endereco_completo_snapshot`, `latitude_snapshot`, `longitude_snapshot`, vindos de `ConsultaEndereco` |
 | `prazoValidacaoHoras` = 24h | `anuncio.prazo-validacao-horas=24` |
 | Publica `AnuncioPublicado` | `eventos/AnuncioPublicadoEvent(anuncioId)`, dentro da transação. Ninguém escuta ainda (ETI-65) |
-| Só com telefone e e-mail confirmados e papel `EMPREGADOR` | `PublicarAnuncioUseCase`: papel do token e `ConsultaDadosUsuario` |
+| Só com e-mail confirmado e papel `EMPREGADOR` (ETI-134: telefone não exige) | `PublicarAnuncioUseCase`: papel do token e `ConsultaDadosUsuario` |
 | Fotos: mesma estrutura da foto de perfil, sem EXIF, `Midia` `FOTO_ANUNCIO` ligada ao anúncio | `AnexarFotosAnuncioUseCase` com `comum/midia` (`ImagemHelper`, `ArmazenamentoService`, `Midia.fotoAnuncio`) |
 | Fotos só em `PUBLICADO` sem `ESCOLHIDA` | `Anuncio.permiteAlteracao` + `AplicacaoService.existeEscolhida` (`ESCOLHIDA`/`AGUARDANDO_VALIDACAO`, via `StatusAplicacao.isEscolhida()`) |
 | Mural mostra só bairro | Nada daqui vai pro mural; `GET /anuncios/{id}` é só do dono e nem ele recebe lat/long |

@@ -54,7 +54,7 @@ class CandidatarSeUseCaseTest {
     private static final UUID PRESTADOR_ID = UUID.randomUUID();
     private static final int MAX_ESCOLHAS_GRATUITAS = 4;
     private static final DadosUsuario CONTATOS_CONFIRMADOS =
-            new DadosUsuario("Rafael Souza", "rafael@example.com", "+5511999998888", Instant.now(), Instant.now());
+            new DadosUsuario("Rafael Souza", "rafael@example.com", "+5511999998888", Instant.now());
 
     @Mock
     private AnuncioService anuncioService;
@@ -147,23 +147,14 @@ class CandidatarSeUseCaseTest {
     }
 
     @Test
-    void dadoTelefoneNaoConfirmado_quandoCandidatarSe_entaoRecusa() {
+    void dadoEmailNaoConfirmado_quandoCandidatarSe_entaoRecusa() {
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(
-                new DadosUsuario("Rafael Souza", "rafael@example.com", "+5511999998888", Instant.now(), null)));
+                new DadosUsuario("Rafael Souza", "rafael@example.com", "+5511999998888", null)));
 
         assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, PRESTADOR_ID, PapelUsuario.PRESTADOR))
                 .isInstanceOf(ContatosNaoConfirmadosException.class);
 
         verify(anuncioService, never()).buscarPorId(any());
-    }
-
-    @Test
-    void dadoEmailNaoConfirmado_quandoCandidatarSe_entaoRecusa() {
-        when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(
-                new DadosUsuario("Rafael Souza", "rafael@example.com", "+5511999998888", null, Instant.now())));
-
-        assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, PRESTADOR_ID, PapelUsuario.PRESTADOR))
-                .isInstanceOf(ContatosNaoConfirmadosException.class);
     }
 
     @Test

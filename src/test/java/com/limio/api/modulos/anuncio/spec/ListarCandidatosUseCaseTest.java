@@ -105,7 +105,7 @@ class ListarCandidatosUseCaseTest {
 
     private void prestador(UUID id, String nome) {
         when(consultaDadosUsuario.buscarPorId(id))
-                .thenReturn(Optional.of(new DadosUsuario(nome, "p@example.com", "11999990000", null, null)));
+                .thenReturn(Optional.of(new DadosUsuario(nome, "p@example.com", "11999990000", null)));
     }
 
     @Test

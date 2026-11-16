@@ -152,15 +152,15 @@ class ConsultarEEditarPerfilEmpregadorStoryTest {
                 .getTokenValue();
     }
 
+    /** ETI-134: telefone não tem confirmação — trocar e-mail e telefone só zera a confirmação do e-mail. */
     @Test
-    void dadoTrocaDeEmailETelefonePeloAuth_quandoConsultaOPerfil_entaoVeOsNovosContatosSemConfirmacao()
+    void dadoTrocaDeEmailETelefonePeloAuth_quandoConsultaOPerfil_entaoVeOsNovosContatosSemConfirmacaoDeEmail()
             throws Exception {
         String token = cadastrarELogar(MARIA);
         jdbc.update("update usuario set email_confirmado_em = now(), telefone_confirmado_em = now() where email = ?",
                 MARIA.email());
         consultar(token)
-                .andExpect(jsonPath("$.emailConfirmadoEm", notNullValue()))
-                .andExpect(jsonPath("$.telefoneConfirmadoEm", notNullValue()));
+                .andExpect(jsonPath("$.emailConfirmadoEm", notNullValue()));
 
         mockMvc.perform(patch("/auth/email")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -178,7 +178,6 @@ class ConsultarEEditarPerfilEmpregadorStoryTest {
                 .andExpect(jsonPath("$.email", is("maria.nova@teste.com")))
                 .andExpect(jsonPath("$.telefone", is("+5521988887777")))
                 .andExpect(jsonPath("$.emailConfirmadoEm", nullValue()))
-                .andExpect(jsonPath("$.telefoneConfirmadoEm", nullValue()))
                 .andExpect(jsonPath("$.nomeExibicao", is("Maria da Silva")));
     }
 
@@ -192,21 +191,19 @@ class ConsultarEEditarPerfilEmpregadorStoryTest {
                 .andExpect(jsonPath("$.email", is("maria@example.com")))
                 .andExpect(jsonPath("$.telefone", is("+5511999998888")))
                 .andExpect(jsonPath("$.emailConfirmadoEm", nullValue()))
-                .andExpect(jsonPath("$.telefoneConfirmadoEm", nullValue()))
                 .andExpect(jsonPath("$.mediaAvaliacoes", nullValue()))
                 .andExpect(jsonPath("$.qtdAvaliacoes", is(0)));
     }
 
     @Test
-    void dadoContatoConfirmado_quandoConsulta_entaoDevolveAsDatasDeConfirmacao() throws Exception {
+    void dadoEmailConfirmado_quandoConsulta_entaoDevolveADataDeConfirmacao() throws Exception {
         String token = cadastrarELogar(MARIA);
         jdbc.update("update usuario set email_confirmado_em = now(), telefone_confirmado_em = now() where email = ?",
                 MARIA.email());
 
         consultar(token)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.emailConfirmadoEm", notNullValue()))
-                .andExpect(jsonPath("$.telefoneConfirmadoEm", notNullValue()));
+                .andExpect(jsonPath("$.emailConfirmadoEm", notNullValue()));
     }
 
     @Test

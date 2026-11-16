@@ -71,7 +71,7 @@ class ConsultarAvaliacaoPendenteUseCaseTest {
 
     private void prestadorCadastrado() {
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(Optional.of(
-                new DadosUsuario("Carlos Souza", "carlos@example.com", "11999990000", AGORA, AGORA)));
+                new DadosUsuario("Carlos Souza", "carlos@example.com", "11999990000", AGORA)));
         when(consultaFotoPerfil.buscarFoto(PRESTADOR_ID)).thenReturn(Optional.empty());
     }
 

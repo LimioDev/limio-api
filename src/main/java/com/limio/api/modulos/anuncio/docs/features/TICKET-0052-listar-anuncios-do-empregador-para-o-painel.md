@@ -66,7 +66,8 @@ minha ação.
 - **Foto do Empregador não derruba o painel**: se o storage não gerar o link, o resumo sai sem foto (log de aviso),
   em vez de 503 na tela inteira. `GET /conta/foto-perfil` continua respondendo 503 nesse caso.
 - **Nome do prestador pela porta `ConsultaDadosUsuario`** (nome completo do cadastro), abreviado em
-  `actions/helper/NomeHelper` pra não expor o nome completo. Uma consulta por anúncio com escolhido; a lista é só de
+  `comum/texto/NomeHelper` (promovido de `actions/helper` quando `modulos.perfil` passou a precisar da mesma regra,
+  ETI-105) pra não expor o nome completo. Uma consulta por anúncio com escolhido; a lista é só de
   anúncios abertos do próprio Empregador, então o volume é pequeno.
 - **Candidaturas em lote**: `AplicacaoService.buscarAbertasDosAnuncios` (já existia, TICKET-0049) — 1 query pra
   todos os anúncios.

@@ -116,7 +116,7 @@ class ConsultarPainelEmpregadorUseCaseTest {
         when(aplicacaoService.buscarAbertasDosAnuncios(List.of(anuncio.getId())))
                 .thenReturn(List.of(aplicacao(anuncio, PRESTADOR_ID, StatusAplicacao.ESCOLHIDA)));
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID))
-                .thenReturn(Optional.of(new DadosUsuario("Rafael Souza", "rafael@example.com", null, null, null)));
+                .thenReturn(Optional.of(new DadosUsuario("Rafael Souza", "rafael@example.com", null, null)));
 
         AnuncioNoPainel item = useCase.executar(CONTRATANTE_ID).anuncios().getFirst();
 
@@ -131,7 +131,7 @@ class ConsultarPainelEmpregadorUseCaseTest {
         when(aplicacaoService.buscarAbertasDosAnuncios(List.of(anuncio.getId())))
                 .thenReturn(List.of(aplicacao(anuncio, PRESTADOR_ID, StatusAplicacao.AGUARDANDO_VALIDACAO)));
         when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID))
-                .thenReturn(Optional.of(new DadosUsuario("Rafael Souza", "rafael@example.com", null, null, null)));
+                .thenReturn(Optional.of(new DadosUsuario("Rafael Souza", "rafael@example.com", null, null)));
 
         assertThat(useCase.executar(CONTRATANTE_ID).anuncios().getFirst().prestadorEscolhido()).isEqualTo("Rafael S.");
     }

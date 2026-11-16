@@ -127,6 +127,15 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     }
 
     /**
+     * Quantos serviços {@code prestadorId} já concluiu como prestador escolhido (histórico do perfil
+     * público, ETI-105). Conta pelo {@code Anuncio} concluído, não por {@code Aplicacao.status}: nenhum
+     * fluxo marca a candidatura como {@code CONCLUIDA} (ver {@code AplicacaoRepository}).
+     */
+    public long contarConcluidasDoPrestador(UUID prestadorId) {
+        return repository.countConcluidosPorAnuncioDoPrestador(prestadorId);
+    }
+
+    /**
      * {@code salvar} de uma candidatura nova: a checagem de duplicata do usecase já cobre o caso normal,
      * mas clique duplo/corrida pode passar os dois pela checagem antes de qualquer insert — só o índice
      * único {@code uk_aplicacao_par_ativo} garante sob concorrência (ETI-75, mesmo idioma de
@@ -204,7 +213,8 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
 
     /**
      * A candidatura que foi escolhida pro anúncio, se alguma já foi — vale mesmo depois do serviço concluir ou
-     * o anúncio cancelar (ETI-86): {@code escolhidaEm} é permanente, diferente do {@code status} atual.
+     * o anúncio cancelar ou encerrar (ETI-86, ETI-92): {@code escolhidaEm} é permanente, diferente do {@code status}
+     * atual.
      */
     public Optional<Aplicacao> buscarEscolhidaDoAnuncio(UUID anuncioId) {
         return repository.findFirstByAnuncioIdAndEscolhidaEmIsNotNull(anuncioId);

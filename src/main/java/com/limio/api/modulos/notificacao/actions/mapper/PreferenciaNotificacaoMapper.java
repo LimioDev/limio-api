@@ -17,7 +17,6 @@ public class PreferenciaNotificacaoMapper {
         return new PreferenciaNotificacaoResponse(
                 entity.getPush(),
                 entity.getEmail(),
-                entity.getSms(),
                 entity.getWhatsapp());
     }
 }

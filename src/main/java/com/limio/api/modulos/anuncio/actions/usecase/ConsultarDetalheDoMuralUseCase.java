@@ -5,15 +5,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.midia.ArmazenamentoService;
-import com.limio.api.comum.midia.LinkTemporario;
 import com.limio.api.comum.midia.MidiaService;
-import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
 import com.limio.api.comum.portas.ConsultaCategoria;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.ConsultaPerfilEmpregador;
@@ -51,8 +47,6 @@ import com.limio.api.modulos.anuncio.excecao.SomentePrestadorVeMuralException;
 @Service
 public class ConsultarDetalheDoMuralUseCase {
 
-    private static final Logger log = LoggerFactory.getLogger(ConsultarDetalheDoMuralUseCase.class);
-
     private final AnuncioService anuncioService;
     private final AplicacaoService aplicacaoService;
     private final ConsultaDadosUsuario consultaDadosUsuario;
@@ -83,7 +77,7 @@ public class ConsultarDetalheDoMuralUseCase {
     @Transactional(readOnly = true)
     public DetalheDoMural executar(UUID usuarioId, PapelUsuario papelAtivo, UUID anuncioId) {
         exigirPrestador(papelAtivo);
-        exigirContatosConfirmados(usuarioId);
+        exigirEmailConfirmado(usuarioId);
         ResumoPerfilPrestador perfil = consultaPerfilPrestador.buscarCompleto(usuarioId)
                 .orElseThrow(PerfilIncompletoException::new);
 
@@ -100,7 +94,8 @@ public class ConsultarDetalheDoMuralUseCase {
                         .get(anuncio.getContratanteId()))
                 .orElseThrow(() -> new IllegalStateException("empregador do anúncio não existe: " + anuncioId));
         List<FotoDoAnuncio> fotos = midiaService.buscarFotosAtivasDoAnuncio(anuncioId).stream()
-                .map(foto -> new FotoDoAnuncio(foto.getId(), link(foto.getUrlS3()).orElse(null)))
+                .map(foto -> new FotoDoAnuncio(foto.getId(),
+                        armazenamentoService.gerarLinkSeDisponivel(foto.getUrlS3()).orElse(null)))
                 .toList();
 
         return new DetalheDoMural(anuncio.getId(), anuncio.getTitulo(), anuncio.getDescricao(), categoria, fotos,
@@ -129,21 +124,12 @@ public class ConsultarDetalheDoMuralUseCase {
         }
     }
 
-    private void exigirContatosConfirmados(UUID usuarioId) {
-        boolean confirmados = consultaDadosUsuario.buscarPorId(usuarioId)
-                .map(DadosUsuario::contatosConfirmados)
+    private void exigirEmailConfirmado(UUID usuarioId) {
+        boolean confirmado = consultaDadosUsuario.buscarPorId(usuarioId)
+                .map(DadosUsuario::emailConfirmado)
                 .orElse(false);
-        if (!confirmados) {
-            throw new ContatosNaoConfirmadosException("Confirme seu e-mail e seu telefone para ver os anúncios.");
-        }
-    }
-
-    private Optional<LinkTemporario> link(String chave) {
-        try {
-            return Optional.of(armazenamentoService.gerarLink(chave));
-        } catch (ArmazenamentoIndisponivelException e) {
-            log.warn("link de mídia indisponível; detalhe do mural segue sem a imagem");
-            return Optional.empty();
+        if (!confirmado) {
+            throw new ContatosNaoConfirmadosException("Confirme seu e-mail para ver os anúncios.");
         }
     }
 }

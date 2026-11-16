@@ -5,8 +5,8 @@
 ETI-48 ([empregador] [BACK-END] Consultar e editar o perfil de Empregador).
 
 Card par: [empregador] [FRONT-END] Telas "Meu perfil" e "Dados de contato".
-Relacionados: UC01 (ETI-30, cadastro), UC04 (confirmar telefone por OTP), UC05 (confirmar e-mail),
-[auth] [BACK-END] Páginas web "Confirmar e-mail".
+Relacionados: UC01 (ETI-30, cadastro), UC04 (confirmar telefone por OTP, fora de escopo — ETI-134), UC05
+(confirmar e-mail), [auth] [BACK-END] Páginas web "Confirmar e-mail".
 
 ## Status
 
@@ -21,8 +21,9 @@ Em implementação por partes. **Implementado**: tabela
 `perfil_empregador`, `GET /conta/perfil-empregador`, `PATCH /conta/perfil-empregador/nome-exibicao` (Parte 1) e a
 leitura dos dados do usuário pela porta de `comum/`, com criação do perfil no primeiro acesso (Parte 2), e a troca de
 e-mail e de telefone (Parte 3, módulo `auth` — ver `auth/docs/features/TICKET-0048-trocar-email-e-telefone.md`).
-**Não implementado**: confirmação de telefone (UC04/SMS) e endereços (dependências abaixo). A confirmação de e-mail
-(UC05) entrou no TICKET-0047 e a foto no TICKET-0056.
+**Não implementado**: endereços (dependências abaixo). A confirmação de e-mail (UC05) entrou no TICKET-0047 e a
+foto no TICKET-0056. Confirmação de telefone (UC04/SMS) saiu de escopo em definitivo (ETI-134) — telefone é dado
+de contato obrigatório/editável, sem etapa de confirmação.
 
 Legenda usada neste documento:
 
@@ -53,14 +54,14 @@ Não se aplica. A interface está no card par [FRONT-END].
 
 - **Consultar meu perfil** devolve:
   - `PerfilEmpregador.nomeExibicao`, a foto (`Midia`), `mediaAvaliacoes` e `qtdAvaliacoes`;
-  - `Usuario.email` e `Usuario.telefone`, com a informação de confirmado (`emailConfirmadoEm`,
-    `telefoneConfirmadoEm`) — a tela mostra "verificado";
+  - `Usuario.email` e `Usuario.telefone`, com a informação de confirmado do e-mail (`emailConfirmadoEm`) — a tela
+    mostra "verificado" só pro e-mail (ETI-134: telefone não tem confirmação);
   - a quantidade de endereços salvos e o apelido do endereço padrão (tela 08: "2 endereços · Casa é o padrão").
 - **Editar nome de exibição**: grava `PerfilEmpregador.nomeExibicao`.
-- **Trocar e-mail ou telefone**: grava o novo valor em `Usuario`; limpa `emailConfirmadoEm` ou
-  `telefoneConfirmadoEm`; envia novo link (e-mail) ou novo código (SMS) por `VerificacaoContato`, com as mesmas
-  regras do cadastro (ETI-30). Até confirmar de novo, o usuário não publica anúncio nem se candidata (texto da
-  tela "Dados de contato").
+- **Trocar e-mail**: grava o novo valor em `Usuario`; limpa `emailConfirmadoEm`; envia novo link por
+  `VerificacaoContato`, com as mesmas regras do cadastro (ETI-30). Até confirmar de novo, o usuário não publica
+  anúncio nem se candidata (texto da tela "Dados de contato").
+- **Trocar telefone**: grava o novo valor em `Usuario`, sem zerar nem bloquear nada (ETI-134).
 
 ### Regra de negócio
 
@@ -90,7 +91,7 @@ Consultar, editar nome, trocar e-mail (com e sem duplicidade) e trocar telefone.
 | Consultar meu perfil | `GET /conta/perfil-empregador` | `Bearer <token>` | — | 200 `PerfilEmpregadorResponse` |
 | Editar nome de exibição | `PATCH /conta/perfil-empregador/nome-exibicao` | `Bearer <token>` | `{ nomeExibicao }` | 200 `PerfilEmpregadorResponse` (perfil atualizado) |
 | Trocar e-mail | `PATCH /auth/email` | `Bearer <token>` | `{ novoEmail }` | 200, confirmação de que o link foi enviado |
-| Trocar telefone | `PATCH /auth/telefone` | `Bearer <token>` | `{ novoTelefone }` | 200, confirmação da troca (**sem** envio de código — ver Dependências) |
+| Trocar telefone | `PATCH /auth/telefone` | `Bearer <token>` | `{ novoTelefone }` | 200, confirmação da troca (sem envio de código — telefone não tem confirmação, ETI-134) |
 
 Justificativa das rotas (**Pendente**: validar com tech lead e com o front):
 
@@ -112,7 +113,6 @@ Justificativa das rotas (**Pendente**: validar com tech lead e com o front):
   "email": "maria@exemplo.com",
   "telefone": "+5511999998888",
   "emailConfirmadoEm": null,
-  "telefoneConfirmadoEm": null,
   "enderecos": { "quantidade": 0, "apelidoPadrao": null }
 }
 ```
@@ -125,8 +125,7 @@ contagem real igual a zero**.
 - `qtdAvaliacoes`: `0`.
 - `enderecos.quantidade`: `0`; `enderecos.apelidoPadrao`: `null`. **Continua placeholder**: os endereços já existem
   (TICKET-0050, `/conta/perfil-empregador/enderecos`), mas o `GET` do perfil ainda não os consulta.
-- `emailConfirmadoEm` / `telefoneConfirmadoEm`: `null` = não confirmado (hoje é o estado de todas as contas,
-  ver Dependências).
+- `emailConfirmadoEm`: `null` = e-mail não confirmado. Telefone não tem campo de confirmação (ETI-134).
 
 ### Códigos de erro
 
@@ -172,12 +171,12 @@ contagem real igual a zero**.
   sem coexistência de formatos. O cadastro (UC01) valida `\d{10,11}` (aceita fixo) e **não foi alterado**; a troca exige
   celular. **A confirmar com o PO/tech lead** que a leitura do card está correta; se for "banco", a mudança é uma
   migration de ampliação e a conversão passa a gravar `+55`.
-- Grava o novo telefone em `Usuario` e zera `telefoneConfirmadoEm`. **Não envia SMS** (Dependência UC04).
+- Grava o novo telefone em `Usuario`, sem zerar nem bloquear nada — telefone não tem confirmação (ETI-134).
 
 ### Efeito da reconfirmação
 
-"Até confirmar de novo, o usuário não publica anúncio nem se candidata": esta feature só garante o dado
-(`emailConfirmadoEm`/`telefoneConfirmadoEm` nulos). O bloqueio em si é do módulo `anuncio` (Dependência).
+"Até confirmar de novo, o usuário não publica anúncio nem se candidata": vale só pro e-mail. Esta feature só
+garante o dado (`emailConfirmadoEm` nulo na troca de e-mail); o bloqueio em si é do módulo `anuncio`.
 
 ## Banco (Flyway) — **Proposto, nada criado**
 
@@ -230,12 +229,12 @@ nenhum fluxo de confirmação de e-mail a reutilizar: só a infraestrutura.
 ### 5. `statusConta` na troca de contato — Proposto / Pendente
 
 Não voltar para `PENDENTE_VERIFICACAO`: o login é permitido antes de confirmar (UC05) e o bloqueio de anúncio e
-candidatura é feito por `*ConfirmadoEm` nulo. Pergunta do card, **aberta**.
+candidatura é feito por `emailConfirmadoEm` nulo (ETI-134: telefone não bloqueia nada). Pergunta do card, **aberta**.
 
 ## Detalhe da implementação 
 
 - **Porta**: `comum/portas/ConsultaDadosUsuario` (`Optional<DadosUsuario> buscarPorId(UUID)`) + record
-  `DadosUsuario` (nome completo, e-mail, telefone, `emailConfirmadoEm`, `telefoneConfirmadoEm`). Implementada em
+  `DadosUsuario` (nome completo, e-mail, telefone, `emailConfirmadoEm`). Implementada em
   `auth/actions/service/ConsultaDadosUsuarioService`; devolve vazio para usuário inexistente ou conta encerrada
   (`anonimizadoEm`). `perfil` não importa nada de `modulos.auth`.
 - **Identidade**: o único identificador usado é `UsuarioAutenticado.id()` (token); nenhuma rota/corpo recebe id de
@@ -257,8 +256,8 @@ candidatura é feito por `*ConfirmadoEm` nulo. Pergunta do card, **aberta**.
 | Item | Situação hoje | Resolvido por |
 |---|---|---|
 | Confirmação de e-mail | **Resolvido (TICKET-0047).** O cadastro e a troca enviam o link; `POST /auth/confirmar-email` preenche `emailConfirmadoEm`, que o `GET` já devolve pela porta. | — |
-| SMS / OTP | Não existe `SmsService` nem gateway. `CanalVerificacao.SMS` existe, sem uso. `verificacao_contato.token_hash` (`UNIQUE`, 64 caracteres) não comporta código curto sem novo desenho. | UC04 + escolha de gateway |
-| Cadastro sem verificação | E-mail: resolvido no TICKET-0047 (o cadastro envia o link). Telefone: segue sem OTP, `telefoneConfirmadoEm` é `null` para todas as contas. | UC04 |
+| SMS / OTP | **Fora de escopo em definitivo (ETI-134).** Não existe `SmsService` nem gateway; `CanalVerificacao` só tem `EMAIL`. Telefone é dado de contato obrigatório/editável, sem etapa de confirmação. | — |
+| Cadastro sem verificação de telefone | E-mail: resolvido no TICKET-0047 (o cadastro envia o link). Telefone: nunca teve confirmação, por decisão (ETI-134), não por pendência. | — |
 | Foto | **Resolvido (TICKET-0056).** Tabela `midia` no módulo `perfil`, `PUT/GET /conta/foto-perfil`. | — |
 | Avaliações | Não existe módulo de avaliação. | UC45–UC47 |
 | Endereços salvos | `endereco_salvo` não existe (prevista no módulo `perfil`). | card próprio de endereços |
@@ -284,8 +283,8 @@ Reproduzidas do card, mais as levantadas na análise.
 
 ## Fora de escopo
 
-UC04 (OTP), UC05 (confirmação de e-mail e seu endpoint), qualquer envio de SMS, `Midia`, avaliações,
-`endereco_salvo`, funcionalidades do módulo `anuncio` e eventos de domínio.
+UC04 (OTP, fora de escopo em definitivo — ETI-134), UC05 (confirmação de e-mail e seu endpoint), qualquer envio
+de SMS, `Midia`, avaliações, `endereco_salvo`, funcionalidades do módulo `anuncio` e eventos de domínio.
 
 ## Nomenclatura
 

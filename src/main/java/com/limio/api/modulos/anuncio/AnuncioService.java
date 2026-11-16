@@ -61,6 +61,11 @@ public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository
         return repository.findAllById(ids);
     }
 
+    /** Quantos anúncios {@code contratanteId} já concluiu como contratante (histórico do perfil público, ETI-105). */
+    public long contarConcluidosDoContratante(UUID contratanteId) {
+        return repository.countByContratanteIdAndStatus(contratanteId, StatusAnuncio.CONCLUIDO);
+    }
+
     public List<UUID> buscarIdsParaExpirar(Instant agora, int lote) {
         return repository.buscarIdsParaExpirar(agora, lote);
     }

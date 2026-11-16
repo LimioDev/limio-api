@@ -1,6 +1,7 @@
 package com.limio.api.comum.midia;
 
 import java.time.Duration;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,6 +70,20 @@ public class ArmazenamentoService {
         } catch (SdkException e) {
             log.warn("falha ao assinar link do storage ({}): {}", e.getClass().getSimpleName(), e.getMessage());
             throw new ArmazenamentoIndisponivelException();
+        }
+    }
+
+    /**
+     * Mesma coisa que {@link #gerarLink}, mas pra quem só mostra a mídia (nunca o motivo de ela faltar):
+     * storage fora do ar vira {@code Optional#empty()} em vez de 503. Usado pelas listagens/detalhes que não
+     * podem derrubar a tela inteira por uma imagem (mural, anúncio, validação do serviço).
+     */
+    public Optional<LinkTemporario> gerarLinkSeDisponivel(String chave) {
+        try {
+            return Optional.of(gerarLink(chave));
+        } catch (ArmazenamentoIndisponivelException e) {
+            log.warn("link de mídia indisponível; segue sem a imagem");
+            return Optional.empty();
         }
     }
 

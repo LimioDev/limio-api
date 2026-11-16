@@ -40,25 +40,25 @@ class PreferenciaNotificacaoRequestTest {
     }
 
     @Test
-    void deveAceitarOsQuatroCanaisPreenchidos() {
-        assertThat(camposInvalidos(new PreferenciaNotificacaoRequest(false, false, false, false))).isEmpty();
+    void deveAceitarOsTresCanaisPreenchidos() {
+        assertThat(camposInvalidos(new PreferenciaNotificacaoRequest(false, false, false))).isEmpty();
     }
 
     @Test
     void deveRecusarCadaCanalAusente() {
-        assertThat(camposInvalidos(new PreferenciaNotificacaoRequest(null, null, null, null)))
-                .containsExactlyInAnyOrder("push", "email", "sms", "whatsapp");
+        assertThat(camposInvalidos(new PreferenciaNotificacaoRequest(null, null, null)))
+                .containsExactlyInAnyOrder("push", "email", "whatsapp");
     }
 
     @Test
     void deveRecusarSoOCanalAusente() {
-        assertThat(camposInvalidos(new PreferenciaNotificacaoRequest(true, false, null, true)))
-                .containsExactly("sms");
+        assertThat(camposInvalidos(new PreferenciaNotificacaoRequest(true, null, true)))
+                .containsExactly("email");
     }
 
     @Test
     void mensagemDeveVirDoValidationMessages() {
-        String mensagem = validator.validate(new PreferenciaNotificacaoRequest(true, true, true, null))
+        String mensagem = validator.validate(new PreferenciaNotificacaoRequest(true, true, null))
                 .iterator().next().getMessage();
 
         assertThat(mensagem).isEqualTo("whatsapp é obrigatório (true ou false)");

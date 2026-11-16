@@ -33,7 +33,6 @@ public class TrocarTelefoneUseCase {
         }
 
         usuario.setTelefone(novoTelefone);
-        usuario.setTelefoneConfirmadoEm(null);
         return usuarioService.salvar(usuario);
     }
 }

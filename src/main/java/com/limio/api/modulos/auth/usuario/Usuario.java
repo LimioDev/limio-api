@@ -5,6 +5,7 @@ import java.time.LocalDate;
 
 import com.limio.api.comum.base.BaseEntity;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
+import com.limio.api.comum.texto.NomeHelper;
 import com.limio.api.modulos.auth.excecao.ContaSuspensaException;
 import com.limio.api.modulos.auth.excecao.SessaoInvalidaException;
 import com.limio.api.modulos.auth.usuario.enums.StatusConta;
@@ -112,7 +113,7 @@ public class Usuario extends BaseEntity {
      * com o CPF original, antes de chamar isto.
      */
     public void encerrar(Instant agora) {
-        this.nomeCompleto = "Conta encerrada";
+        this.nomeCompleto = NomeHelper.CONTA_ENCERRADA;
         this.email = "encerrada+" + getId() + "@anonimizado.limio";
         this.telefone = "00000000000";
         this.cpf = null;

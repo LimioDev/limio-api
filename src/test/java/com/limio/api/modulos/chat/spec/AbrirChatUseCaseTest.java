@@ -96,7 +96,7 @@ class AbrirChatUseCaseTest {
     }
 
     private static DadosUsuario dados(String nome) {
-        return new DadosUsuario(nome, "x@example.com", null, null, null);
+        return new DadosUsuario(nome, "x@example.com", null, null);
     }
 
     @Test

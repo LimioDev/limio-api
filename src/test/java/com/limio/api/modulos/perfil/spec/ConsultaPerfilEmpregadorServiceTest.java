@@ -58,7 +58,7 @@ class ConsultaPerfilEmpregadorServiceTest {
 
     private void comPerfil(String nomeExibicao) {
         PerfilEmpregador perfil = PerfilEmpregador.builder().usuarioId(USUARIO_ID).nomeExibicao(nomeExibicao).build();
-        DadosUsuario dados = new DadosUsuario("Maria da Silva", "maria@example.com", null, null, null);
+        DadosUsuario dados = new DadosUsuario("Maria da Silva", "maria@example.com", null, null);
         when(perfilEmpregadorService.garantirPerfil(USUARIO_ID)).thenReturn(new MeuPerfilEmpregador(perfil, dados));
     }
 

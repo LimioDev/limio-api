@@ -22,7 +22,6 @@ import com.limio.api.comum.midia.ArmazenamentoService;
 import com.limio.api.comum.midia.LinkTemporario;
 import com.limio.api.comum.midia.Midia;
 import com.limio.api.comum.midia.MidiaService;
-import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
 import com.limio.api.comum.portas.ConsultaCategoria;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.ConsultaFotoPerfil;
@@ -99,7 +98,7 @@ class ConsultarMeuAnuncioUseCaseTest {
 
     private void prestador(UUID id, String nome) {
         when(consultaDadosUsuario.buscarPorId(id))
-                .thenReturn(Optional.of(new DadosUsuario(nome, "p@example.com", null, null, null)));
+                .thenReturn(Optional.of(new DadosUsuario(nome, "p@example.com", null, null)));
     }
 
     @Test
@@ -163,7 +162,7 @@ class ConsultarMeuAnuncioUseCaseTest {
         semFotosNemCandidatos();
         when(midiaService.buscarFotosAtivasDoAnuncio(ANUNCIO_ID)).thenReturn(List.of(
                 Midia.fotoAnuncio(DONO_ID, ANUNCIO_ID, "fotos-anuncio/a.jpg", "image/jpeg", 10, 10, 100)));
-        when(armazenamentoService.gerarLink(anyString())).thenThrow(new ArmazenamentoIndisponivelException());
+        when(armazenamentoService.gerarLinkSeDisponivel(anyString())).thenReturn(Optional.empty());
 
         MeuAnuncio meu = useCase.executar(DONO_ID, ANUNCIO_ID);
 

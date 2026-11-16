@@ -19,14 +19,14 @@ public interface PreferenciaNotificacaoRepository extends BaseRepository<Prefere
      */
     @Modifying
     @Query(value = """
-            insert into preferencia_notificacao (usuario_id, push, email, sms, whatsapp)
-            values (:usuarioId, :push, :email, :sms, :whatsapp)
+            insert into preferencia_notificacao (usuario_id, push, email, whatsapp)
+            values (:usuarioId, :push, :email, :whatsapp)
             on conflict (usuario_id) do update
-               set push = excluded.push, email = excluded.email, sms = excluded.sms,
+               set push = excluded.push, email = excluded.email,
                    whatsapp = excluded.whatsapp, atualizado_em = now()
             """, nativeQuery = true)
     void upsert(@Param("usuarioId") UUID usuarioId, @Param("push") boolean push, @Param("email") boolean email,
-            @Param("sms") boolean sms, @Param("whatsapp") boolean whatsapp);
+            @Param("whatsapp") boolean whatsapp);
 
     @Modifying
     @Query("delete from PreferenciaNotificacao p where p.usuarioId = :usuarioId")

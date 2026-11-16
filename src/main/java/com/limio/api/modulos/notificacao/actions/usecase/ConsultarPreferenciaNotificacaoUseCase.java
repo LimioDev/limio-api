@@ -27,7 +27,7 @@ public class ConsultarPreferenciaNotificacaoUseCase {
     }
 
     /**
-     * Padrões de conta nova: Push ligado; E-mail, SMS e WhatsApp desligados.
+     * Padrões de conta nova: Push ligado; E-mail e WhatsApp desligados.
      * WhatsApp fica {@code false} enquanto o cadastro (UC01) não coleta opt-in.
      */
     private PreferenciaNotificacao padraoContaNova(UUID usuarioId) {
@@ -35,7 +35,6 @@ public class ConsultarPreferenciaNotificacaoUseCase {
                 .usuarioId(usuarioId)
                 .push(true)
                 .email(false)
-                .sms(false)
                 .whatsapp(false)
                 .build();
     }

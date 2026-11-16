@@ -325,7 +325,7 @@ class ConsultarDetalheDoMuralStoryTest {
     }
 
     @Test
-    void dadoContatoNaoConfirmado_quandoDetalha_entao403ContatosNaoConfirmados() throws Exception {
+    void dadoEmailNaoConfirmado_quandoDetalha_entao403ContatosNaoConfirmados() throws Exception {
         Usuario semEmail = usuario("Sem Email", "sememail@example.com", "39053344705", PapelUsuario.PRESTADOR, false, true);
         perfil(semEmail, 10, "Elétrica");
 

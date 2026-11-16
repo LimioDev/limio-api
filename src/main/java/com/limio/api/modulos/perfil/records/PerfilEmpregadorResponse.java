@@ -9,6 +9,5 @@ public record PerfilEmpregadorResponse(
         int qtdAvaliacoes,
         String email,
         String telefone,
-        Instant emailConfirmadoEm,
-        Instant telefoneConfirmadoEm) {
+        Instant emailConfirmadoEm) {
 }
