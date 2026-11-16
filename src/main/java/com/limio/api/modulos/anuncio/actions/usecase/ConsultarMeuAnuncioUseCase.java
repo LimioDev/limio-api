@@ -4,15 +4,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.midia.ArmazenamentoService;
-import com.limio.api.comum.midia.LinkTemporario;
 import com.limio.api.comum.midia.MidiaService;
-import com.limio.api.comum.midia.excecao.ArmazenamentoIndisponivelException;
 import com.limio.api.comum.portas.ConsultaCategoria;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.ConsultaFotoPerfil;
@@ -40,8 +36,6 @@ public class ConsultarMeuAnuncioUseCase {
 
     /** Quantos candidatos a tela mostra com nome abreviado e foto; os demais entram só no total. */
     static final int PRIMEIROS_CANDIDATOS = 4;
-
-    private static final Logger log = LoggerFactory.getLogger(ConsultarMeuAnuncioUseCase.class);
 
     private final AnuncioService anuncioService;
     private final AplicacaoService aplicacaoService;
@@ -77,7 +71,8 @@ public class ConsultarMeuAnuncioUseCase {
                 .orElseThrow(() -> new IllegalStateException("categoria do anúncio não existe: " + anuncioId));
 
         List<FotoDoAnuncio> fotos = midiaService.buscarFotosAtivasDoAnuncio(anuncioId).stream()
-                .map(foto -> new FotoDoAnuncio(foto.getId(), link(foto.getUrlS3()).orElse(null)))
+                .map(foto -> new FotoDoAnuncio(foto.getId(),
+                        armazenamentoService.gerarLinkSeDisponivel(foto.getUrlS3()).orElse(null)))
                 .toList();
         List<Aplicacao> enviadas = aplicacaoService.buscarEnviadasDoAnuncio(anuncioId);
         List<CandidatoResumido> primeiros = enviadas.stream()
@@ -95,14 +90,5 @@ public class ConsultarMeuAnuncioUseCase {
                 .map(DadosUsuario::nomeCompleto)
                 .map(nome -> new CandidatoResumido(NomeHelper.abreviar(nome),
                         consultaFotoPerfil.buscarFoto(prestadorId).orElse(null)));
-    }
-
-    private Optional<LinkTemporario> link(String chave) {
-        try {
-            return Optional.of(armazenamentoService.gerarLink(chave));
-        } catch (ArmazenamentoIndisponivelException e) {
-            log.warn("link de mídia indisponível; anúncio segue sem a imagem");
-            return Optional.empty();
-        }
     }
 }

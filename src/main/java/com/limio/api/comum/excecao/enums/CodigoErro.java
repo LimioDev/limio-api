@@ -44,6 +44,7 @@ public enum CodigoErro {
     ANUNCIO_ESTADO_INVALIDO("O anúncio não permite esta ação no estado atual."),
     SERVICO_NAO_ENCONTRADO("Serviço não encontrado."),
     SERVICO_ESTADO_INVALIDO("O serviço não permite esta ação no estado atual."),
+    VALIDACAO_SEM_CHECKOUT("A validação pela foto exige o check-out do Prestador antes."),
     ANUNCIO_PROPRIO("Você não pode se candidatar ao próprio anúncio."),
     CANDIDATURA_DUPLICADA("Você já tem uma candidatura em aberto para este anúncio."),
     COTA_ESGOTADA("Você atingiu o limite de candidaturas escolhidas do plano gratuito neste mês."),
@@ -59,6 +60,12 @@ public enum CodigoErro {
     JANELA_AVALIACAO_ENCERRADA("O prazo para avaliar este serviço terminou."),
     AVALIACAO_DUPLICADA("Você já avaliou este serviço."),
     COMENTARIO_SEM_NOTA("Escolha uma nota para enviar o comentário."),
+    PLANO_NAO_ENCONTRADO("Plano não encontrado."),
+    ASSINATURA_JA_ATIVA("Você já é assinante do plano GOLD."),
+    COBRANCA_EM_ANDAMENTO("Já existe uma cobrança em andamento. Tente novamente em instantes."),
+    PAGAMENTO_RECUSADO("Pagamento recusado. Verifique os dados do cartão e tente novamente."),
+    GATEWAY_INDISPONIVEL("Não foi possível processar o pagamento agora. Tente novamente em instantes."),
+    CARTAO_INVALIDO("Dados do cartão inválidos. Confira número, validade e CVV."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;

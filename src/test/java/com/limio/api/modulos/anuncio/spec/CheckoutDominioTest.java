@@ -26,13 +26,13 @@ class CheckoutDominioTest {
     @ParameterizedTest
     @EnumSource(value = StatusAnuncio.class, names = { "PUBLICADO", "EM_ANDAMENTO" })
     void dadoAnuncioPublicadoOuEmAndamento_quandoPerguntaSePermiteCheckout_entaoSim(StatusAnuncio status) {
-        assertThat(anuncio(status, 24).permiteCheckout()).isTrue();
+        assertThat(anuncio(status, 24).servicoEmAberto()).isTrue();
     }
 
     @ParameterizedTest
     @EnumSource(value = StatusAnuncio.class, names = { "AGUARDANDO_VALIDACAO", "CONCLUIDO", "ENCERRADO" })
     void dadoAnuncioEmOutroEstado_quandoPerguntaSePermiteCheckout_entaoNao(StatusAnuncio status) {
-        assertThat(anuncio(status, 24).permiteCheckout()).isFalse();
+        assertThat(anuncio(status, 24).servicoEmAberto()).isFalse();
     }
 
     @ParameterizedTest
