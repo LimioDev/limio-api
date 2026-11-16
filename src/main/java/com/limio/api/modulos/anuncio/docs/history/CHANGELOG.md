@@ -333,3 +333,11 @@ Publicar anúncio, mural (listar/detalhar) e candidatar-se passam a exigir só `
 implementada (campo e enum eram andaime morto). `ContatosNaoConfirmadosException` manteve nome e
 `CodigoErro.CONTATOS_NAO_CONFIRMADOS` (contrato estável com o front), só a mensagem padrão mudou para "Confirme
 seu e-mail para continuar." Decisão completa em `auth/docs/history/CHANGELOG.md`.
+
+## 2026-11-16 — ETI-65: avisar os prestadores compatíveis quando um anúncio é publicado
+
+Primeiro ouvinte do `AnuncioPublicadoEvent`: `AvisarPrestadoresCompativeisUseCase` (`AFTER_COMMIT`, `REQUIRES_NEW`)
+publica um `comum/eventos/NovoServicoNaAreaEvent` por Prestador compatível e apto, só com categoria, bairro, título e
+distância. A regra do mural vista do outro lado mora no `perfil` (porta `ConsultaPrestadoresCompativeis`), e a
+aptidão da conta no `auth` (`ConsultaDadosUsuario.filtrarAptosAReceberAviso`). Papel ativo não filtra; "pausado" não
+existe ainda. Sem migration. Detalhe em `../features/ETI-65-avisar-prestadores-compativeis.md`.

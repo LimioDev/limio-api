@@ -254,6 +254,7 @@ o resumo sai sem foto em vez de 503 — a foto não derruba o painel.
 | `actions/service/ConsultaCategoriaService` | implementa `comum/portas/ConsultaCategoria` (ETI-59): categoria por id, ativa ou não |
 | `comum/portas/ConsultaPerfilPrestador`, `ResumoPerfilPrestador` | porta de leitura da atuação do Prestador (especialidades, "Outros", raio, base) — ETI-73 |
 | `actions/service/ConsultaPerfilPrestadorService` | implementação da porta (ETI-73): só perfil completo |
+| `comum/portas/ConsultaPrestadoresCompativeis`, `PrestadorCompativel`; `actions/service/ConsultaPrestadoresCompativeisService`, `perfilprestador/PrestadorCompativelProjecao` | Prestadores que atendem um anúncio (ETI-65): perfil completo, categoria/"Outros" e distância ≤ raio, pela consulta nativa `PerfilPrestadorRepository.buscarCompativeis` |
 | `actions/service/ConsultaEnderecoService` | implementa `comum/portas/ConsultaEndereco` (ETI-59): endereço salvo do usuário ou avulso geocodificado, sempre com o texto de uma linha do retrato do anúncio |
 | `perfilprestador/cotamensal/CotaMensal`, `CotaMensalRepository`, `CotaMensalService`, `AnoMesConverter` | subentidade de `PerfilPrestador` (uma linha por mês, `FUSO`, `mesDe`, `inicio`, `renovaEm`, `isEsgotada`), persistência e `YearMonth` ↔ `'AAAA-MM'` (ETI-79) |
 | `perfilprestador/cotamensal/CotaDoMes` | tipo de domínio: plano + cota do mês + escolhas; teto e esgotada por plano (ETI-79) |
