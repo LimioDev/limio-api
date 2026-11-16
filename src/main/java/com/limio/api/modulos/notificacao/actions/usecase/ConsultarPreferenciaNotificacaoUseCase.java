@@ -23,19 +23,6 @@ public class ConsultarPreferenciaNotificacaoUseCase {
 
     public PreferenciaNotificacao executar(UUID usuarioId) {
         return preferenciaNotificacaoService.buscarPorUsuario(usuarioId)
-                .orElseGet(() -> padraoContaNova(usuarioId));
-    }
-
-    /**
-     * Padrões de conta nova: Push ligado; E-mail e WhatsApp desligados.
-     * WhatsApp fica {@code false} enquanto o cadastro (UC01) não coleta opt-in.
-     */
-    private PreferenciaNotificacao padraoContaNova(UUID usuarioId) {
-        return PreferenciaNotificacao.builder()
-                .usuarioId(usuarioId)
-                .push(true)
-                .email(false)
-                .whatsapp(false)
-                .build();
+                .orElseGet(() -> PreferenciaNotificacao.padraoContaNova(usuarioId));
     }
 }

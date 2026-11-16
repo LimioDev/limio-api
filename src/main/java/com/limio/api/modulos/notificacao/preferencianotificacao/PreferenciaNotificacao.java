@@ -43,4 +43,18 @@ public class PreferenciaNotificacao extends BaseEntity {
 
     @Column(name = "whatsapp", nullable = false)
     private Boolean whatsapp;
+
+    /**
+     * Padrões de conta nova, pra quem nunca salvou a preferência: Push ligado; E-mail e WhatsApp desligados. WhatsApp
+     * fica {@code false} enquanto o cadastro (UC01) não coleta opt-in. Não persiste. Vale pra consulta (ETI-34) e pro
+     * envio dos avisos (ETI-112).
+     */
+    public static PreferenciaNotificacao padraoContaNova(UUID usuarioId) {
+        return PreferenciaNotificacao.builder()
+                .usuarioId(usuarioId)
+                .push(true)
+                .email(false)
+                .whatsapp(false)
+                .build();
+    }
 }
