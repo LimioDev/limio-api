@@ -34,7 +34,7 @@ conversa daquele serviço.
 |---|---|
 | `candidaturaId` = candidatura escolhida | `ConsultarServicoUseCase` já carregava a escolhida (de onde vem o `escolhidaEm`); o valor é `escolhida.getId()`, levado por `ServicoCombinado.candidaturaId`. |
 | Mesmo id pros dois lados | Não depende de quem consulta. |
-| Reputação do Prestador (opcional) | `ConsultaAvaliacoes.resumir` (porta do `moderacao`, ETI-107), só no ramo do Empregador. Fecha o ponto em aberto do ETI-86. |
+| Reputação do Prestador (opcional) | `ConsultaAvaliacoes.resumir` (porta do `moderacao`, ETI-107), só no ramo do Empregador (`prestadorVistoPeloEmpregador`; o Prestador vê o Empregador por `empregadorVistoPeloPrestador`, sem GOLD nem reputação). Fecha o ponto em aberto do ETI-86. |
 
 ## Fora desta entrega
 
@@ -42,11 +42,15 @@ conversa daquele serviço.
   de conta ou expiração, e só a #38 (ETI-94, aberta) grava o `tipoCancelamento` que separa o cancelamento. Devolver
   `encerradoEm` agora daria data de cancelamento pra anúncio que não foi cancelado. Entra num ajuste curto depois do
   merge da #38.
+- **Agrupar os argumentos de `ServicoCombinado`** (review da PR #45). O construtor tem 10 argumentos posicionais; a
+  #38 mexe no mesmo record e o `canceladoEm` entra nele também, então o agrupamento (ex.: o andamento num record)
+  fica pro ajuste pós-#38, pra não conflitar com ela.
 
 ## Testes
 
 - `spec/ConsultarServicoUseCaseTest`: `candidaturaId` pros dois lados; reputação zerada sem avaliação, preenchida com
   avaliação (GOLD junto) e ausente pro Prestador, sem nem consultar a porta.
 - `story/ConsultarServicoStoryTest`: Empregador e Prestador recebem o `candidaturaId` da escolhida; reputação do
-  Prestador pro Empregador e `null` pro Prestador; com o id devolvido, `GET /candidaturas/{id}/chat` responde 200
+  Prestador pro Empregador (zerada sem avaliação; com duas avaliações gravadas, `qtdAvaliacoes = 2` e média 4.5 pela
+  `ConsultaAvaliacoes` real) e `null` pro Prestador; com o id devolvido, `GET /candidaturas/{id}/chat` responde 200
   pelos dois lados.

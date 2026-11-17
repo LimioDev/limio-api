@@ -95,8 +95,9 @@ public class ConsultarServicoUseCase {
         ResumoCategoria categoria = consultaCategoria.buscarPorId(anuncio.getCategoriaId())
                 .orElseThrow(() -> new IllegalStateException("categoria do anúncio não existe: " + anuncioId));
 
-        UUID outraParteId = souEmpregador ? escolhida.getPrestadorId() : anuncio.getContratanteId();
-        OutraParteDoServico outraParte = outraParte(outraParteId, souEmpregador);
+        OutraParteDoServico outraParte = souEmpregador
+                ? prestadorVistoPeloEmpregador(escolhida.getPrestadorId())
+                : empregadorVistoPeloPrestador(anuncio.getContratanteId());
 
         Reagendamento propostaPendente = reagendamentoService.buscarPendentesDosAnuncios(List.of(anuncioId))
                 .stream().findFirst().orElse(null);
@@ -110,23 +111,33 @@ public class ConsultarServicoUseCase {
     }
 
     /**
-     * Vazio se a conta da outra parte já foi encerrada. GOLD e reputação só são calculados pro Empregador ver do
-     * Prestador, como na lista de candidatos (ETI-67): não existe GOLD de Empregador, e a reputação dele já
-     * aparece no detalhe do mural.
+     * GOLD e reputação só são calculados pro Empregador ver do Prestador, como na lista de candidatos (ETI-67).
+     * Vazio se a conta do Prestador já foi encerrada.
      */
-    private OutraParteDoServico outraParte(UUID outraParteId, boolean souEmpregador) {
-        Optional<DadosUsuario> dados = consultaDadosUsuario.buscarPorId(outraParteId);
+    private OutraParteDoServico prestadorVistoPeloEmpregador(UUID prestadorId) {
+        Optional<DadosUsuario> dados = consultaDadosUsuario.buscarPorId(prestadorId);
         if (dados.isEmpty()) {
             return OutraParteDoServico.CONTA_ENCERRADA;
         }
-        LinkTemporario foto = consultaFotoPerfil.buscarFoto(outraParteId).orElse(null);
-        if (!souEmpregador) {
-            return new OutraParteDoServico(dados.get().nomeCompleto(), foto, dados.get().telefone(), null, null, null);
-        }
-        boolean gold = consultaPlanoPrestador.planoAtual(outraParteId) == Plano.GOLD;
-        ResumoAvaliacoes reputacao = consultaAvaliacoes.resumir(List.of(outraParteId))
-                .getOrDefault(outraParteId, ResumoAvaliacoes.SEM_AVALIACOES);
-        return new OutraParteDoServico(dados.get().nomeCompleto(), foto, dados.get().telefone(), gold,
+        boolean gold = consultaPlanoPrestador.planoAtual(prestadorId) == Plano.GOLD;
+        ResumoAvaliacoes reputacao = consultaAvaliacoes.resumir(List.of(prestadorId))
+                .getOrDefault(prestadorId, ResumoAvaliacoes.SEM_AVALIACOES);
+        return new OutraParteDoServico(dados.get().nomeCompleto(), foto(prestadorId), dados.get().telefone(), gold,
                 reputacao.quantidade(), reputacao.media());
+    }
+
+    /**
+     * Sem GOLD (não existe GOLD de Empregador) e sem reputação (a dele já aparece no detalhe do mural).
+     * Vazio se a conta do Empregador já foi encerrada.
+     */
+    private OutraParteDoServico empregadorVistoPeloPrestador(UUID empregadorId) {
+        return consultaDadosUsuario.buscarPorId(empregadorId)
+                .map(dados -> new OutraParteDoServico(dados.nomeCompleto(), foto(empregadorId), dados.telefone(),
+                        null, null, null))
+                .orElse(OutraParteDoServico.CONTA_ENCERRADA);
+    }
+
+    private LinkTemporario foto(UUID usuarioId) {
+        return consultaFotoPerfil.buscarFoto(usuarioId).orElse(null);
     }
 }

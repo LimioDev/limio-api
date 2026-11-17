@@ -48,6 +48,8 @@ import com.limio.api.modulos.chat.Chat;
 import com.limio.api.modulos.chat.ChatRepository;
 import com.limio.api.modulos.chat.mensagem.Mensagem;
 import com.limio.api.modulos.chat.mensagem.MensagemRepository;
+import com.limio.api.modulos.moderacao.avaliacao.Avaliacao;
+import com.limio.api.modulos.moderacao.avaliacao.AvaliacaoRepository;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -91,6 +93,9 @@ class ConsultarServicoStoryTest {
     private MensagemRepository mensagemRepository;
 
     @Autowired
+    private AvaliacaoRepository avaliacaoRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private Usuario empregador;
@@ -129,6 +134,7 @@ class ConsultarServicoStoryTest {
     }
 
     private void limparBase() {
+        avaliacaoRepository.deleteAll();
         mensagemRepository.deleteAll();
         chatRepository.deleteAll();
         reagendamentoRepository.deleteAll();
@@ -189,6 +195,25 @@ class ConsultarServicoStoryTest {
                 .andExpect(jsonPath("$.propostaPendente", nullValue()))
                 .andExpect(jsonPath("$.chatId", nullValue()))
                 .andExpect(jsonPath("$.mensagensNaoLidas", is(0)));
+    }
+
+    /**
+     * ETI-138: a reputação vem da {@code ConsultaAvaliacoes} real (moderacao), sem mock. As avaliações nascem
+     * direto pelo repository, de serviços anteriores do Prestador (anúncios que não precisam existir aqui).
+     */
+    @Test
+    void dadoPrestadorJaAvaliado_quandoEmpregadorConsulta_entaoOutraParteTrazAReputacaoDele() throws Exception {
+        Instant ontem = Instant.now().minus(Duration.ofDays(1));
+        avaliacaoRepository.save(Avaliacao.publicar(UUID.randomUUID(), empregador.getId(), prestador.getId(),
+                PapelUsuario.PRESTADOR, 5, "Pontual e educado.", ontem));
+        avaliacaoRepository.save(Avaliacao.publicar(UUID.randomUUID(), empregador.getId(), prestador.getId(),
+                PapelUsuario.PRESTADOR, 4, null, ontem));
+        String token = logar("maria@example.com");
+
+        consultar(token, anuncio.getId())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.outraParte.qtdAvaliacoes", is(2)))
+                .andExpect(jsonPath("$.outraParte.mediaAvaliacoes", is(4.5)));
     }
 
     @Test

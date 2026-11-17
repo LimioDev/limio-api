@@ -3,11 +3,14 @@ package com.limio.api.modulos.anuncio.spec;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -165,7 +168,7 @@ class ConsultarServicoUseCaseTest {
         assertThat(servico.outraParte().qtdAvaliacoes()).isNull();
         assertThat(servico.outraParte().mediaAvaliacoes()).isNull();
         assertThat(servico.candidaturaId()).as("o mesmo id pros dois lados").isEqualTo(CANDIDATURA_ID);
-        org.mockito.Mockito.verifyNoInteractions(consultaAvaliacoes);
+        verifyNoInteractions(consultaAvaliacoes);
     }
 
     @Test
@@ -179,7 +182,7 @@ class ConsultarServicoUseCaseTest {
         when(consultaFotoPerfil.buscarFoto(PRESTADOR_ID)).thenReturn(Optional.empty());
         when(consultaPlanoPrestador.planoAtual(PRESTADOR_ID)).thenReturn(Plano.GOLD);
         when(consultaAvaliacoes.resumir(List.of(PRESTADOR_ID)))
-                .thenReturn(java.util.Map.of(PRESTADOR_ID, new ResumoAvaliacoes(12, new java.math.BigDecimal("4.6"))));
+                .thenReturn(Map.of(PRESTADOR_ID, new ResumoAvaliacoes(12, new BigDecimal("4.6"))));
 
         ServicoCombinado servico = useCase.executar(EMPREGADOR_ID, ANUNCIO_ID);
 
