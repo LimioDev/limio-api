@@ -1,6 +1,7 @@
 package com.limio.api.modulos.perfil.actions.service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.stereotype.Component;
@@ -19,10 +20,15 @@ public class ConsultaPrestadoresCompativeisService implements ConsultaPrestadore
         this.perfilPrestadorService = perfilPrestadorService;
     }
 
+    /**
+     * A distância nunca vem nula: a consulta só traz perfil completo, que tem coordenadas. O {@code requireNonNull}
+     * deixa isso explícito em vez de um NPE no desembrulho para {@code double}.
+     */
     @Override
     public List<PrestadorCompativel> buscarCompativeis(UUID categoriaId, double latitude, double longitude) {
         return perfilPrestadorService.buscarCompativeis(categoriaId, latitude, longitude).stream()
-                .map(linha -> new PrestadorCompativel(linha.getUsuarioId(), linha.getDistanciaKm()))
+                .map(linha -> new PrestadorCompativel(linha.getUsuarioId(), Objects.requireNonNull(
+                        linha.getDistanciaKm(), "perfil completo sem distância: " + linha.getUsuarioId())))
                 .toList();
     }
 }

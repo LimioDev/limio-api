@@ -1,6 +1,7 @@
 package com.limio.api.modulos.anuncio.spec;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.never;
@@ -35,6 +36,7 @@ import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.actions.usecase.AvisarPrestadoresCompativeisUseCase;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.eventos.AnuncioPublicadoEvent;
+import com.limio.api.modulos.anuncio.excecao.CategoriaDoAnuncioNaoEncontradaException;
 
 @ExtendWith(MockitoExtension.class)
 class AvisarPrestadoresCompativeisUseCaseTest {
@@ -162,6 +164,19 @@ class AvisarPrestadoresCompativeisUseCaseTest {
         publicar();
 
         verifyNoInteractions(consultaDadosUsuario, consultaCategoria, eventos);
+    }
+
+    @Test
+    void dadoCategoriaDoAnuncioInexistente_quandoAnuncioPublicado_entaoFalhaComExcecaoDoModuloSemAvisar() {
+        anuncioPublicado();
+        compativeis(new PrestadorCompativel(RAFAEL, 1.0));
+        when(consultaDadosUsuario.filtrarAptosAReceberAviso(List.of(RAFAEL))).thenReturn(Set.of(RAFAEL));
+        when(consultaCategoria.buscarPorId(CATEGORIA_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(this::publicar)
+                .isInstanceOf(CategoriaDoAnuncioNaoEncontradaException.class)
+                .hasMessageContaining(ANUNCIO_ID.toString());
+        verifyNoInteractions(eventos);
     }
 
     @Test

@@ -67,11 +67,20 @@ Os campos vão soltos porque o `notificacao` não pode importar `modulos.anuncio
   que o constroem. Um método de filtro em lote na porta resolve sem uma consulta por Prestador.
 - **Falha não derruba a publicação.** O listener é `AFTER_COMMIT`: se ele falhar, o anúncio já está publicado e a
   exceção vira só log (mesmo comportamento do chat no `CandidaturaCriadaEvent`).
+- **Categoria que sumiu vira exceção do módulo.** Se a categoria do anúncio não existir mais, o usecase lança
+  `CategoriaDoAnuncioNaoEncontradaException` (com o id do anúncio na mensagem) em vez de `IllegalStateException`
+  solta, e ninguém é avisado. Ajuste do review da PR #41.
+- **Um evento por destinatário, falha isolada.** O ouvinte do `NovoServicoNaAreaEvent` no `notificacao` (ETI-112,
+  PR #43) é `AFTER_COMMIT` + `REQUIRES_NEW`: cada aviso roda depois do commit desta transação e a exceção de um
+  destinatário vira log sem interromper os demais.
+- **Distância nunca nula.** `ConsultaPrestadoresCompativeisService` usa `Objects.requireNonNull` no desembrulho de
+  `getDistanciaKm()`: perfil completo sempre tem coordenadas, e a falha fica explícita se isso mudar.
 
 ## Testes
 
 - `spec/AvisarPrestadoresCompativeisUseCaseTest`: aviso com bairro e distância, um por Prestador apto, dono de fora,
-  ninguém no raio (nem consulta contas), anúncio que saiu de `PUBLICADO`, inexistente e sem coordenadas.
+  ninguém no raio (nem consulta contas), anúncio que saiu de `PUBLICADO`, inexistente e sem coordenadas,
+  e categoria inexistente (exceção do módulo, sem aviso).
 - `auth/spec/ConsultaDadosUsuarioServiceTest`: filtro de aptos (sem e-mail confirmado, suspensa e encerrada ficam
   de fora; papel ativo não importa) e lista vazia sem consultar o banco.
 - `story/AvisarPrestadoresCompativeisStoryTest`, ponta a ponta pela rota real `POST /anuncios`: compatível por
