@@ -2,6 +2,7 @@ package com.limio.api.modulos.anuncio.aplicacao;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -77,6 +78,13 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     /** Busca que não lança: quem consulta por fora do módulo ({@code ConsultaCandidatura}) decide o que fazer. */
     public Optional<Aplicacao> buscarPorId(UUID id) {
         return repository.findById(id);
+    }
+
+    public List<Aplicacao> buscarPorIds(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return repository.findAllById(ids);
     }
 
     /** Candidaturas ainda abertas (não recusadas/concluídas/encerradas) em que {@code usuarioId} é o prestador. */

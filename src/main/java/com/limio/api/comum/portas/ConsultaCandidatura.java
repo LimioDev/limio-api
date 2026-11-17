@@ -1,5 +1,7 @@
 package com.limio.api.comum.portas;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,5 +16,7 @@ public interface ConsultaCandidatura {
      * @return o resumo, ou vazio se a candidatura ou o anúncio dela não existem
      */
     Optional<ResumoCandidatura> buscarPorId(UUID candidaturaId);
+
+    Map<UUID, ResumoCandidatura> buscarResumosEmLote(Collection<UUID> candidaturaIds);
 
 }

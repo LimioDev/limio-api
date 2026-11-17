@@ -1,5 +1,7 @@
 package com.limio.api.comum.portas;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,5 +22,7 @@ public interface ConsultaFotoPerfil {
      * @return link temporário de leitura da foto atual
      */
     Optional<LinkTemporario> buscarFoto(UUID usuarioId);
+
+    Map<UUID, LinkTemporario> buscarFotosEmLote(Collection<UUID> usuarioIds);
 
 }
