@@ -49,3 +49,22 @@ por `anuncio`) em `AFTER_COMMIT` + `REQUIRES_NEW` e deixa somente leitura (`OUTR
 candidaturas listadas em `candidaturasNaoEscolhidasIds`, em lote (`executarDasCandidaturas`). O chat do escolhido não é
 tocado e segue aberto. Recusadas e desistentes não entram na lista: seus chats já foram fechados com o motivo próprio
 (e `Chat.deixarSomenteLeitura` mantém o primeiro motivo). Só `SERVICO_CANCELADO` (ETI-94 a ETI-97) segue sem listener.
+
+## 2026-11-17 — ETI-103: listar minhas conversas por papel
+
+- **`GET /chats`:** lista as conversas do papel ativo do token (Empregador: chats dos anúncios; Prestador: chats das
+  candidaturas), da última mensagem mais nova para a mais antiga, paginada com `PageResponse` (`pagina`, `tamanho` de
+  1 a 50). A resposta traz também `totalComNaoLidas`, que não depende da página. Contrato em
+  `docs/features/ETI-103-listar-minhas-conversas.md`.
+- **Query única por papel:** `ChatRepository.listarDoContratante` / `listarDoPrestador` (nativas, com LATERAL para a
+  última mensagem e subconsulta para as não lidas) e `contarDoContratanteComNaoLidas` / `contarDoPrestadorComNaoLidas`.
+  Mensagens enviadas pelo próprio usuário não contam como não lidas.
+- **`ListarConversasUseCase`:** monta título/status, nome e foto da outra parte em lote pelas portas
+  `ConsultaCandidatura.buscarResumosEmLote`, `ConsultaDadosUsuario.buscarPorIds`, `ConsultaFotoPerfil.buscarFotosEmLote`
+  e `ConsultaPerfilEmpregador.buscarResumosEmLote`. Conta encerrada aparece como "Usuário excluído". Chat somente
+  leitura e chat sem mensagem continuam na lista.
+- **Índices (V38):** `idx_chat_contratante_id`, `idx_chat_prestador_id` e `idx_mensagem_nao_lidas` (parcial).
+- **Código de erro:** entrada inválida responde 400 `VALIDACAO_FALHOU`; `DADOS_INVALIDOS`, sugerido no card, não existe
+  na API.
+- `ChatController` deixou de ser "sem checagem de papel" só nesta rota: a lista segue o papel do token.
+
