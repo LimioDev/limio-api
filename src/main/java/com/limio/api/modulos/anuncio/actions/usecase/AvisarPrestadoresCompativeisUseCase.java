@@ -22,6 +22,7 @@ import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.eventos.AnuncioPublicadoEvent;
+import com.limio.api.modulos.anuncio.excecao.CategoriaDoAnuncioNaoEncontradaException;
 
 /**
  * UC "Publicar no mural geográfico" — aviso aos Prestadores compatíveis (ETI-65). Ao publicar um anúncio, pede um
@@ -86,7 +87,7 @@ public class AvisarPrestadoresCompativeisUseCase {
                 compativeis.stream().map(PrestadorCompativel::usuarioId).toList());
         String categoriaNome = consultaCategoria.buscarPorId(anuncio.getCategoriaId())
                 .map(ResumoCategoria::nome)
-                .orElseThrow(() -> new IllegalStateException("categoria do anúncio não existe: " + anuncio.getId()));
+                .orElseThrow(() -> new CategoriaDoAnuncioNaoEncontradaException(anuncio.getId()));
         Instant agora = Instant.now();
 
         compativeis.stream()
