@@ -89,3 +89,10 @@ O padrão de conta nova da preferência saiu do usecase de consulta pra `Prefere
 a entrega usa o mesmo padrão. Conta encerrada passa a apagar também os aparelhos de push. `ServicoCanceladoEvent` (#38)
 e `AnuncioExpiradoEvent` (#39) ficam pra depois do merge delas. Detalhe em
 `../features/ETI-112-envio-de-notificacoes-respeitando-preferencias.md`.
+
+## 2026-11 — ajustes do review da #43 (ETI-112)
+
+Cada canal virou uma `CanalDeEnvioService` (push, e-mail, WhatsApp) e o `EntregarNotificacaoUseCase` só itera: canal
+novo não mexe no usecase. Envio desligado no ambiente não grava mais `ENVIADO`. O push trata cada lote à parte e não
+perde os tokens inválidos quando outro lote falha. Fila do executor cheia roda o envio em quem publicou, em vez de
+descartar. Os não escolhidos da escolha saem numa consulta só (`ConsultaCandidatura.buscarPrestadoresIds`).

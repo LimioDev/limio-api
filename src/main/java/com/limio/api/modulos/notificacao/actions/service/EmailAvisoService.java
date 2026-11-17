@@ -16,7 +16,11 @@ import com.resend.services.emails.model.CreateEmailOptions;
  * específico pra não colidir com o {@code EmailService} de {@code auth}.
  *
  * <p>Diferente do {@code auth}, falha sobe como exceção: quem chama registra o envio como falho. Com
- * {@code email.enviar=false} (padrão fora de produção) só loga.
+ * {@code email.enviar=false} (padrão fora de produção) só loga e devolve {@code false}: nada é registrado como
+ * enviado.
+ *
+ * <p>{@code new Resend(apiKey)} é a 3ª cópia ({@code auth}, {@code financeiro} e esta). Vira bean em
+ * {@code comum/config/} quando uma 4ª aparecer ou a configuração do cliente deixar de ser só a chave.
  */
 @Component
 public class EmailAvisoService {
@@ -35,11 +39,15 @@ public class EmailAvisoService {
         this.envioHabilitado = envioHabilitado;
     }
 
-    /** O texto vem de dado do usuário (título do anúncio, nome): escapado antes de entrar no HTML. */
-    public void enviar(String destinatario, String titulo, String corpo) {
+    /**
+     * O texto vem de dado do usuário (título do anúncio, nome): escapado antes de entrar no HTML.
+     *
+     * @return {@code true} se o Resend aceitou; {@code false} se o envio está desligado e nada saiu
+     */
+    public boolean enviar(String destinatario, String titulo, String corpo) {
         if (!envioHabilitado) {
             log.info("e-mail não enviado (email.enviar=false): destinatario={}, assunto={}", destinatario, titulo);
-            return;
+            return false;
         }
         try {
             resend.emails().send(CreateEmailOptions.builder()
@@ -49,6 +57,7 @@ public class EmailAvisoService {
                     .html("<p>" + HtmlUtils.htmlEscape(corpo) + "</p>"
                             + "<p>Abra o app Limio para ver os detalhes.</p>")
                     .build());
+            return true;
         } catch (ResendException e) {
             throw new IllegalStateException("Resend recusou o e-mail: " + e.getMessage(), e);
         }

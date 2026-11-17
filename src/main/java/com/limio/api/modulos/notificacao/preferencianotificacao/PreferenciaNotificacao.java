@@ -3,6 +3,7 @@ package com.limio.api.modulos.notificacao.preferencianotificacao;
 import java.util.UUID;
 
 import com.limio.api.comum.base.BaseEntity;
+import com.limio.api.modulos.notificacao.enums.CanalNotificacao;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -56,5 +57,14 @@ public class PreferenciaNotificacao extends BaseEntity {
                 .email(false)
                 .whatsapp(false)
                 .build();
+    }
+
+    /** Se o usuário ligou {@code canal}. Sem {@code default}: canal novo não compila sem decidir aqui (ETI-112). */
+    public boolean ligado(CanalNotificacao canal) {
+        return switch (canal) {
+            case PUSH -> push;
+            case EMAIL -> email;
+            case WHATSAPP -> whatsapp;
+        };
     }
 }

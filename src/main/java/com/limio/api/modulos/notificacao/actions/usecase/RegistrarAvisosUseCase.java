@@ -3,7 +3,6 @@ package com.limio.api.modulos.notificacao.actions.usecase;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -24,7 +23,6 @@ import com.limio.api.comum.eventos.ServicoIniciadoEvent;
 import com.limio.api.comum.portas.ConsultaCandidatura;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.DadosUsuario;
-import com.limio.api.comum.portas.ResumoCandidatura;
 import com.limio.api.comum.texto.NomeHelper;
 import com.limio.api.modulos.notificacao.Aviso;
 import com.limio.api.modulos.notificacao.Notificacao;
@@ -85,16 +83,17 @@ public class RegistrarAvisosUseCase {
         registrar(AvisoHelper.candidaturaRecusada(evento.prestadorId(), evento.anuncioId(), evento.anuncioTitulo()));
     }
 
-    /** O escolhido e cada não escolhido (as candidaturas que a escolha encerrou). */
+    /**
+     * O escolhido e cada não escolhido (as candidaturas que a escolha encerrou), com os não escolhidos numa consulta
+     * só. Todos na mesma transação de propósito: falha ao gravar é do banco e pegaria os outros também, e como o envio
+     * só começa depois do commit, nenhum push sai pra um aviso desfeito.
+     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void aoEscolherPrestador(PrestadorEscolhidoEvent evento) {
         List<Aviso> avisos = new ArrayList<>();
         avisos.add(AvisoHelper.prestadorEscolhido(evento.prestadorId(), evento.anuncioId(), evento.anuncioTitulo()));
-        evento.candidaturasNaoEscolhidasIds().stream()
-                .map(consultaCandidatura::buscarPorId)
-                .flatMap(Optional::stream)
-                .map(ResumoCandidatura::prestadorId)
+        consultaCandidatura.buscarPrestadoresIds(evento.candidaturasNaoEscolhidasIds())
                 .forEach(naoEscolhido -> avisos.add(
                         AvisoHelper.naoEscolhido(naoEscolhido, evento.anuncioId(), evento.anuncioTitulo())));
         avisos.forEach(this::registrar);

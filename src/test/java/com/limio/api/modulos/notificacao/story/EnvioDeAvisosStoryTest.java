@@ -49,6 +49,7 @@ import com.limio.api.modulos.auth.usuario.UsuarioRepository;
 import com.limio.api.modulos.auth.usuario.enums.StatusConta;
 import com.limio.api.modulos.notificacao.actions.service.EmailAvisoService;
 import com.limio.api.modulos.notificacao.actions.service.PushExpoService;
+import com.limio.api.modulos.notificacao.actions.service.PushExpoService.ResultadoPush;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -102,7 +103,9 @@ class EnvioDeAvisosStoryTest {
         limparBase();
         maria = usuario("Maria da Silva", "maria@example.com", "52998224725", PapelUsuario.EMPREGADOR);
         rafael = usuario("Rafael Souza", "rafael@example.com", "11144477735", PapelUsuario.PRESTADOR);
-        when(pushExpoService.enviar(anyList(), anyString(), anyString(), anyMap())).thenReturn(List.of());
+        when(pushExpoService.enviar(anyList(), anyString(), anyString(), anyMap()))
+                .thenReturn(ResultadoPush.enviado(List.of()));
+        when(emailAvisoService.enviar(anyString(), anyString(), anyString())).thenReturn(true);
     }
 
     @AfterEach
@@ -198,7 +201,8 @@ class EnvioDeAvisosStoryTest {
     @Test
     void dadoTokenQueOExpoDizNaoExistirMais_quandoEnvia_entaoOAparelhoEApagado() throws Exception {
         registrarAparelho(logar(maria), TOKEN_MARIA, "ANDROID").andExpect(status().isNoContent());
-        when(pushExpoService.enviar(anyList(), anyString(), anyString(), anyMap())).thenReturn(List.of(TOKEN_MARIA));
+        when(pushExpoService.enviar(anyList(), anyString(), anyString(), anyMap()))
+                .thenReturn(ResultadoPush.enviado(List.of(TOKEN_MARIA)));
 
         candidatarSe();
 

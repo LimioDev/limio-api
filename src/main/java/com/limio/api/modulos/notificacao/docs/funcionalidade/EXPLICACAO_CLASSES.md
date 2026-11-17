@@ -77,7 +77,8 @@ Atualize esta página sempre que uma classe mudar de responsabilidade.
    (`AFTER_COMMIT`, `REQUIRES_NEW`): `AvisoHelper` monta o `Aviso`, grava a `Notificacao` e publica
    `eventos/NotificacaoRegistradaEvent`.
 2. `NotificacaoRegistradaEvent` → `EntregarNotificacaoUseCase` (`@Async`, `AFTER_COMMIT`): preferência do usuário
-   (ou `PreferenciaNotificacao.padraoContaNova`), um envio por canal ligado, `EnvioNotificacao` por tentativa.
+   (ou `PreferenciaNotificacao.padraoContaNova`), uma `CanalDeEnvioService` por canal ligado, `EnvioNotificacao` por
+   tentativa.
 3. `POST /notificacoes/aparelhos` e `/remover` → `AparelhoPushController` → `RegistrarAparelhoPushUseCase` (upsert por
    token) / `RemoverAparelhoPushUseCase` (só o token do próprio usuário).
 
@@ -86,11 +87,13 @@ Atualize esta página sempre que uma classe mudar de responsabilidade.
 | `Aviso` | Tipo de domínio: destinatário, tipo, título, corpo e anúncio de um aviso |
 | `actions/helper/AvisoHelper` | Textos dos avisos por evento (puro) |
 | `RegistrarAvisosUseCase` | Um ouvinte por evento de aviso; grava a notificação |
-| `EntregarNotificacaoUseCase` | Envia pelos canais ligados e registra cada tentativa |
-| `actions/service/PushExpoService` | Cliente do Expo Push Service; devolve os tokens que não existem mais |
+| `EntregarNotificacaoUseCase` | Itera os canais ligados e registra cada tentativa |
+| `actions/service/CanalDeEnvioService` | Estratégia de um canal; canal novo é uma implementação nova |
+| `actions/service/CanalPushService`, `CanalEmailService`, `CanalWhatsappService` | Push, e-mail e WhatsApp (este nunca envia sem consentimento) |
+| `actions/service/PushExpoService` | Cliente do Expo Push Service; resultado por lote, com os tokens que não existem mais |
 | `actions/service/EmailAvisoService` | Resend pros avisos (instância própria, falha sobe como exceção) |
 | `aparelhopush/AparelhoPush` (+ repository/service) | Token de push do aparelho logado, único por aparelho |
 | `envionotificacao/EnvioNotificacao` (+ repository/service) | Canal, status e motivo de cada tentativa de envio |
 | `enums/CanalNotificacao`, `StatusEnvio`, `Plataforma` | Valores fechados do envio |
 | `AparelhoPushController`, `AparelhoPushRequest`, `RemoverAparelhoPushRequest` | HTTP do aparelho |
-| `comum/config/AssincronoConfig` | `@EnableAsync` e o executor `envioDeAvisos` (síncrono nos testes) |
+| `comum/config/AssincronoConfig` | `@EnableAsync` e o executor `envioDeAvisos` (síncrono nos testes; fila cheia roda em quem publicou) |
