@@ -1,6 +1,7 @@
 package com.limio.api.modulos.notificacao.story;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
@@ -151,7 +152,8 @@ class NotificacoesStoryTest {
     void dadoPaginaNegativa_quandoLista_entao400() throws Exception {
         mockMvc.perform(get("/notificacoes").param("pagina", "-1").header(HttpHeaders.AUTHORIZATION, bearer(maria)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.codigo", is("VALIDACAO_FALHOU")));
+                .andExpect(jsonPath("$.codigo", is("VALIDACAO_FALHOU")))
+                .andExpect(jsonPath("$.mensagem", containsString("a página deve ser 0 ou maior")));
     }
 
     @Test
