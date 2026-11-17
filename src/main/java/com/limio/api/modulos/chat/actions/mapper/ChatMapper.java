@@ -2,13 +2,18 @@ package com.limio.api.modulos.chat.actions.mapper;
 
 import org.springframework.stereotype.Component;
 
+import com.limio.api.comum.records.PageResponse;
 import com.limio.api.modulos.chat.ChatAberto;
+import com.limio.api.modulos.chat.ConversaResumo;
+import com.limio.api.modulos.chat.ConversasListadas;
 import com.limio.api.modulos.chat.OutraParte;
 import com.limio.api.modulos.chat.enums.TipoEventoChat;
 import com.limio.api.modulos.chat.eventos.MensagemEnviadaEvent;
 import com.limio.api.modulos.chat.eventos.MensagensConfirmadasEvent;
 import com.limio.api.modulos.chat.mensagem.Mensagem;
 import com.limio.api.modulos.chat.records.ChatResponse;
+import com.limio.api.modulos.chat.records.ConversaResponse;
+import com.limio.api.modulos.chat.records.ConversasResponse;
 import com.limio.api.modulos.chat.records.EventoChatResponse;
 import com.limio.api.modulos.chat.records.MensagemResponse;
 
@@ -33,6 +38,28 @@ public class ChatMapper {
                 aberto.chat().getMotivoSomenteLeitura(),
                 new ChatResponse.Historico(aberto.mensagens().stream().map(this::toResponse).toList(),
                         aberto.tamanho(), aberto.temMais()));
+    }
+
+    public ConversasResponse toResponse(ConversasListadas listadas) {
+        return new ConversasResponse(PageResponse.de(listadas.conversas(), this::toResponse),
+                listadas.totalComNaoLidas());
+    }
+
+    private ConversaResponse toResponse(ConversaResumo conversa) {
+        OutraParte outraParte = conversa.outraParte();
+        ConversaResumo.UltimaMensagem ultima = conversa.ultimaMensagem();
+        return new ConversaResponse(
+                conversa.chatId(),
+                conversa.candidaturaId(),
+                new ConversaResponse.OutraParte(outraParte.nome(), outraParte.fotoUrl(), outraParte.fotoExpiraEm(),
+                        outraParte.papel()),
+                conversa.tituloAnuncio(),
+                conversa.statusCandidatura(),
+                ultima == null ? null
+                        : new ConversaResponse.UltimaMensagem(ultima.texto(), ultima.enviadaEm(), ultima.enviadaPorMim()),
+                conversa.mensagensNaoLidas(),
+                conversa.somenteLeitura(),
+                conversa.motivoSomenteLeitura());
     }
 
     public MensagemResponse toResponse(Mensagem mensagem) {
