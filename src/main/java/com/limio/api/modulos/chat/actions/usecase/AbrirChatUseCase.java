@@ -79,8 +79,7 @@ public class AbrirChatUseCase {
         Optional<OutraParte> encontrada = switch (papel) {
             case EMPREGADOR -> consultaPerfilEmpregador.buscarResumoSemCriar(outraParteId)
                     .map(perfil -> new OutraParte(outraParteId, perfil.nomeExibicao(), perfil.fotoUrl(),
-                            perfil.fotoExpiraEm(),
-                            papel));
+                            perfil.fotoExpiraEm(), papel));
             case CANDIDATO -> consultaDadosUsuario.buscarPorId(outraParteId).map(dados -> {
                 Optional<LinkTemporario> foto = consultaFotoPerfil.buscarFoto(outraParteId);
                 return new OutraParte(outraParteId, dados.nomeCompleto(), foto.map(LinkTemporario::url).orElse(null),

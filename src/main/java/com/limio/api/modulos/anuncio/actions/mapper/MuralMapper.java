@@ -37,8 +37,8 @@ public class MuralMapper {
                 detalhe.uf(),
                 umaCasa(detalhe.distanciaKm()),
                 new EmpregadorNoDetalheResponse(detalhe.empregadorId(), detalhe.empregador().nomeExibicao(),
-                        detalhe.empregador().fotoUrl(),
-                        detalhe.empregador().mediaAvaliacoes(), detalhe.empregador().qtdAvaliacoes()),
+                        detalhe.empregador().fotoUrl(), detalhe.empregador().mediaAvaliacoes(),
+                        detalhe.empregador().qtdAvaliacoes()),
                 detalhe.minhaCandidatura() == null ? null
                         : new CandidaturaResponse(detalhe.minhaCandidatura().id(), detalhe.minhaCandidatura().status()));
     }
