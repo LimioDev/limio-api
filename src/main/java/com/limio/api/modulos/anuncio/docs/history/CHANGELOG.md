@@ -351,3 +351,18 @@ estornadas, o que fecha a divergência de contagem registrada no ETI-69.
 `ServicoCanceladoEvent` fica em `comum/eventos/`; o chat vira somente leitura em `AFTER_COMMIT`. Sem consumidor de
 notificação até o ETI-112. Pendências: ETI-99/100 (criar e aceitar reagendamento; o tardio é testado com dado
 semeado) e a duplicação das constantes de 24h.
+
+## 2026-11-18 — ETI-96: Prestador cancelar depois de escolhido
+
+`POST /anuncios/{anuncioId}/servico/cancelar-prestador`. Detalhe completo em
+`docs/features/ETI-96-prestador-cancelar-servico.md`.
+
+Serviço `PUBLICADO` ou `EM_ANDAMENTO` com a candidatura `ESCOLHIDA` vai para `ENCERRADO` (sem `tipo_cancelamento`;
+nenhuma migration). A proposta de reagendamento pendente perde o efeito na mesma transação. Em `AGUARDANDO_VALIDACAO`
+o pedido é recusado (409 `SERVICO_ESTADO_INVALIDO`). Sem estorno de cota (RB18) e sem carência (RB36): o caso de uso
+não conhece a porta `ConsumoCotaPrestador`.
+
+Evento próprio, `ServicoCanceladoPeloPrestadorEvent` em `comum/eventos/`, porque o `ServicoCanceladoEvent` do ETI-94
+é do Empregador (tipo, estorno e data vigente). O chat vira somente leitura em `AFTER_COMMIT` com o mesmo motivo
+`SERVICO_CANCELADO`. A autorização usa `escolhidaEm` (permanente), então o escolhido que repete o pedido recebe 409 e
+quem não foi escolhido, 404. Pendência: aviso ao Empregador (US56/ETI-112).

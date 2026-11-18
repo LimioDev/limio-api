@@ -48,4 +48,12 @@ para a lista de candidatos do `anuncio`. Só leitura: nunca cria o chat. Ver
 por `anuncio`) em `AFTER_COMMIT` + `REQUIRES_NEW` e deixa somente leitura (`OUTRO_PRESTADOR_ESCOLHIDO`) os chats das
 candidaturas listadas em `candidaturasNaoEscolhidasIds`, em lote (`executarDasCandidaturas`). O chat do escolhido não é
 tocado e segue aberto. Recusadas e desistentes não entram na lista: seus chats já foram fechados com o motivo próprio
-(e `Chat.deixarSomenteLeitura` mantém o primeiro motivo). Só `SERVICO_CANCELADO` (ETI-94 a ETI-97) segue sem listener.
+(e `Chat.deixarSomenteLeitura` mantém o primeiro motivo). Só `SERVICO_CANCELADO` (ETI-94 a ETI-97) segue sem listener (ligado depois: ETI-94 e ETI-96, ver 2026-11-18).
+
+## 2026-11-18 — ETI-96: chat somente leitura quando o Prestador cancela o serviço
+
+`DeixarChatSomenteLeituraUseCase.aoCancelarServicoPeloPrestador` escuta `ServicoCanceladoPeloPrestadorEvent`
+(`comum/eventos`, publicado por `anuncio`) em `AFTER_COMMIT` + `REQUIRES_NEW` e deixa somente leitura o chat da
+`candidaturaEscolhidaId`, com o mesmo motivo `SERVICO_CANCELADO` do cancelamento pelo Empregador (ETI-94,
+`aoCancelarServico`): a faixa do front não depende de quem cancelou. Com isso `SERVICO_CANCELADO` tem listener nos dois
+sentidos. Falha do listener é só logada e o chat fica aberto, como nos demais.
