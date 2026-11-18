@@ -16,6 +16,7 @@ import com.limio.api.comum.eventos.CandidaturaRecusadaEvent;
 import com.limio.api.comum.eventos.CandidaturaEncerradaEvent;
 import com.limio.api.comum.eventos.ContaEncerradaEvent;
 import com.limio.api.comum.eventos.PrestadorEscolhidoEvent;
+import com.limio.api.comum.eventos.ServicoCanceladoEvent;
 import com.limio.api.modulos.chat.Chat;
 import com.limio.api.modulos.chat.ChatService;
 import com.limio.api.modulos.chat.enums.MotivoSomenteLeitura;
@@ -25,9 +26,10 @@ import com.limio.api.modulos.chat.enums.MotivoSomenteLeitura;
  * receber mensagens e o histórico continua. Roda depois do commit de quem publicou, em transação própria (ADR-0003).
  *
  * Hoje escuta {@code AnuncioCanceladoEvent}, {@code ContaEncerradaEvent}, {@code CandidaturaEncerradaEvent}
- * (desistência, ETI-77), {@code CandidaturaRecusadaEvent} (ETI-67) e {@code PrestadorEscolhidoEvent} (ETI-69). O card
- * de serviço cancelado (ETI-94/ETI-96) publica seu evento e liga aqui um listener que chama {@link
- * #executarDaCandidatura} (ou {@link #executarDoAnuncio}) com o {@link MotivoSomenteLeitura} do cenário.
+ * (desistência, ETI-77), {@code CandidaturaRecusadaEvent} (ETI-67), {@code PrestadorEscolhidoEvent} (ETI-69) e
+ * {@code ServicoCanceladoEvent} (cancelamento do serviço combinado pelo Empregador, ETI-94). O cancelamento pelo
+ * Prestador (ETI-96) ligará aqui o seu, chamando {@link #executarDaCandidatura} com o {@link MotivoSomenteLeitura} do
+ * cenário.
  */
 @Service
 public class DeixarChatSomenteLeituraUseCase {
@@ -55,6 +57,13 @@ public class DeixarChatSomenteLeituraUseCase {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void aoEscolherPrestador(PrestadorEscolhidoEvent evento) {
         executarDasCandidaturas(evento.candidaturasNaoEscolhidasIds(), MotivoSomenteLeitura.OUTRO_PRESTADOR_ESCOLHIDO,
+                evento.ocorridoEm());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void aoCancelarServico(ServicoCanceladoEvent evento) {
+        executarDaCandidatura(evento.candidaturaEscolhidaId(), MotivoSomenteLeitura.SERVICO_CANCELADO,
                 evento.ocorridoEm());
     }
 

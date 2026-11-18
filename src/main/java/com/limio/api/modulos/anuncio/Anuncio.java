@@ -6,8 +6,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 import com.limio.api.comum.base.BaseEntity;
+import com.limio.api.comum.eventos.enums.TipoCancelamento;
 import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.comum.portas.EnderecoLocalizado;
+import com.limio.api.modulos.anuncio.enums.SituacaoCancelamentoServico;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 
 import jakarta.persistence.Column;
@@ -38,8 +40,13 @@ import lombok.Setter;
 @Builder
 public class Anuncio extends BaseEntity {
 
-    private static final String MOTIVO_EXCLUSAO_DE_CONTA = "Cancelado por saída de conta";
+    /** Antecedência mínima para cancelar o serviço combinado (RB08). Regra do anúncio, lida por quem precisar dela. */
+    public static final Duration PRAZO_CANCELAMENTO_SERVICO = Duration.ofHours(24);
+
+    private static final String MOTIVO_EXCLUSAO_DE_CONTA ="Cancelado por saída de conta";
     private static final String MOTIVO_CANCELAMENTO_PELO_EMPREGADOR = "Cancelado pelo Empregador";
+    private static final String MOTIVO_SERVICO_CANCELADO = "Serviço cancelado pelo Empregador";
+    private static final String MOTIVO_SERVICO_CANCELADO_NA_CARENCIA = "Serviço cancelado pelo Empregador na carência pós-reagendamento";
 
     @Column(name = "contratante_id", nullable = false)
     private UUID contratanteId;
@@ -121,6 +128,10 @@ public class Anuncio extends BaseEntity {
      */
     @Column(name = "motivo_encerramento")
     private String motivoEncerramento;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_cancelamento", length = 20)
+    private TipoCancelamento tipoCancelamento;
 
     /** Status ainda "vivo" — ainda não chegou num estado final (TICKET-0049: candidato a encerramento). */
     public boolean isAberto() {
@@ -253,6 +264,40 @@ public class Anuncio extends BaseEntity {
     /** ETI-63: Empregador cancela antes de escolher alguém. Quem chama já validou o estado do anúncio. */
     public void cancelarPeloEmpregador(Instant agora) {
         encerrar(agora, MOTIVO_CANCELAMENTO_PELO_EMPREGADOR);
+    }
+
+    public void cancelarServicoCombinado(Instant agora, TipoCancelamento tipo) {
+        encerrar(agora, switch (tipo) {
+            case NORMAL -> MOTIVO_SERVICO_CANCELADO;
+            case TARDIO -> MOTIVO_SERVICO_CANCELADO_NA_CARENCIA;
+        });
+        this.tipoCancelamento = tipo;
+    }
+
+    public boolean temAntecedenciaDe(Duration antecedencia, Instant agora) {
+        return !dataHoraPretendida.isBefore(agora.plus(antecedencia));
+    }
+
+    /**
+     * ETI-94: o que o status permite quanto a cancelar o serviço combinado. {@code switch} sem {@code default}: um
+     * status novo obriga a decidir aqui, junto das transições. Quem chama traduz o resultado em resposta.
+     */
+    public SituacaoCancelamentoServico situacaoParaCancelarServico() {
+        return switch (status) {
+            case PUBLICADO -> SituacaoCancelamentoServico.CANCELAVEL;
+            case EM_ANDAMENTO, AGUARDANDO_VALIDACAO -> SituacaoCancelamentoServico.USAR_DENUNCIA;
+            case CONCLUIDO, ENCERRADO -> SituacaoCancelamentoServico.SEM_O_QUE_CANCELAR;
+        };
+    }
+
+    /** ETI-94: o serviço combinado só se cancela com 24h ou mais de antecedência da data/hora vigente. */
+    public boolean permiteCancelarServico(Instant agora) {
+        return temAntecedenciaDe(PRAZO_CANCELAMENTO_SERVICO, agora);
+    }
+
+    /** ETI-86: "até quando o Empregador pode cancelar" — o último instante em que {@link #permiteCancelarServico} vale. */
+    public Instant prazoCancelamentoServicoEm() {
+        return dataHoraPretendida.minus(PRAZO_CANCELAMENTO_SERVICO);
     }
 
     private void encerrar(Instant agora, String motivo) {
