@@ -57,6 +57,7 @@ import com.limio.api.TestcontainersConfiguration;
 import com.limio.api.comum.eventos.AnuncioCanceladoEvent;
 import com.limio.api.comum.eventos.CandidaturaCriadaEvent;
 import com.limio.api.comum.eventos.ServicoCanceladoEvent;
+import com.limio.api.comum.eventos.ServicoCanceladoPeloPrestadorEvent;
 import com.limio.api.comum.eventos.enums.TipoCancelamento;
 import com.limio.api.comum.seguranca.JwtAuthFilter;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
@@ -438,6 +439,32 @@ class ChatDaCandidaturaStoryTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenEmpregador)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("texto", "Mudei de ideia."))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo", is("CHAT_SOMENTE_LEITURA")));
+        for (Usuario parte : List.of(empregador, prestador)) {
+            mockMvc.perform(get("/candidaturas/{id}/chat", candidatura.getId())
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + logar(parte)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.isSomenteLeitura", is(true)))
+                    .andExpect(jsonPath("$.motivoSomenteLeitura", is("SERVICO_CANCELADO")))
+                    .andExpect(jsonPath("$.historico.mensagens", hasSize(1)));
+        }
+    }
+
+    @Test
+    void dadoServicoCanceladoPeloPrestador_quandoEnvia_entaoRecusadoEHistoricoContinuaParaOsDois() throws Exception {
+        UUID chatId = candidaturaCriada();
+        String tokenPrestador = logar(prestador);
+        enviar(tokenPrestador, chatId, "Combinado, chego às 9h.", 201);
+
+        transacao.executeWithoutResult(status -> eventos.publishEvent(new ServicoCanceladoPeloPrestadorEvent(
+                anuncio.getId(), anuncio.getTitulo(), candidatura.getId(), empregador.getId(), prestador.getId(),
+                Instant.now())));
+
+        mockMvc.perform(post("/chats/{chatId}/mensagens", chatId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenPrestador)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("texto", "Não vou conseguir."))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.codigo", is("CHAT_SOMENTE_LEITURA")));
         for (Usuario parte : List.of(empregador, prestador)) {

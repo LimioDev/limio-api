@@ -243,6 +243,10 @@ class CancelarServicoPeloPrestadorStoryTest {
         return id;
     }
 
+    private boolean chatSomenteLeitura(UUID chatId) {
+        return jdbc.queryForObject("select somente_leitura from chat where id = ?", Boolean.class, chatId);
+    }
+
     private ResultActions cancelar(String token, UUID anuncioId) throws Exception {
         return mockMvc.perform(post("/anuncios/{anuncioId}/servico/cancelar-prestador", anuncioId)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token));
@@ -276,6 +280,7 @@ class CancelarServicoPeloPrestadorStoryTest {
         Usuario rafael = prestador("Rafael Souza", "rafael@example.com", "39053344705", 3);
         Anuncio anuncio = anuncio(maria.getId(), StatusAnuncio.PUBLICADO, Duration.ofHours(2));
         Aplicacao doRafael = escolhida(anuncio.getId(), rafael.getId(), true);
+        UUID chatId = chat(doRafael, maria.getId());
 
         cancelar(logar("rafael@example.com"), anuncio.getId())
                 .andExpect(status().isOk())
@@ -302,6 +307,25 @@ class CancelarServicoPeloPrestadorStoryTest {
         assertThat(publicados.get(0).candidaturaEscolhidaId()).isEqualTo(doRafael.getId());
         assertThat(publicados.get(0).contratanteId()).isEqualTo(maria.getId());
         assertThat(publicados.get(0).prestadorId()).isEqualTo(rafael.getId());
+
+        assertThat(chatSomenteLeitura(chatId)).isTrue();
+        assertThat(jdbc.queryForObject("select motivo_somente_leitura from chat where id = ?", String.class, chatId))
+                .isEqualTo("SERVICO_CANCELADO");
+    }
+
+    @Test
+    void dadoAguardandoValidacao_quandoEscolhidoCancela_entaoOChatContinuaAberto() throws Exception {
+        Usuario maria = usuario("Maria da Silva", "maria@example.com", "52998224725", PapelUsuario.EMPREGADOR);
+        Usuario rafael = prestador("Rafael Souza", "rafael@example.com", "39053344705", 3);
+        Anuncio anuncio = anuncio(maria.getId(), StatusAnuncio.AGUARDANDO_VALIDACAO, Duration.ofHours(-1));
+        Aplicacao doRafael = escolhida(anuncio.getId(), rafael.getId(), true);
+        doRafael.setStatus(StatusAplicacao.AGUARDANDO_VALIDACAO);
+        aplicacaoRepository.save(doRafael);
+        UUID chatId = chat(doRafael, maria.getId());
+
+        cancelar(logar("rafael@example.com"), anuncio.getId()).andExpect(status().isConflict());
+
+        assertThat(chatSomenteLeitura(chatId)).isFalse();
     }
 
     @Test
@@ -433,6 +457,7 @@ class CancelarServicoPeloPrestadorStoryTest {
         Anuncio anuncio = anuncio(maria.getId(), StatusAnuncio.PUBLICADO, Duration.ofDays(3));
         Aplicacao doRafael = escolhida(anuncio.getId(), rafael.getId(), true);
         Reagendamento proposta = reagendamento(anuncio.getId(), StatusReagendamento.PENDENTE, null);
+        UUID chatId = chat(doRafael, maria.getId());
         doThrow(new IllegalStateException("falha simulada")).when(aplicacaoService).salvar(any(Aplicacao.class));
 
         cancelar(logar("rafael@example.com"), anuncio.getId()).andExpect(status().isInternalServerError());
@@ -441,5 +466,6 @@ class CancelarServicoPeloPrestadorStoryTest {
         assertThat(reagendamentoRepository.findById(proposta.getId()).orElseThrow().getStatus())
                 .isEqualTo(StatusReagendamento.PENDENTE);
         assertThat(consumidas(rafael)).isEqualTo(3);
+        assertThat(chatSomenteLeitura(chatId)).as("sem commit, o chat não reage").isFalse();
     }
 }
