@@ -46,6 +46,7 @@ public class Anuncio extends BaseEntity {
     private static final String MOTIVO_EXCLUSAO_DE_CONTA ="Cancelado por saída de conta";
     private static final String MOTIVO_CANCELAMENTO_PELO_EMPREGADOR = "Cancelado pelo Empregador";
     private static final String MOTIVO_SERVICO_CANCELADO = "Serviço cancelado pelo Empregador";
+    private static final String MOTIVO_SERVICO_CANCELADO_PELO_PRESTADOR = "Serviço cancelado pelo Prestador";
     private static final String MOTIVO_SERVICO_CANCELADO_NA_CARENCIA = "Serviço cancelado pelo Empregador na carência pós-reagendamento";
 
     @Column(name = "contratante_id", nullable = false)
@@ -272,6 +273,10 @@ public class Anuncio extends BaseEntity {
             case TARDIO -> MOTIVO_SERVICO_CANCELADO_NA_CARENCIA;
         });
         this.tipoCancelamento = tipo;
+    }
+
+    public void cancelarServicoPeloPrestador(Instant agora) {
+        encerrar(agora, MOTIVO_SERVICO_CANCELADO_PELO_PRESTADOR);
     }
 
     public boolean temAntecedenciaDe(Duration antecedencia, Instant agora) {

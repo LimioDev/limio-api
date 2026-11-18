@@ -34,6 +34,7 @@ public class Aplicacao extends BaseEntity {
     private static final String MOTIVO_DESISTENCIA = "Desistência do Prestador";
     private static final String MOTIVO_OUTRA_ESCOLHA = "Outro prestador escolhido";
     private static final String MOTIVO_SERVICO_CANCELADO = "Serviço cancelado pelo Empregador";
+    private static final String MOTIVO_SERVICO_CANCELADO_PELO_PRESTADOR = "Serviço cancelado pelo Prestador";
 
     @Column(name = "anuncio_id", nullable = false)
     private UUID anuncioId;
@@ -102,6 +103,10 @@ public class Aplicacao extends BaseEntity {
 
     public void encerrarPorCancelamentoDoServico(Instant agora) {
         encerrar(agora, MOTIVO_SERVICO_CANCELADO);
+    }
+
+    public void encerrarPorCancelamentoDoServicoPeloPrestador(Instant agora) {
+        encerrar(agora, MOTIVO_SERVICO_CANCELADO_PELO_PRESTADOR);
     }
 
     public void registrarEstornoDeCota(Instant agora) {
