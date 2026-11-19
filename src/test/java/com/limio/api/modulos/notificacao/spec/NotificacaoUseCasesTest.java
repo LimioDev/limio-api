@@ -31,6 +31,7 @@ import com.limio.api.modulos.notificacao.actions.usecase.ListarNotificacoesUseCa
 import com.limio.api.modulos.notificacao.actions.usecase.MarcarNotificacaoComoLidaUseCase;
 import com.limio.api.modulos.notificacao.actions.usecase.MarcarTodasNotificacoesComoLidasUseCase;
 import com.limio.api.modulos.notificacao.actions.usecase.RemoverNotificacoesDaContaEncerradaUseCase;
+import com.limio.api.modulos.notificacao.aparelhopush.AparelhoPushService;
 import com.limio.api.modulos.notificacao.enums.TipoNotificacao;
 import com.limio.api.modulos.notificacao.excecao.NotificacaoNaoEncontradaException;
 
@@ -44,6 +45,9 @@ class NotificacaoUseCasesTest {
 
     @Mock
     private NotificacaoService notificacaoService;
+
+    @Mock
+    private AparelhoPushService aparelhoPushService;
 
     private static Notificacao notificacao(Instant lidaEm) {
         return Notificacao.builder()
@@ -138,9 +142,10 @@ class NotificacaoUseCasesTest {
 
     @Test
     void dadoContaEncerrada_quandoEventoChega_entaoApagaAsNotificacoesDoUsuario() {
-        new RemoverNotificacoesDaContaEncerradaUseCase(notificacaoService)
+        new RemoverNotificacoesDaContaEncerradaUseCase(notificacaoService, aparelhoPushService)
                 .aoEncerrarConta(new ContaEncerradaEvent(USUARIO_ID, AGORA));
 
         verify(notificacaoService).apagarDoUsuario(USUARIO_ID);
+        verify(aparelhoPushService).apagarDoUsuario(USUARIO_ID);
     }
 }
