@@ -28,6 +28,8 @@ import com.limio.api.modulos.anuncio.records.MuralItemResponse;
 
 class MuralMapperTest {
 
+    private static final UUID EMPREGADOR_ID = UUID.randomUUID();
+
     private final MuralMapper mapper = new MuralMapper();
 
     private ItemDoMural item(LinkTemporario foto, double km) {
@@ -67,7 +69,7 @@ class MuralMapperTest {
                 new ResumoCategoria(UUID.randomUUID(), "Elétrica", "Reparos", true),
                 List.of(new FotoDoAnuncio(fotoComLink, new LinkTemporario("https://bucket/1", Instant.now())),
                         new FotoDoAnuncio(fotoSemLink, null)),
-                Instant.parse("2026-11-05T13:00:00Z"), "Cambuí", "Campinas", Uf.SP, 9.96,
+                Instant.parse("2026-11-05T13:00:00Z"), "Cambuí", "Campinas", Uf.SP, 9.96, EMPREGADOR_ID,
                 new ResumoPerfilEmpregador("Mari", "https://bucket/mari", Instant.now(), new BigDecimal("4.5"), 8),
                 new MinhaCandidatura(candidaturaId, StatusAplicacao.ENVIADA));
 
@@ -79,6 +81,7 @@ class MuralMapperTest {
         assertThat(resposta.cidade()).isEqualTo("Campinas");
         assertThat(resposta.uf()).isEqualTo(Uf.SP);
         assertThat(resposta.distanciaKm()).isEqualTo(10.0);
+        assertThat(resposta.empregador().usuarioId()).isEqualTo(EMPREGADOR_ID);
         assertThat(resposta.empregador().mediaAvaliacoes()).isEqualByComparingTo("4.5");
         assertThat(resposta.empregador().qtdAvaliacoes()).isEqualTo(8);
         assertThat(resposta.minhaCandidatura()).isEqualTo(new CandidaturaResponse(candidaturaId, StatusAplicacao.ENVIADA));
