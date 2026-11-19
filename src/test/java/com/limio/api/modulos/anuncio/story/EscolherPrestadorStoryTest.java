@@ -291,7 +291,9 @@ class EscolherPrestadorStoryTest {
         Aplicacao escolhida = recarregar(doRafael);
         assertThat(escolhida.getStatus()).isEqualTo(StatusAplicacao.ESCOLHIDA);
         assertThat(escolhida.getEscolhidaEm()).isNotNull();
+        assertThat(escolhida.isCotaConsumida()).isTrue();
         Aplicacao encerrada = recarregar(daAna);
+        assertThat(encerrada.isCotaConsumida()).isFalse();
         assertThat(encerrada.getStatus()).isEqualTo(StatusAplicacao.ENCERRADA);
         assertThat(encerrada.getEncerradaEm()).isNotNull();
         assertThat(encerrada.getMotivoEncerramento()).isEqualTo("Outro prestador escolhido");
@@ -319,6 +321,7 @@ class EscolherPrestadorStoryTest {
         escolher(logar("maria@example.com"), anuncio.getId(), doRafael.getId()).andExpect(status().isOk());
 
         assertThat(recarregar(doRafael).getStatus()).isEqualTo(StatusAplicacao.ESCOLHIDA);
+        assertThat(recarregar(doRafael).isCotaConsumida()).isFalse();
         assertThat(consumidas(rafael)).isEqualTo(TETO);
     }
 
