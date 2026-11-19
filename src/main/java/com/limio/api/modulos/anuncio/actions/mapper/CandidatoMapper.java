@@ -24,6 +24,7 @@ public class CandidatoMapper {
     private static CandidatoResponse toResponse(CandidatoDoAnuncio candidato) {
         return new CandidatoResponse(
                 candidato.candidaturaId(),
+                candidato.usuarioId(),
                 candidato.nome(),
                 candidato.foto() == null ? null : candidato.foto().url(),
                 candidato.foto() == null ? null : candidato.foto().expiraEm(),
