@@ -1,6 +1,7 @@
 package com.limio.api.modulos.anuncio.aplicacao;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -76,6 +77,10 @@ public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
     /** Consulta escalar: não carrega a entidade no contexto de persistência (ver {@code buscarAnuncioId}). */
     @Query("select a.anuncioId from Aplicacao a where a.id = :id")
     Optional<UUID> findAnuncioIdById(@Param("id") UUID id);
+
+    /** Consulta escalar em lote: quem se candidatou em cada uma das candidaturas (avisos da escolha, ETI-112). */
+    @Query("select a.prestadorId from Aplicacao a where a.id in :ids")
+    List<UUID> findPrestadorIdsByIdIn(@Param("ids") Collection<UUID> ids);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from Aplicacao a where a.id = :id")

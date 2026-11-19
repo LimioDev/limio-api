@@ -22,6 +22,10 @@ public class NotificacaoService extends BaseService<Notificacao, UUID, Notificac
         return repository.findByUsuarioIdOrderByEnviadaEmDescIdDesc(usuarioId, pageable);
     }
 
+    public Optional<Notificacao> buscarPorId(UUID notificacaoId) {
+        return repository.findById(notificacaoId);
+    }
+
     public long contarNaoLidas(UUID usuarioId) {
         return repository.countByUsuarioIdAndLidaEmIsNull(usuarioId);
     }

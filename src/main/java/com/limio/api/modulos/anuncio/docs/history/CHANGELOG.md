@@ -371,6 +371,14 @@ distância. A regra do mural vista do outro lado mora no `perfil` (porta `Consul
 aptidão da conta no `auth` (`ConsultaDadosUsuario.filtrarAptosAReceberAviso`). Papel ativo não filtra; "pausado" não
 existe ainda. Sem migration. Detalhe em `../features/ETI-65-avisar-prestadores-compativeis.md`.
 
+## 2026-11-16 — ETI-136: id do usuário nas telas que abrem o perfil público
+
+`CandidatoResponse` ganhou `usuarioId` (Prestador) e `EmpregadorNoDetalheResponse` ganhou `usuarioId` (dono do
+anúncio), pro app abrir `GET /perfis-publicos/{usuarioId}` (ETI-105). No mural, o id vem de `Anuncio.contratanteId`
+pelo `DetalheDoMural.empregadorId`, sem mexer na porta `ResumoPerfilEmpregador`. Sem migration nem `CodigoErro` novo.
+O chat ganhou o mesmo campo (ver `chat/docs/history/CHANGELOG.md`). Detalhe em
+`../features/ETI-136-usuario-id-nas-telas-do-perfil-publico.md`.
+
 ## 2026-11-16 — ETI-138: id da candidatura e reputação no serviço combinado
 
 `ServicoCombinadoResponse` ganhou `candidaturaId` (a candidatura escolhida, o mesmo pros dois lados), pro "Conversar
