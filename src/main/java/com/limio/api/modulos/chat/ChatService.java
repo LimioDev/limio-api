@@ -25,6 +25,10 @@ public class ChatService extends BaseService<Chat, UUID, ChatRepository> {
                 .orElseThrow(ChatNaoEncontradoException::new);
     }
 
+    public Optional<Chat> buscarPorId(UUID chatId) {
+        return repository.findById(chatId);
+    }
+
     public Optional<Chat> buscarDaCandidatura(UUID aplicacaoId) {
         return repository.findByAplicacaoId(aplicacaoId);
     }

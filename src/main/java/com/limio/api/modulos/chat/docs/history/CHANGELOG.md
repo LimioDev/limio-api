@@ -49,3 +49,10 @@ por `anuncio`) em `AFTER_COMMIT` + `REQUIRES_NEW` e deixa somente leitura (`OUTR
 candidaturas listadas em `candidaturasNaoEscolhidasIds`, em lote (`executarDasCandidaturas`). O chat do escolhido não é
 tocado e segue aberto. Recusadas e desistentes não entram na lista: seus chats já foram fechados com o motivo próprio
 (e `Chat.deixarSomenteLeitura` mantém o primeiro motivo). Só `SERVICO_CANCELADO` (ETI-94 a ETI-97) segue sem listener.
+
+## 2026-11-19 — ETI-114: `ConsultaChat.buscarMensagem` pra denúncia de mensagem
+
+A porta `comum/portas/ConsultaChat` ganhou `buscarMensagem(mensagemId)`, que devolve `ResumoMensagem`: o remetente, a
+candidatura, o anúncio e as duas partes do chat. Quem usa é a denúncia de `moderacao`, pra conferir que o denunciante
+participa da conversa e pra saber quem é o denunciado. `ChatService` e `MensagemService` ganharam `buscarPorId`. Só
+leitura. Ver `moderacao/docs/features/ETI-114-registrar-denuncia.md`.
