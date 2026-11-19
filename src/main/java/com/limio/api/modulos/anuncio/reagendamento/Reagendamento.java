@@ -110,11 +110,6 @@ public class Reagendamento extends BaseEntity {
         this.respondidoEm = agora;
     }
 
-    public void cancelarSemEfeito(Instant agora) {
-        this.status = StatusReagendamento.CANCELADO;
-        this.respondidoEm = agora;
-    }
-
     /**
      * RB36: o reagendamento foi respondido há menos que a {@code carencia}. Sem resposta registrada não há carência.
      * Quem chama já filtrou o {@code ACEITO}; aqui só se conta o tempo.

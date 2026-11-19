@@ -1,5 +1,6 @@
 package com.limio.api.modulos.anuncio.reagendamento;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,6 +23,18 @@ public class ReagendamentoService extends BaseService<Reagendamento, UUID, Reage
             return List.of();
         }
         return repository.findByAnuncioIdInAndStatus(anuncioIds, StatusReagendamento.PENDENTE);
+    }
+
+    /**
+     * O serviço deixou de estar combinado (cancelado, iniciado ou conta encerrada): toda proposta pendente dos
+     * anúncios perde o efeito. A data vigente não muda. Ponto único dessa regra; quem tira o serviço de "combinado"
+     * chama aqui em vez de repetir o laço.
+     */
+    public void encerrarPendentesSemEfeito(List<UUID> anuncioIds, Instant agora) {
+        for (Reagendamento pendente : buscarPendentesDosAnuncios(anuncioIds)) {
+            pendente.encerrarSemEfeito(agora);
+            salvar(pendente);
+        }
     }
 
     public Optional<Reagendamento> buscarUltimoAceito(UUID anuncioId) {

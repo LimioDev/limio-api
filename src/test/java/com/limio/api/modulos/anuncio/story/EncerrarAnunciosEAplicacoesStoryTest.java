@@ -193,7 +193,7 @@ class EncerrarAnunciosEAplicacoesStoryTest {
         encerrarConta(token);
 
         Reagendamento atualizado = reagendamentoRepository.findById(pendente.getId()).orElseThrow();
-        assertThat(atualizado.getStatus()).isEqualTo(StatusReagendamento.CANCELADO);
+        assertThat(atualizado.getStatus()).isEqualTo(StatusReagendamento.SEM_EFEITO);
         assertThat(atualizado.getRespondidoEm()).isNotNull();
     }
 

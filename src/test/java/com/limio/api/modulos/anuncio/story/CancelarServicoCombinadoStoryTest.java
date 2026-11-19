@@ -513,7 +513,7 @@ class CancelarServicoCombinadoStoryTest {
         cancelar(logar("maria@example.com"), anuncio.getId()).andExpect(status().isOk());
 
         Reagendamento depois = reagendamentoRepository.findById(pendente.getId()).orElseThrow();
-        assertThat(depois.getStatus()).isEqualTo(StatusReagendamento.CANCELADO);
+        assertThat(depois.getStatus()).isEqualTo(StatusReagendamento.SEM_EFEITO);
         assertThat(depois.getRespondidoEm()).isEqualTo(agora);
     }
 

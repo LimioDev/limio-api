@@ -253,7 +253,7 @@ class IniciarServicoStoryTest {
                 .andExpect(status().isOk());
 
         Reagendamento encerrada = reagendamentoRepository.findById(pendente.getId()).orElseThrow();
-        assertThat(encerrada.getStatus()).isEqualTo(StatusReagendamento.CANCELADO);
+        assertThat(encerrada.getStatus()).isEqualTo(StatusReagendamento.SEM_EFEITO);
         assertThat(encerrada.getRespondidoEm()).isNotNull();
         assertThat(reagendamentoRepository.findById(recusada.getId()).orElseThrow().getStatus())
                 .isEqualTo(StatusReagendamento.RECUSADO);

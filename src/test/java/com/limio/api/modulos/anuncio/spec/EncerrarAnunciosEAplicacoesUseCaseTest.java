@@ -70,7 +70,6 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
     void montarUseCase() {
         useCase = new EncerrarAnunciosEAplicacoesUseCase(anuncioService, aplicacaoService, reagendamentoService,
                 logAuditoriaService, eventPublisher);
-        Mockito.lenient().when(reagendamentoService.buscarPendentesDosAnuncios(any())).thenReturn(List.of());
     }
 
     private Anuncio anuncio(StatusAnuncio status, Instant dataHoraPretendida) {
@@ -189,21 +188,13 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
     @Test
     void dadoReagendamentoPendenteDoAnuncio_quandoContratanteEncerraConta_entaoCancelaSemEfeito() {
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO, Instant.now().plus(Duration.ofDays(10)));
-        Reagendamento pendente = Reagendamento.builder()
-                .anuncioId(ANUNCIO_ID)
-                .dataAnterior(Instant.now())
-                .dataProposta(Instant.now().plus(Duration.ofDays(2)))
-                .status(StatusReagendamento.PENDENTE)
-                .build();
         when(anuncioService.buscarAbertosDoContratante(CONTRATANTE_ID)).thenReturn(List.of(anuncio));
         when(aplicacaoService.buscarAbertasDoPrestador(CONTRATANTE_ID)).thenReturn(List.of());
         when(aplicacaoService.buscarAbertasDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of());
-        when(reagendamentoService.buscarPendentesDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of(pendente));
 
         useCase.aoEncerrarConta(new ContaEncerradaEvent(CONTRATANTE_ID, Instant.now()));
 
-        assertThat(pendente.getStatus()).isEqualTo(StatusReagendamento.CANCELADO);
-        verify(reagendamentoService).salvar(pendente);
+        verify(reagendamentoService).encerrarPendentesSemEfeito(eq(List.of(ANUNCIO_ID)), any(Instant.class));
     }
 
     @Test
