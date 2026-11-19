@@ -363,6 +363,14 @@ escolhido. `Anuncio` ganhou `permiteExpiracao` e `expirar`; `ExpirarAnunciosSemC
 até a US56). Sem migration, sem mudança no mural e sem tocar na cota. Propriedades `anuncio.expiracao.cron` e
 `anuncio.expiracao.lote`; o cron fica desligado (`-`) nos testes.
 
+## 2026-11-16 — ETI-65: avisar os prestadores compatíveis quando um anúncio é publicado
+
+Primeiro ouvinte do `AnuncioPublicadoEvent`: `AvisarPrestadoresCompativeisUseCase` (`AFTER_COMMIT`, `REQUIRES_NEW`)
+publica um `comum/eventos/NovoServicoNaAreaEvent` por Prestador compatível e apto, só com categoria, bairro, título e
+distância. A regra do mural vista do outro lado mora no `perfil` (porta `ConsultaPrestadoresCompativeis`), e a
+aptidão da conta no `auth` (`ConsultaDadosUsuario.filtrarAptosAReceberAviso`). Papel ativo não filtra; "pausado" não
+existe ainda. Sem migration. Detalhe em `../features/ETI-65-avisar-prestadores-compativeis.md`.
+
 ## 2026-11-16 — ETI-136: id do usuário nas telas que abrem o perfil público
 
 `CandidatoResponse` ganhou `usuarioId` (Prestador) e `EmpregadorNoDetalheResponse` ganhou `usuarioId` (dono do
