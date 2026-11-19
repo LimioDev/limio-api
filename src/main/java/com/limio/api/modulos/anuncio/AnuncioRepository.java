@@ -15,6 +15,16 @@ import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 
 public interface AnuncioRepository extends BaseRepository<Anuncio, UUID> {
 
+    @Query(value = """
+            SELECT a.id FROM anuncio a
+            WHERE a.status = 'PUBLICADO'
+              AND a.data_hora_pretendida <= :agora
+              AND NOT EXISTS (SELECT 1 FROM aplicacao ap WHERE ap.anuncio_id = a.id)
+            ORDER BY a.data_hora_pretendida, a.id
+            LIMIT :lote
+            """, nativeQuery = true)
+    List<UUID> buscarIdsParaExpirar(@Param("agora") Instant agora, @Param("lote") int lote);
+
     List<Anuncio> findByContratanteIdAndStatusIn(UUID contratanteId, List<StatusAnuncio> status);
 
     /** Usa {@code idx_anuncio_contratante_status} — histórico resumido do perfil público (ETI-105). */

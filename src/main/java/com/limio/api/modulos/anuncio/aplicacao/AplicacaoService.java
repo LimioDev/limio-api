@@ -49,6 +49,11 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
         return repository.existsByAnuncioIdAndStatusIn(anuncioId, STATUS_ESCOLHIDA);
     }
 
+    /** Existe candidatura ao anúncio, em qualquer estado (pendente, recusada, encerrada...) — barra a expiração. */
+    public boolean existeAlguma(UUID anuncioId) {
+        return repository.existsByAnuncioId(anuncioId);
+    }
+
     /** Prestador escolhido para o anúncio, mesmo depois de concluído. Vazio enquanto ninguém foi escolhido. */
     public Optional<UUID> buscarPrestadorDoServico(UUID anuncioId) {
         return repository.findFirstByAnuncioIdAndStatusIn(anuncioId, STATUS_DO_SERVICO).map(Aplicacao::getPrestadorId);

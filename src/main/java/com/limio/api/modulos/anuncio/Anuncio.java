@@ -47,6 +47,7 @@ public class Anuncio extends BaseEntity {
     private static final String MOTIVO_CANCELAMENTO_PELO_EMPREGADOR = "Cancelado pelo Empregador";
     private static final String MOTIVO_SERVICO_CANCELADO = "Serviço cancelado pelo Empregador";
     private static final String MOTIVO_SERVICO_CANCELADO_NA_CARENCIA = "Serviço cancelado pelo Empregador na carência pós-reagendamento";
+    private static final String MOTIVO_EXPIRACAO = "Expirado sem candidatos";
 
     @Column(name = "contratante_id", nullable = false)
     private UUID contratanteId;
@@ -298,6 +299,21 @@ public class Anuncio extends BaseEntity {
     /** ETI-86: "até quando o Empregador pode cancelar" — o último instante em que {@link #permiteCancelarServico} vale. */
     public Instant prazoCancelamentoServicoEm() {
         return dataHoraPretendida.minus(PRAZO_CANCELAMENTO_SERVICO);
+    }
+
+    /**
+     * ETI-66: só um anúncio {@code PUBLICADO} cuja data pretendida já chegou pode expirar. Quem chama confere à parte
+     * que não há nenhuma candidatura (o anúncio não conhece {@code Aplicacao}, ADR-0001 §1.6).
+     */
+    public boolean permiteExpiracao(Instant agora) {
+        return switch (status) {
+            case PUBLICADO -> !dataHoraPretendida.isAfter(agora);
+            case EM_ANDAMENTO, AGUARDANDO_VALIDACAO, CONCLUIDO, ENCERRADO -> false;
+        };
+    }
+
+    public void expirar(Instant agora) {
+        encerrar(agora, MOTIVO_EXPIRACAO);
     }
 
     private void encerrar(Instant agora, String motivo) {
