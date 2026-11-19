@@ -6,6 +6,8 @@ import org.springframework.stereotype.Component;
 
 import com.limio.api.comum.midia.LinkTemporario;
 import com.limio.api.modulos.anuncio.Anuncio;
+import com.limio.api.modulos.anuncio.CancelamentoServico;
+import com.limio.api.modulos.anuncio.records.CancelamentoServicoResponse;
 import com.limio.api.modulos.anuncio.FotoDoCheckout;
 import com.limio.api.modulos.anuncio.ValidacaoDoServico;
 import com.limio.api.modulos.anuncio.records.CheckoutResponse;
@@ -39,5 +41,11 @@ public class ServicoMapper {
     public CheckoutResponse toCheckoutResponse(Anuncio anuncio) {
         return new CheckoutResponse(anuncio.getStatus(), anuncio.getCheckoutEm(),
                 anuncio.prazoDeValidacao().orElse(null));
+    }
+
+    public CancelamentoServicoResponse toCancelamentoResponse(CancelamentoServico cancelamento) {
+        Anuncio anuncio = cancelamento.anuncio();
+        return new CancelamentoServicoResponse(anuncio.getId(), anuncio.getStatus(), anuncio.getTipoCancelamento(),
+                cancelamento.cotaEstornada());
     }
 }

@@ -1,6 +1,7 @@
 package com.limio.api.modulos.anuncio.reagendamento;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Component;
@@ -21,6 +22,10 @@ public class ReagendamentoService extends BaseService<Reagendamento, UUID, Reage
             return List.of();
         }
         return repository.findByAnuncioIdInAndStatus(anuncioIds, StatusReagendamento.PENDENTE);
+    }
+
+    public Optional<Reagendamento> buscarUltimoAceito(UUID anuncioId) {
+        return repository.findFirstByAnuncioIdAndStatusOrderByRespondidoEmDesc(anuncioId, StatusReagendamento.ACEITO);
     }
 
     /** Quantos reagendamentos já foram aceitos pro anúncio (ETI-86); conta contra o limite de 2 (ETI-99/ETI-100). */
