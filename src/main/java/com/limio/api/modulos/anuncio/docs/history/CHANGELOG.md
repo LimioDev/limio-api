@@ -362,3 +362,11 @@ deixava previsto. O "combinado" não muda o anúncio (só a candidatura), então
 escolhido. `Anuncio` ganhou `permiteExpiracao` e `expirar`; `ExpirarAnunciosSemCandidatosUseCase` (uma transação por anúncio, via `TransactionTemplate`) trava `ANUNCIO`, confere de novo e publica `AnuncioExpiradoEvent` (`comum/eventos/`, sem consumidor
 até a US56). Sem migration, sem mudança no mural e sem tocar na cota. Propriedades `anuncio.expiracao.cron` e
 `anuncio.expiracao.lote`; o cron fica desligado (`-`) nos testes.
+
+## 2026-11-16 — ETI-65: avisar os prestadores compatíveis quando um anúncio é publicado
+
+Primeiro ouvinte do `AnuncioPublicadoEvent`: `AvisarPrestadoresCompativeisUseCase` (`AFTER_COMMIT`, `REQUIRES_NEW`)
+publica um `comum/eventos/NovoServicoNaAreaEvent` por Prestador compatível e apto, só com categoria, bairro, título e
+distância. A regra do mural vista do outro lado mora no `perfil` (porta `ConsultaPrestadoresCompativeis`), e a
+aptidão da conta no `auth` (`ConsultaDadosUsuario.filtrarAptosAReceberAviso`). Papel ativo não filtra; "pausado" não
+existe ainda. Sem migration. Detalhe em `../features/ETI-65-avisar-prestadores-compativeis.md`.
