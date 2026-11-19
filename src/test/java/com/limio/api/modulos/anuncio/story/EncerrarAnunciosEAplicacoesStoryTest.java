@@ -185,6 +185,8 @@ class EncerrarAnunciosEAplicacoesStoryTest {
                 .dataAnterior(anuncio.getDataHoraPretendida())
                 .dataProposta(anuncio.getDataHoraPretendida().plus(Duration.ofDays(3)))
                 .status(StatusReagendamento.PENDENTE)
+                .proponenteId(contratante.getId())
+                .expiraEm(Instant.now().plus(Duration.ofDays(1)))
                 .build());
         String token = logar(contratante.getEmail());
 

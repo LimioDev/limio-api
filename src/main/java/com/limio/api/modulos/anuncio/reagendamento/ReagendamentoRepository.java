@@ -11,6 +11,12 @@ public interface ReagendamentoRepository extends BaseRepository<Reagendamento, U
 
     List<Reagendamento> findByAnuncioIdInAndStatus(List<UUID> anuncioIds, StatusReagendamento status);
 
+    boolean existsByAnuncioIdAndStatus(UUID anuncioId, StatusReagendamento status);
+
+    boolean existsByAnuncioIdAndPropostaAposDataVigenteTrue(UUID anuncioId);
+
+    long countByAnuncioIdAndStatus(UUID anuncioId, StatusReagendamento status);
+
     Optional<Reagendamento> findFirstByAnuncioIdAndStatusOrderByRespondidoEmDesc(UUID anuncioId,
             StatusReagendamento status);
 }

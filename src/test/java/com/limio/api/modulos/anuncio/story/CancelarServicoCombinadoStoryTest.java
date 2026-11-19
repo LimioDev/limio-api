@@ -245,6 +245,8 @@ class CancelarServicoCombinadoStoryTest {
                 .dataProposta(agora.plus(Duration.ofDays(5)))
                 .status(status)
                 .respondidoEm(respondidoEm)
+                .proponenteId(UUID.randomUUID())
+                .expiraEm(agora.plus(Duration.ofDays(1)))
                 .build());
     }
 

@@ -47,6 +47,69 @@ public class Reagendamento extends BaseEntity {
     @Column(name = "respondido_em")
     private Instant respondidoEm;
 
+    @Column(name = "proponente_id", nullable = false)
+    private UUID proponenteId;
+
+    @Column(name = "expira_em", nullable = false)
+    private Instant expiraEm;
+
+    @Column(name = "proposta_apos_data_vigente", nullable = false)
+    private boolean propostaAposDataVigente;
+
+    public static Reagendamento propor(UUID anuncioId, UUID proponenteId, Instant dataAnterior, Instant dataProposta,
+            String justificativa, Instant expiraEm, boolean propostaAposDataVigente) {
+        return Reagendamento.builder()
+                .anuncioId(anuncioId)
+                .proponenteId(proponenteId)
+                .dataAnterior(dataAnterior)
+                .dataProposta(dataProposta)
+                .justificativa(justificativa)
+                .status(StatusReagendamento.PENDENTE)
+                .expiraEm(expiraEm)
+                .propostaAposDataVigente(propostaAposDataVigente)
+                .build();
+    }
+
+    public boolean estaPendente() {
+        return status == StatusReagendamento.PENDENTE;
+    }
+
+    public boolean foiProposta(UUID usuarioId) {
+        return proponenteId != null && proponenteId.equals(usuarioId);
+    }
+
+    public boolean estaVencida(Instant agora) {
+        return !agora.isBefore(expiraEm);
+    }
+
+    public void aceitar(Instant agora) {
+        encerrar(StatusReagendamento.ACEITO, agora);
+    }
+
+    public void recusar(Instant agora) {
+        encerrar(StatusReagendamento.RECUSADO, agora);
+    }
+
+    public void cancelarPeloProponente(Instant agora) {
+        encerrar(StatusReagendamento.CANCELADO, agora);
+    }
+
+    public void expirar(Instant agora) {
+        encerrar(StatusReagendamento.EXPIRADO, agora);
+    }
+
+    public void encerrarSemEfeito(Instant agora) {
+        encerrar(StatusReagendamento.SEM_EFEITO, agora);
+    }
+
+    private void encerrar(StatusReagendamento novoStatus, Instant agora) {
+        if (!estaPendente()) {
+            throw new IllegalStateException("Só uma proposta pendente pode ser encerrada, mas está " + status);
+        }
+        this.status = novoStatus;
+        this.respondidoEm = agora;
+    }
+
     public void cancelarSemEfeito(Instant agora) {
         this.status = StatusReagendamento.CANCELADO;
         this.respondidoEm = agora;

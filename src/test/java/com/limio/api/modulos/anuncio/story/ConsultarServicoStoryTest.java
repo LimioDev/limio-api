@@ -234,6 +234,8 @@ class ConsultarServicoStoryTest {
                 .dataProposta(dataProposta)
                 .status(StatusReagendamento.PENDENTE)
                 .justificativa("Imprevisto de agenda")
+                .proponenteId(UUID.randomUUID())
+                .expiraEm(Instant.now().plus(Duration.ofDays(1)))
                 .build());
         String token = logar("maria@example.com");
 

@@ -169,6 +169,8 @@ class IniciarServicoStoryTest {
                 .dataAnterior(Instant.now().plus(Duration.ofDays(5)))
                 .dataProposta(Instant.now().plus(Duration.ofDays(6)))
                 .status(status)
+                .proponenteId(UUID.randomUUID())
+                .expiraEm(Instant.now().plus(Duration.ofDays(1)))
                 .build());
     }
 

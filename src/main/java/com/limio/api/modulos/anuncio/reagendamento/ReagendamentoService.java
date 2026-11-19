@@ -28,8 +28,18 @@ public class ReagendamentoService extends BaseService<Reagendamento, UUID, Reage
         return repository.findFirstByAnuncioIdAndStatusOrderByRespondidoEmDesc(anuncioId, StatusReagendamento.ACEITO);
     }
 
-    /** Quantos reagendamentos já foram aceitos pro anúncio (ETI-86); conta contra o limite de 2 (ETI-99/ETI-100). */
+    /** Quantos reagendamentos já foram aceitos pro anúncio (ETI-86); conta contra {@code anuncio.reagendamento.limite}. */
     public int contarAceitos(UUID anuncioId) {
-        return repository.findByAnuncioIdInAndStatus(List.of(anuncioId), StatusReagendamento.ACEITO).size();
+        return (int) repository.countByAnuncioIdAndStatus(anuncioId, StatusReagendamento.ACEITO);
+    }
+
+    /** Há proposta aguardando resposta; enquanto houver, a conclusão por silêncio não pode concluir o serviço. */
+    public boolean existePendente(UUID anuncioId) {
+        return repository.existsByAnuncioIdAndStatus(anuncioId, StatusReagendamento.PENDENTE);
+    }
+
+    /** Já houve proposta feita com a data vigente passada, qualquer que tenha sido o desfecho. */
+    public boolean existePropostaAposDataVigente(UUID anuncioId) {
+        return repository.existsByAnuncioIdAndPropostaAposDataVigenteTrue(anuncioId);
     }
 }
