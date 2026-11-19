@@ -23,7 +23,7 @@ import lombok.NoArgsConstructor;
  *
  * <p>{@code perfilPrestadorId} é UUID cru (com FK no banco): a cota não é carregada junto do perfil, então não
  * entra na coleção dele como as janelas. Sem setter: a contagem só muda por {@link #consumirEscolha()} (ETI-69) e
- * pelo estorno (ETI-94/ETI-95), que ganha método próprio aqui quando entrar.
+ * por {@link #estornarEscolha()} (ETI-94).
  */
 @Entity
 @Table(name = "cota_mensal")
@@ -87,5 +87,13 @@ public class CotaMensal extends BaseEntity {
             throw new IllegalStateException("Cota do mês " + anoMes + " já esgotada (" + tetoAplicado + ")");
         }
         escolhasConsumidas++;
+    }
+
+    public boolean estornarEscolha() {
+        if (escolhasConsumidas == 0) {
+            return false;
+        }
+        escolhasConsumidas--;
+        return true;
     }
 }

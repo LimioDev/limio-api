@@ -1,5 +1,6 @@
 package com.limio.api.modulos.anuncio;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -63,6 +64,10 @@ public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository
     /** Quantos anúncios {@code contratanteId} já concluiu como contratante (histórico do perfil público, ETI-105). */
     public long contarConcluidosDoContratante(UUID contratanteId) {
         return repository.countByContratanteIdAndStatus(contratanteId, StatusAnuncio.CONCLUIDO);
+    }
+
+    public List<UUID> buscarIdsParaExpirar(Instant agora, int lote) {
+        return repository.buscarIdsParaExpirar(agora, lote);
     }
 
     /**
