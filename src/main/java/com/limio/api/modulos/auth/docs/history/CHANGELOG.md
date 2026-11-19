@@ -256,3 +256,10 @@ sentido zerar uma confirmação que nunca existia de fato). `ContatoResponse`, `
 `comum/portas/DadosUsuario` deixaram de expor `telefoneConfirmadoEm`; `CanalVerificacao.SMS` saiu do enum.
 A coluna `usuario.telefone_confirmado_em` continua no banco (unused), por ser inofensiva e não exigir
 migration — decisão revisável se alguém reintroduzir OTP.
+
+## 2026-11-16 — ETI-65: filtro de contas aptas a receber aviso
+
+`comum/portas/ConsultaDadosUsuario` ganhou `filtrarAptosAReceberAviso(ids)`: em lote, devolve só as contas não
+encerradas, não suspensas e com e-mail confirmado. O papel ativo não entra. Usado pelo `anuncio` para avisar os
+Prestadores compatíveis com um anúncio publicado. `DadosUsuario` não mudou: expor a suspensão lá mexeria em todo
+teste que constrói o record. Detalhe em `anuncio/docs/features/ETI-65-avisar-prestadores-compativeis.md`.

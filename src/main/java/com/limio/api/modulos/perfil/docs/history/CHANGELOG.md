@@ -244,3 +244,11 @@ valer. Mudança mecânica, sem tocar a lógica nem os testes (só pacote e impor
 `PerfilEmpregadorResponse` e `comum/portas/DadosUsuario` deixaram de expor `telefoneConfirmadoEm` — a tela "Meu
 perfil" mostra "verificado" só pro e-mail. `GET /conta/perfil-empregador` não devolve mais esse campo. Decisão
 completa (porquê, módulo `auth` envolvido) em `auth/docs/history/CHANGELOG.md`.
+
+## 2026-11-16 — ETI-65: porta dos Prestadores compatíveis com um anúncio
+
+`comum/portas/ConsultaPrestadoresCompativeis` (só leitura), implementada em
+`actions/service/ConsultaPrestadoresCompativeisService` sobre `PerfilPrestadorRepository.buscarCompativeis`: perfil
+completo, categoria/"Outros" e haversine ≤ raio de cada um, a regra do mural (ETI-73) no sentido inverso. Usada pelo
+`anuncio` no aviso de anúncio publicado. Sem migration nem índice novo. Decisão completa em
+`anuncio/docs/features/ETI-65-avisar-prestadores-compativeis.md`.

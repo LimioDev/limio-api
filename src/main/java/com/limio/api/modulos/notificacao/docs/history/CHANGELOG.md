@@ -64,3 +64,15 @@ Resolvida a pendência do item 8 do UC15: `RemoverPreferenciaDaContaEncerradaUse
 mapper e usecases — canais passam a ser só `push`, `email`, `whatsapp`. O canal nunca chegou a disparar
 nenhuma notificação de fato (ETI-112 não implementado); não tem relação com a confirmação de telefone por OTP
 (UC04), que saiu de escopo no mesmo card por motivo independente — ver `auth/docs/history/CHANGELOG.md`.
+
+## 2026-11 — notificações do usuário: listar e marcar como lidas (ETI-110)
+
+Primeira entidade raiz do módulo: `Notificacao` (tabela `notificacao`, V36), uma linha por notificação mostrada na
+tela 43, com `usuario_id` e `anuncio_id` crus. `GET /notificacoes` (página de 20 + total de não lidas pro sino),
+`POST /notificacoes/{id}/lida` e `POST /notificacoes/lidas`; as duas marcações devolvem o novo total de não lidas.
+Notificação de outra pessoa responde 404 `NOTIFICACAO_NAO_ENCONTRADA`, igual a id inexistente.
+
+`TipoNotificacao` tem um valor por evento de domínio que já pede aviso; o envio (ETI-112), que grava as linhas, pode
+acrescentar valores sem migration (coluna sem `CHECK`). Conta encerrada passa a apagar também as notificações
+(`RemoverNotificacoesDaContaEncerradaUseCase`), pelo mesmo motivo da preferência. Detalhe em
+`../features/ETI-110-listar-notificacoes-e-marcar-como-lidas.md`.
