@@ -334,6 +334,35 @@ implementada (campo e enum eram andaime morto). `ContatosNaoConfirmadosException
 `CodigoErro.CONTATOS_NAO_CONFIRMADOS` (contrato estável com o front), só a mensagem padrão mudou para "Confirme
 seu e-mail para continuar." Decisão completa em `auth/docs/history/CHANGELOG.md`.
 
+## 2026-11-11 — ETI-94: Empregador cancelar o serviço combinado
+
+`POST /anuncios/{anuncioId}/servico/cancelar`. Detalhe completo em
+`docs/features/ETI-94-cancelar-servico-combinado.md`.
+
+"Cancelado" não é status: é `ENCERRADO` com `tipo_cancelamento` (`NORMAL`/`TARDIO`, V35). Dentro da carência
+pós-reagendamento (`anuncio.carencia-pos-reagendamento-horas`, 24h) o cancelamento é `TARDIO`: sem estorno e com
+auditoria `COMBINADO_CANCELADO_TARDIO` (`LogAuditoriaService.registrar` ganhou o overload com `detalhesJson`).
+
+O estorno da cota FREE é síncrono pela porta `ConsumoCotaPrestador.estornarEscolha`, na transação do cancelamento,
+e não por evento como dizia o card. `aplicacao.cota_consumida` (V34) diz se a escolha gastou cota; só ela estorna.
+`aplicacao.cota_estornada_em` faz a barreira de candidatura e a lista de uso da cota ignorarem escolhas
+estornadas, o que fecha a divergência de contagem registrada no ETI-69.
+
+`ServicoCanceladoEvent` fica em `comum/eventos/`; o chat vira somente leitura em `AFTER_COMMIT`. Sem consumidor de
+notificação até o ETI-112. Pendências: ETI-99/100 (criar e aceitar reagendamento; o tardio é testado com dado
+semeado) e a duplicação das constantes de 24h.
+
+## 2026-11-12 — ETI-66: expirar anúncio sem candidatos
+
+Job `@Scheduled` (`ExpirarAnunciosSemCandidatosUseCase`) que encerra por expiração o anúncio `PUBLICADO` vencido e sem
+nenhuma candidatura. Detalhe completo em `docs/features/ETI-66-expirar-anuncio-sem-candidatos.md`.
+
+Não existe status `EXPIRADO`: é `ENCERRADO` com `motivoEncerramento = "Expirado sem candidatos"`, como o ETI-63 já
+deixava previsto. O "combinado" não muda o anúncio (só a candidatura), então "sem nenhuma candidatura" já exclui o
+escolhido. `Anuncio` ganhou `permiteExpiracao` e `expirar`; `ExpirarAnunciosSemCandidatosUseCase` (uma transação por anúncio, via `TransactionTemplate`) trava `ANUNCIO`, confere de novo e publica `AnuncioExpiradoEvent` (`comum/eventos/`, sem consumidor
+até a US56). Sem migration, sem mudança no mural e sem tocar na cota. Propriedades `anuncio.expiracao.cron` e
+`anuncio.expiracao.lote`; o cron fica desligado (`-`) nos testes.
+
 ## 2026-11-16 — ETI-138: id da candidatura e reputação no serviço combinado
 
 `ServicoCombinadoResponse` ganhou `candidaturaId` (a candidatura escolhida, o mesmo pros dois lados), pro "Conversar
