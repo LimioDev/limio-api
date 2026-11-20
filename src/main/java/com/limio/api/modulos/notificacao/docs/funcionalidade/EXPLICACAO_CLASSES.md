@@ -49,4 +49,51 @@
 | `PreferenciaNotificacaoRequest` / `PreferenciaNotificacaoResponse` | Records HTTP com os 3 booleanos (SMS saiu no ETI-134) |
 | `AceiteTermo` | Registro do consentimento de WhatsApp — **ainda não existe** (definição fora desta feature) |
 
+## Notificações: listar e marcar como lidas (ETI-110)
+
+1. `GET /notificacoes?pagina=N` → `NotificacaoController.listar` → `ListarNotificacoesUseCase` (página de 20 da mais
+   nova pra mais antiga + `contarNaoLidas`) → `NotificacaoMapper.toResponse` → `NotificacoesResponse`.
+2. `POST /notificacoes/{id}/lida` → `MarcarNotificacaoComoLidaUseCase`: busca por id **e** dono (404 se não achar),
+   `Notificacao.marcarComoLida(agora)` (idempotente), devolve o novo total de não lidas.
+3. `POST /notificacoes/lidas` → `MarcarTodasNotificacoesComoLidasUseCase`: um `UPDATE` em lote nas não lidas do
+   usuário, devolve o novo total (0).
+
+| Classe | Papel |
+|---|---|
+| `Notificacao` | Entity raiz (`extends BaseEntity`): `usuario_id`, `anuncio_id`, `tipo`, `titulo`, `corpo`, `enviada_em`, `lida_em`; só `lidaEm` muda |
+| `enums/TipoNotificacao` | Do que trata a notificação; um valor por evento de domínio que pede aviso |
+| `NotificacaoRepository` / `NotificacaoService` | Lista paginada do dono, total de não lidas, busca por id + dono, marcar todas em lote, apagar do usuário |
+| `MinhasNotificacoes` | Tipo de domínio: página + total de não lidas |
+| `ListarNotificacoesUseCase`, `MarcarNotificacaoComoLidaUseCase`, `MarcarTodasNotificacoesComoLidasUseCase` | Regras do ETI-110 |
+| `RemoverNotificacoesDaContaEncerradaUseCase` | Reação a `ContaEncerradaEvent`: apaga as notificações da conta encerrada |
+| `NotificacaoController`, `NotificacaoMapper` | HTTP; `NotificacoesFiltro`, `NotificacaoResponse`, `NotificacoesResponse`, `NaoLidasResponse` |
+| `excecao/NotificacaoNaoEncontradaException` | 404 `NOTIFICACAO_NAO_ENCONTRADA` (inexistente ou de outra pessoa) |
+
 Atualize esta página sempre que uma classe mudar de responsabilidade.
+
+## Envio dos avisos (ETI-112)
+
+1. Evento de aviso de outro módulo (`CandidaturaCriadaEvent`, `PrestadorEscolhidoEvent`, ...) → `RegistrarAvisosUseCase`
+   (`AFTER_COMMIT`, `REQUIRES_NEW`): `AvisoHelper` monta o `Aviso`, grava a `Notificacao` e publica
+   `eventos/NotificacaoRegistradaEvent`.
+2. `NotificacaoRegistradaEvent` → `EntregarNotificacaoUseCase` (`@Async`, `AFTER_COMMIT`): preferência do usuário
+   (ou `PreferenciaNotificacao.padraoContaNova`), uma `CanalDeEnvioService` por canal ligado, `EnvioNotificacao` por
+   tentativa.
+3. `POST /notificacoes/aparelhos` e `/remover` → `AparelhoPushController` → `RegistrarAparelhoPushUseCase` (upsert por
+   token) / `RemoverAparelhoPushUseCase` (só o token do próprio usuário).
+
+| Classe | Papel |
+|---|---|
+| `Aviso` | Tipo de domínio: destinatário, tipo, título, corpo e anúncio de um aviso |
+| `actions/helper/AvisoHelper` | Textos dos avisos por evento (puro) |
+| `RegistrarAvisosUseCase` | Um ouvinte por evento de aviso; grava a notificação |
+| `EntregarNotificacaoUseCase` | Itera os canais ligados e registra cada tentativa |
+| `actions/service/CanalDeEnvioService` | Estratégia de um canal; canal novo é uma implementação nova |
+| `actions/service/CanalPushService`, `CanalEmailService`, `CanalWhatsappService` | Push, e-mail e WhatsApp (este nunca envia sem consentimento) |
+| `actions/service/PushExpoService` | Cliente do Expo Push Service; resultado por lote, com os tokens que não existem mais |
+| `actions/service/EmailAvisoService` | Resend pros avisos (instância própria, falha sobe como exceção) |
+| `aparelhopush/AparelhoPush` (+ repository/service) | Token de push do aparelho logado, único por aparelho |
+| `envionotificacao/EnvioNotificacao` (+ repository/service) | Canal, status e motivo de cada tentativa de envio |
+| `enums/CanalNotificacao`, `StatusEnvio`, `Plataforma` | Valores fechados do envio |
+| `AparelhoPushController`, `AparelhoPushRequest`, `RemoverAparelhoPushRequest` | HTTP do aparelho |
+| `comum/config/AssincronoConfig` | `@EnableAsync` e o executor `envioDeAvisos` (síncrono nos testes; fila cheia roda em quem publicou) |

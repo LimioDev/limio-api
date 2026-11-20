@@ -51,6 +51,12 @@ public class PerfilPrestadorService extends BaseService<PerfilPrestador, UUID, P
         return repository.findIdByUsuarioId(usuarioId);
     }
 
+    /** Prestadores que atendem um anúncio nesta categoria e ponto (ETI-65), do mais perto pro mais longe. */
+    @Transactional(readOnly = true)
+    public List<PrestadorCompativelProjecao> buscarCompativeis(UUID categoriaId, double latitude, double longitude) {
+        return repository.buscarCompativeis(categoriaId, latitude, longitude);
+    }
+
     /**
      * Coordenadas que algum perfil já gravou pra este município/UF (inclusive o do próprio Prestador, num
      * novo salvamento). Funciona como cache da geocodificação.
