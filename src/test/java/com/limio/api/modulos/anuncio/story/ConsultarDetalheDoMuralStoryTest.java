@@ -210,6 +210,7 @@ class ConsultarDetalheDoMuralStoryTest {
                 .andExpect(jsonPath("$.cidade", is("Campinas")))
                 .andExpect(jsonPath("$.uf", is("SP")))
                 .andExpect(jsonPath("$.distanciaKm", is(3.0)))
+                .andExpect(jsonPath("$.empregador.usuarioId", is(empregador.getId().toString())))
                 .andExpect(jsonPath("$.empregador.nomeExibicao", is("Mari S.")))
                 .andExpect(jsonPath("$.empregador.mediaAvaliacoes", is(4.5)))
                 .andExpect(jsonPath("$.empregador.qtdAvaliacoes", is(8)))

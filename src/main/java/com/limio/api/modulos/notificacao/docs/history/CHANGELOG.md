@@ -64,3 +64,35 @@ Resolvida a pendência do item 8 do UC15: `RemoverPreferenciaDaContaEncerradaUse
 mapper e usecases — canais passam a ser só `push`, `email`, `whatsapp`. O canal nunca chegou a disparar
 nenhuma notificação de fato (ETI-112 não implementado); não tem relação com a confirmação de telefone por OTP
 (UC04), que saiu de escopo no mesmo card por motivo independente — ver `auth/docs/history/CHANGELOG.md`.
+
+## 2026-11 — notificações do usuário: listar e marcar como lidas (ETI-110)
+
+Primeira entidade raiz do módulo: `Notificacao` (tabela `notificacao`, V36), uma linha por notificação mostrada na
+tela 43, com `usuario_id` e `anuncio_id` crus. `GET /notificacoes` (página de 20 + total de não lidas pro sino),
+`POST /notificacoes/{id}/lida` e `POST /notificacoes/lidas`; as duas marcações devolvem o novo total de não lidas.
+Notificação de outra pessoa responde 404 `NOTIFICACAO_NAO_ENCONTRADA`, igual a id inexistente.
+
+`TipoNotificacao` tem um valor por evento de domínio que já pede aviso; o envio (ETI-112), que grava as linhas, pode
+acrescentar valores sem migration (coluna sem `CHECK`). Conta encerrada passa a apagar também as notificações
+(`RemoverNotificacoesDaContaEncerradaUseCase`), pelo mesmo motivo da preferência. Detalhe em
+`../features/ETI-110-listar-notificacoes-e-marcar-como-lidas.md`.
+
+## 2026-11 — envio dos avisos respeitando as preferências (ETI-112)
+
+O módulo passa a reagir aos eventos de aviso dos outros módulos: `RegistrarAvisosUseCase` grava a `Notificacao` pra
+lista do app e `EntregarNotificacaoUseCase` envia, fora da requisição (`@Async`, primeiro uso no projeto,
+`comum/config/AssincronoConfig`), só pelos canais ligados. Push pelo Expo Push Service (aparelhos registrados em
+`aparelho_push`, rotas `POST /notificacoes/aparelhos` e `/remover`), e-mail pelo Resend. WhatsApp nunca sai: o
+consentimento exige `AceiteTermo`, que não existe. Cada tentativa vira uma linha em `envio_notificacao` (V37).
+
+O padrão de conta nova da preferência saiu do usecase de consulta pra `PreferenciaNotificacao.padraoContaNova`, porque
+a entrega usa o mesmo padrão. Conta encerrada passa a apagar também os aparelhos de push. `ServicoCanceladoEvent` (#38)
+e `AnuncioExpiradoEvent` (#39) ficam pra depois do merge delas. Detalhe em
+`../features/ETI-112-envio-de-notificacoes-respeitando-preferencias.md`.
+
+## 2026-11 — ajustes do review da #43 (ETI-112)
+
+Cada canal virou uma `CanalDeEnvioService` (push, e-mail, WhatsApp) e o `EntregarNotificacaoUseCase` só itera: canal
+novo não mexe no usecase. Envio desligado no ambiente não grava mais `ENVIADO`. O push trata cada lote à parte e não
+perde os tokens inválidos quando outro lote falha. Fila do executor cheia roda o envio em quem publicou, em vez de
+descartar. Os não escolhidos da escolha saem numa consulta só (`ConsultaCandidatura.buscarPrestadoresIds`).

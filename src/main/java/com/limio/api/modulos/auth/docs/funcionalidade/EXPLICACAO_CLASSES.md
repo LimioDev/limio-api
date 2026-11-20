@@ -146,7 +146,7 @@ o token e encerra todas as sessões.
 | `LinkWeb` | Helper — monta o link `https` da página web com o token no fragmento |
 | `PaginasWebConfig` (`comum/config/`) | URLs limpas `/nova-senha` e `/confirmar-email` para o HTML estático |
 | `TrocarTelefoneUseCase` | Troca de telefone (TICKET-0048): grava dígitos nacionais, sem zerar/bloquear nada (ETI-134) |
-| `ConsultaDadosUsuarioService` | Implementa a porta `comum/portas/ConsultaDadosUsuario` para outros módulos (só leitura) |
+| `ConsultaDadosUsuarioService` | Implementa a porta `comum/portas/ConsultaDadosUsuario` para outros módulos (só leitura). `filtrarAptosAReceberAviso` (ETI-65): não encerrada, não suspensa, e-mail confirmado |
 | `TelefoneHelper` | Helper puro — `normalizar` (entrada → dígitos nacionais, só a troca) e `paraInternacional` (saída → `+55...`, usado pelo mapper e pela porta) |
 | `ConfirmacaoEmailSolicitadaEvent`, `EmailContaAlteradoEvent` | Eventos internos do `auth` (`auth/eventos/`) publicados pela troca de e-mail |
 | `EmailEventosService` | Escuta os eventos com `@TransactionalEventListener(AFTER_COMMIT)` e envia os e-mails; falha só é logada, sem `fallbackExecution` |

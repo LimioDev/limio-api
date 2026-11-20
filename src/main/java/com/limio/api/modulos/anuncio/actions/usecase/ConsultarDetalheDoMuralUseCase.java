@@ -103,7 +103,8 @@ public class ConsultarDetalheDoMuralUseCase {
                 anuncio.getUfSnapshot(),
                 DistanciaHelper.haversineKm(perfil.latitudeBase(), perfil.longitudeBase(),
                         anuncio.getLatitudeSnapshot(), anuncio.getLongitudeSnapshot()),
-                empregador, minha.map(a -> new MinhaCandidatura(a.getId(), a.getStatus())).orElse(null));
+                anuncio.getContratanteId(), empregador,
+                minha.map(a -> new MinhaCandidatura(a.getId(), a.getStatus())).orElse(null));
     }
 
     private boolean visivel(Anuncio anuncio, UUID usuarioId, boolean jaCandidatou) {
