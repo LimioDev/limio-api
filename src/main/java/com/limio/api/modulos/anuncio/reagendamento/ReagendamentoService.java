@@ -26,6 +26,10 @@ public class ReagendamentoService extends BaseService<Reagendamento, UUID, Reage
         return repository.findById(id);
     }
 
+    public List<UUID> buscarIdsParaExpirar(Instant agora, int lote) {
+        return repository.buscarIdsParaExpirar(agora, lote);
+    }
+
     public List<Reagendamento> buscarPendentesDosAnuncios(List<UUID> anuncioIds) {
         if (anuncioIds.isEmpty()) {
             return List.of();
