@@ -23,9 +23,12 @@ import com.limio.api.modulos.financeiro.assinaturagold.cobranca.documentofiscal.
 import com.limio.api.modulos.financeiro.assinaturagold.cobranca.documentofiscal.DocumentoFiscalService;
 import com.limio.api.modulos.financeiro.eventos.GoldAssinadoEvent;
 import com.limio.api.modulos.financeiro.excecao.AssinaturaJaAtivaException;
+import com.limio.api.modulos.financeiro.excecao.CartaoNaoCadastradoException;
 import com.limio.api.modulos.financeiro.excecao.CobrancaEmAndamentoException;
+import com.limio.api.modulos.financeiro.excecao.GatewayIndisponivelException;
 import com.limio.api.modulos.financeiro.excecao.PagamentoRecusadoException;
 import com.limio.api.modulos.financeiro.excecao.PlanoNaoEncontradoException;
+import com.limio.api.modulos.financeiro.meiopagamento.MeioPagamento;
 import com.limio.api.modulos.financeiro.meiopagamento.MeioPagamentoService;
 import com.limio.api.modulos.financeiro.plano.Plano;
 import com.limio.api.modulos.financeiro.plano.PlanoService;
@@ -42,20 +45,28 @@ import com.limio.api.modulos.financeiro.plano.PlanoService;
  *
  * <ol>
  *   <li>{@link #reservar} — transação curta: trava {@link EscopoTrava#ASSINATURA_GOLD} (clique duplo
- *   concorrente entra em fila), valida plano e estado atual, e grava {@code AssinaturaGold} +
+ *   concorrente entra em fila), valida plano e estado atual, escolhe o cartão (o {@code gatewayToken}
+ *   enviado ou, sem ele, o {@link MeioPagamento} salvo), e grava {@code AssinaturaGold} +
  *   {@code Cobranca} ambas {@code PENDENTE}. O índice único em {@code usuario_id} é quem protege contra
  *   uma segunda tentativa depois que esta transação já comitou (e soltou o lock): o segundo clique
  *   encontra a linha {@code PENDENTE} e é recusado por {@link CobrancaEmAndamentoException}, sem chegar a
  *   chamar o gateway de novo;</li>
- *   <li>chamada ao {@link GatewayPagamento}, fora de qualquer transação;</li>
+ *   <li>chamada ao {@link GatewayPagamento}, fora de qualquer transação. Gateway fora do ar sem ter
+ *   recebido a cobrança: {@link #desfazerReserva} cancela a pendência numa transação curta e o Prestador
+ *   pode tentar de novo;</li>
  *   <li>{@link #confirmar} — segunda transação curta: aprovado, ativa a assinatura, grava o recibo e
  *   publica o evento; recusado, cancela a pendência.</li>
  * </ol>
  *
- * <p>Uma falha entre o passo 2 e o 3 (o processo cai, por exemplo) deixa {@code AssinaturaGold} e
- * {@code Cobranca} em {@code PENDENTE} — pendência conhecida, sem reconciliação automática ainda (o
- * webhook do Asaas só loga hoje). Até reconciliar manualmente, novas tentativas do mesmo usuário recebem
- * {@link CobrancaEmAndamentoException}.
+ * <p>{@link PagamentoRecusadoException} só é lançada depois que a transação do passo 3 comitou: lançada
+ * dentro do {@code transacao.execute}, ela desfaria o cancelamento e deixaria a assinatura presa em
+ * {@code PENDENTE}.
+ *
+ * <p>Resultado incerto do gateway ({@link GatewayIndisponivelException#cobrancaPodeTerOcorrido()}: timeout
+ * de leitura, 5xx) e falha entre o passo 2 e o 3 (o processo cai, por exemplo) deixam {@code AssinaturaGold}
+ * e {@code Cobranca} em {@code PENDENTE}, porque o gateway pode ter cobrado — pendência conhecida, sem
+ * reconciliação automática ainda (o webhook do Asaas só loga hoje; card de renovação ETI-85). Até
+ * reconciliar, novas tentativas do mesmo usuário recebem {@link CobrancaEmAndamentoException}.
  */
 @Service
 public class AssinarGoldUseCase {
@@ -96,20 +107,36 @@ public class AssinarGoldUseCase {
     public AssinaturaGold executar(UUID usuarioId, PapelUsuario papelAtivo, String codigoPlano, String gatewayToken) {
         ExigirPrestadorHelper.exigirPrestador(papelAtivo);
 
-        Reserva reserva = transacao.execute(status -> reservar(usuarioId, codigoPlano));
+        Reserva reserva = transacao.execute(status -> reservar(usuarioId, codigoPlano, gatewayToken));
 
-        ResultadoCobranca resultado = gatewayPagamento.cobrar(usuarioId, gatewayToken, reserva.valorCentavos(),
-                reserva.moeda(), reserva.chaveIdempotencia());
+        ResultadoCobranca resultado;
+        try {
+            resultado = gatewayPagamento.cobrar(usuarioId, reserva.gatewayToken(), reserva.valorCentavos(),
+                    reserva.moeda(), reserva.chaveIdempotencia());
+        } catch (GatewayIndisponivelException e) {
+            if (!e.cobrancaPodeTerOcorrido()) {
+                transacao.executeWithoutResult(status -> desfazerReserva(reserva));
+            }
+            throw e;
+        }
 
-        return transacao.execute(status -> confirmar(usuarioId, gatewayToken, reserva, resultado));
+        Optional<AssinaturaGold> ativada = transacao.execute(status -> confirmar(usuarioId, reserva, resultado));
+        return ativada.orElseThrow(PagamentoRecusadoException::new);
     }
 
-    private Reserva reservar(UUID usuarioId, String codigoPlano) {
+    private Reserva reservar(UUID usuarioId, String codigoPlano, String gatewayTokenInformado) {
         travaTransacional.travar(EscopoTrava.ASSINATURA_GOLD, usuarioId.toString());
 
         Plano plano = planoService.buscarAtivoPorCodigo(codigoPlano).orElseThrow(PlanoNaoEncontradoException::new);
         Optional<AssinaturaGold> existente = assinaturaGoldService.buscarPorUsuario(usuarioId);
         existente.ifPresent(AssinarGoldUseCase::exigirSemCobrancaEmAberto);
+
+        boolean cartaoNovo = gatewayTokenInformado != null && !gatewayTokenInformado.isBlank();
+        String gatewayToken = cartaoNovo
+                ? gatewayTokenInformado
+                : meioPagamentoService.buscarPorUsuario(usuarioId)
+                        .map(MeioPagamento::getGatewayToken)
+                        .orElseThrow(CartaoNaoCadastradoException::new);
 
         Instant inicio = relogio.instant();
         Instant fim = plano.fimDoCiclo(inicio);
@@ -126,11 +153,25 @@ public class AssinarGoldUseCase {
                 .salvar(Cobranca.pendente(assinatura.getId(), plano.getPrecoCentavos(), chaveIdempotencia));
 
         return new Reserva(assinatura.getId(), cobranca.getId(), plano.getNome(), plano.getPrecoCentavos(),
-                plano.getMoeda(), fim, chaveIdempotencia);
+                plano.getMoeda(), fim, chaveIdempotencia, gatewayToken, cartaoNovo);
     }
 
-    private AssinaturaGold confirmar(UUID usuarioId, String gatewayToken, Reserva reserva,
-            ResultadoCobranca resultado) {
+    /** Gateway fora do ar antes de receber a cobrança: nada foi cobrado, a pendência vira {@code CANCELADA}. */
+    private void desfazerReserva(Reserva reserva) {
+        AssinaturaGold assinatura = assinaturaGoldService.buscarPorIdOuFalhar(reserva.assinaturaId());
+        assinatura.cancelarPendencia();
+        assinaturaGoldService.salvar(assinatura);
+
+        Cobranca cobranca = cobrancaService.buscarPorIdOuFalhar(reserva.cobrancaId());
+        cobranca.registrarFalha();
+        cobrancaService.salvar(cobranca);
+    }
+
+    /**
+     * Resolve a pendência. Recusado devolve vazio em vez de lançar {@link PagamentoRecusadoException} aqui
+     * dentro: a exceção desfaria esta transação e, com ela, o cancelamento da pendência.
+     */
+    private Optional<AssinaturaGold> confirmar(UUID usuarioId, Reserva reserva, ResultadoCobranca resultado) {
         AssinaturaGold assinatura = assinaturaGoldService.buscarPorIdOuFalhar(reserva.assinaturaId());
         Cobranca cobranca = cobrancaService.buscarPorIdOuFalhar(reserva.cobrancaId());
 
@@ -139,10 +180,15 @@ public class AssinarGoldUseCase {
             assinaturaGoldService.salvar(assinatura);
             cobranca.confirmarRecusada();
             cobrancaService.salvar(cobranca);
-            throw new PagamentoRecusadoException();
+            return Optional.empty();
         }
 
-        meioPagamentoService.salvarOuSubstituir(usuarioId, gatewayToken, resultado.bandeira(), resultado.ultimos4());
+        // Cartão salvo: o token já está no MeioPagamento; regravar com bandeira/últimos 4 nulos (o Asaas nem
+        // sempre devolve creditCard na cobrança) apagaria o que a tela mostra.
+        if (reserva.cartaoNovo()) {
+            meioPagamentoService.salvarOuSubstituir(usuarioId, reserva.gatewayToken(), resultado.bandeira(),
+                    resultado.ultimos4());
+        }
 
         assinatura.confirmarAtiva();
         assinatura = assinaturaGoldService.salvar(assinatura);
@@ -153,7 +199,7 @@ public class AssinarGoldUseCase {
 
         eventos.publishEvent(new GoldAssinadoEvent(usuarioId, reserva.planoNome(), reserva.valorCentavos(),
                 reserva.moeda(), reserva.fimCiclo(), recibo.getNumero()));
-        return assinatura;
+        return Optional.of(assinatura);
     }
 
     private static void exigirSemCobrancaEmAberto(AssinaturaGold existente) {
@@ -165,8 +211,11 @@ public class AssinarGoldUseCase {
         }
     }
 
-    /** Dados da reserva (passo 1) que o passo 2 (gateway) e o passo 3 (confirmação) precisam. */
+    /**
+     * Dados da reserva (passo 1) que o passo 2 (gateway) e o passo 3 (confirmação) precisam.
+     * {@code cartaoNovo}: o token veio na requisição (e é gravado se aprovado), não do {@link MeioPagamento}.
+     */
     private record Reserva(UUID assinaturaId, UUID cobrancaId, String planoNome, long valorCentavos, String moeda,
-            Instant fimCiclo, String chaveIdempotencia) {
+            Instant fimCiclo, String chaveIdempotencia, String gatewayToken, boolean cartaoNovo) {
     }
 }
