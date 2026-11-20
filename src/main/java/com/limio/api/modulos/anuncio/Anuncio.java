@@ -296,6 +296,13 @@ public class Anuncio extends BaseEntity {
         return temAntecedenciaDe(PRAZO_CANCELAMENTO_SERVICO, agora);
     }
 
+    public void reagendar(Instant novaDataHora) {
+        if (status != StatusAnuncio.PUBLICADO) {
+            throw new IllegalStateException("Só um serviço combinado (PUBLICADO) pode ser reagendado, mas está " + status);
+        }
+        this.dataHoraPretendida = novaDataHora;
+    }
+
     /** ETI-86: "até quando o Empregador pode cancelar" — o último instante em que {@link #permiteCancelarServico} vale. */
     public Instant prazoCancelamentoServicoEm() {
         return dataHoraPretendida.minus(PRAZO_CANCELAMENTO_SERVICO);
