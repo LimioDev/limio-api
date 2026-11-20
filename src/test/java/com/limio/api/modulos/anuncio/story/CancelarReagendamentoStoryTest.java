@@ -410,4 +410,27 @@ class CancelarReagendamentoStoryTest {
         assertThat(auditorias()).isEqualTo(1);
         assertThat(eventos.stream(ReagendamentoCanceladoEvent.class).count()).isEqualTo(1);
     }
+
+    /** Serviço cancelado pelo Empregador pelo endpoint real: a proposta perde o efeito e a candidatura encerra. */
+    private Reagendamento propostaDeServicoCancelado(Anuncio anuncio, UUID proponenteId) throws Exception {
+        Reagendamento proposta = pendenteDe(anuncio, proponenteId);
+        mockMvc.perform(post("/anuncios/{id}/servico/cancelar", anuncio.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + logar("maria@example.com")))
+                .andExpect(status().isOk());
+        assertThat(recarregar(proposta).getStatus()).isEqualTo(StatusReagendamento.SEM_EFEITO);
+        return proposta;
+    }
+
+    @Test
+    void dadoServicoCancelado_quandoOPrestadorProponenteTentaCancelarAProposta_entao409ENaoUm404() throws Exception {
+        Anuncio anuncio = combinado(Duration.ofDays(3));
+        Reagendamento proposta = propostaDeServicoCancelado(anuncio, rafael.getId());
+
+        cancelar(logar("rafael@example.com"), proposta.getId())
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo", is("PROPOSTA_ENCERRADA")));
+
+        assertThat(recarregar(proposta).getStatus()).isEqualTo(StatusReagendamento.SEM_EFEITO);
+        assertThat(auditorias()).isZero();
+    }
 }

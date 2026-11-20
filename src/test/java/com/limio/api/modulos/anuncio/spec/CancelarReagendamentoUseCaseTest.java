@@ -97,7 +97,7 @@ class CancelarReagendamentoUseCaseTest {
                 .build();
         ReflectionTestUtils.setField(anuncio, "id", ANUNCIO_ID);
         when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
-        when(aplicacaoService.buscarPrestadorDoServico(ANUNCIO_ID)).thenReturn(Optional.of(PRESTADOR_ID));
+        when(aplicacaoService.buscarPrestadorEscolhido(ANUNCIO_ID)).thenReturn(Optional.of(PRESTADOR_ID));
         when(reagendamentoService.buscarAnuncioId(REAGENDAMENTO_ID)).thenReturn(Optional.of(ANUNCIO_ID));
         when(reagendamentoService.salvar(any(Reagendamento.class))).thenAnswer(i -> i.getArgument(0));
     }

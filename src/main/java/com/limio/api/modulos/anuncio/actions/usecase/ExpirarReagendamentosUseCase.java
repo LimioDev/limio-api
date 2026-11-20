@@ -114,7 +114,7 @@ public class ExpirarReagendamentosUseCase {
         // Anúncio nunca é apagado: ausência aqui é dado corrompido, não cenário de negócio.
         Anuncio anuncio = anuncioService.buscarPorId(anuncioId.get()).orElseThrow(
                 () -> new IllegalStateException("anúncio da proposta de reagendamento não existe: " + reagendamentoId));
-        UUID prestadorId = aplicacaoService.buscarPrestadorDoServico(anuncioId.get()).orElse(null);
+        UUID prestadorId = aplicacaoService.buscarPrestadorEscolhido(anuncioId.get()).orElse(null);
 
         proposta.expirar(agora);
         reagendamentoService.salvar(proposta);

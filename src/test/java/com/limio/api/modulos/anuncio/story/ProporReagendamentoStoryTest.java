@@ -524,4 +524,20 @@ class ProporReagendamentoStoryTest {
         assertThat(auditorias()).isEqualTo(1);
         assertThat(eventos.stream(ReagendamentoPropostoEvent.class).count()).isEqualTo(1);
     }
+
+    @Test
+    void dadoServicoCancelado_quandoOPrestadorQueFoiEscolhidoPropoe_entao409ComoOEmpregadorENaoUm404()
+            throws Exception {
+        Anuncio anuncio = anuncio(StatusAnuncio.ENCERRADO, Duration.ofDays(3));
+        aplicacao(anuncio.getId(), rafael.getId(), StatusAplicacao.ENCERRADA); // cancelado: a candidatura encerra
+
+        propor(logar("rafael@example.com"), anuncio, Duration.ofDays(5))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo", is("SERVICO_ESTADO_INVALIDO")));
+        propor(logar("maria@example.com"), anuncio, Duration.ofDays(5))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo", is("SERVICO_ESTADO_INVALIDO")));
+
+        verificarNadaMudou(anuncio, 0);
+    }
 }

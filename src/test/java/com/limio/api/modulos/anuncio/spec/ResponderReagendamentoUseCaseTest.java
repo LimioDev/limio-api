@@ -101,7 +101,7 @@ class ResponderReagendamentoUseCaseTest {
         anuncio = anuncio(StatusAnuncio.PUBLICADO);
         when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
         when(anuncioService.salvar(any(Anuncio.class))).thenAnswer(i -> i.getArgument(0));
-        when(aplicacaoService.buscarPrestadorDoServico(ANUNCIO_ID)).thenReturn(Optional.of(PRESTADOR_ID));
+        when(aplicacaoService.buscarPrestadorEscolhido(ANUNCIO_ID)).thenReturn(Optional.of(PRESTADOR_ID));
         when(aplicacaoService.buscarEscolhidaDoAnuncioParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.of(escolhida()));
         when(reagendamentoService.buscarAnuncioId(REAGENDAMENTO_ID)).thenReturn(Optional.of(ANUNCIO_ID));
         when(reagendamentoService.salvar(any(Reagendamento.class))).thenAnswer(i -> i.getArgument(0));

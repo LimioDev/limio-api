@@ -40,7 +40,7 @@ public class ConsultarReagendamentoUseCase {
                 .orElseThrow(ReagendamentoNaoEncontradoException::new);
 
         boolean parte = proposta.foiProposta(usuarioId) || anuncio.pertenceA(usuarioId)
-                || aplicacaoService.buscarPrestadorDoServico(anuncio.getId()).filter(usuarioId::equals).isPresent();
+                || aplicacaoService.buscarPrestadorEscolhido(anuncio.getId()).filter(usuarioId::equals).isPresent();
         if (!parte) {
             throw new ReagendamentoNaoEncontradoException();
         }

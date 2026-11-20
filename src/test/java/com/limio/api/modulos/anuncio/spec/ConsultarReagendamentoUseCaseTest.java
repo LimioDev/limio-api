@@ -70,7 +70,7 @@ class ConsultarReagendamentoUseCaseTest {
         ReflectionTestUtils.setField(proposta, "id", REAGENDAMENTO_ID);
         when(reagendamentoService.buscarPorId(REAGENDAMENTO_ID)).thenReturn(Optional.of(proposta));
         when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
-        when(aplicacaoService.buscarPrestadorDoServico(ANUNCIO_ID)).thenReturn(Optional.of(PRESTADOR_ID));
+        when(aplicacaoService.buscarPrestadorEscolhido(ANUNCIO_ID)).thenReturn(Optional.of(PRESTADOR_ID));
     }
 
     @Test
@@ -88,7 +88,7 @@ class ConsultarReagendamentoUseCaseTest {
 
     @Test
     void dadoProponenteQueDeixouDeSerParte_quandoConsulta_entaoAindaVeAPropostaQueFez() {
-        when(aplicacaoService.buscarPrestadorDoServico(ANUNCIO_ID)).thenReturn(Optional.empty());
+        when(aplicacaoService.buscarPrestadorEscolhido(ANUNCIO_ID)).thenReturn(Optional.empty());
         ReflectionTestUtils.setField(proposta, "proponenteId", PRESTADOR_ID);
 
         assertThat(useCase.executar(PRESTADOR_ID, REAGENDAMENTO_ID).reagendamento()).isSameAs(proposta);

@@ -84,7 +84,7 @@ public class ResponderReagendamentoUseCase {
         Reagendamento proposta = reagendamentoService.buscarPorId(reagendamentoId)
                 .orElseThrow(ReagendamentoNaoEncontradoException::new);
         Anuncio anuncio = anuncioService.buscarPorId(anuncioId).orElseThrow(ReagendamentoNaoEncontradoException::new);
-        UUID prestadorId = aplicacaoService.buscarPrestadorDoServico(anuncioId).orElse(null);
+        UUID prestadorId = aplicacaoService.buscarPrestadorEscolhido(anuncioId).orElse(null);
 
         if (!anuncio.pertenceA(usuarioId) && !usuarioId.equals(prestadorId)) {
             throw new ReagendamentoNaoEncontradoException();

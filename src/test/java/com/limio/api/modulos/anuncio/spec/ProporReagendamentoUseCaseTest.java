@@ -128,7 +128,7 @@ class ProporReagendamentoUseCaseTest {
     private Anuncio combinado(Instant dataVigente) {
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO, dataVigente);
         when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
-        when(aplicacaoService.foiEscolhido(ANUNCIO_ID, PRESTADOR_ID)).thenReturn(true);
+        when(aplicacaoService.buscarPrestadorEscolhido(ANUNCIO_ID)).thenReturn(Optional.of(PRESTADOR_ID));
         when(aplicacaoService.buscarEscolhidaDoAnuncioParaAtualizar(ANUNCIO_ID)).thenReturn(Optional.of(escolhida()));
         return anuncio;
     }
@@ -239,7 +239,6 @@ class ProporReagendamentoUseCaseTest {
     @Test
     void dadoUsuarioQueNaoEParte_quandoPropoe_entao404SemEfeito() {
         combinado(DATA_VIGENTE);
-        when(aplicacaoService.foiEscolhido(ANUNCIO_ID, ESTRANHO_ID)).thenReturn(false);
 
         assertThatThrownBy(() -> propor(ESTRANHO_ID, NOVA_DATA)).isInstanceOf(ServicoNaoEncontradoException.class);
 
@@ -250,7 +249,7 @@ class ProporReagendamentoUseCaseTest {
     @EnumSource(value = StatusAnuncio.class, names = "PUBLICADO", mode = EnumSource.Mode.EXCLUDE)
     void dadoServicoForaDeCombinado_quandoPropoe_entao409SemEfeito(StatusAnuncio status) {
         when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio(status, DATA_VIGENTE)));
-        when(aplicacaoService.foiEscolhido(ANUNCIO_ID, PRESTADOR_ID)).thenReturn(true);
+        when(aplicacaoService.buscarPrestadorEscolhido(ANUNCIO_ID)).thenReturn(Optional.of(PRESTADOR_ID));
 
         assertThatThrownBy(() -> propor(PRESTADOR_ID, NOVA_DATA)).isInstanceOf(ServicoEstadoInvalidoException.class);
 

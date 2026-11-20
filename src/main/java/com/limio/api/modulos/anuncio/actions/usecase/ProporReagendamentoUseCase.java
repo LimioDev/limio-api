@@ -115,8 +115,13 @@ public class ProporReagendamentoUseCase {
         return proposta;
     }
 
+    /**
+     * O Empregador do anúncio ou o Prestador escolhido, inclusive depois do check-out ou do cancelamento do serviço:
+     * esses casos caem em 409 (estado) adiante, não em 404.
+     */
     private boolean ehParteDoServico(Anuncio anuncio, UUID usuarioId) {
-        return anuncio.pertenceA(usuarioId) || aplicacaoService.foiEscolhido(anuncio.getId(), usuarioId);
+        return anuncio.pertenceA(usuarioId)
+                || aplicacaoService.buscarPrestadorEscolhido(anuncio.getId()).filter(usuarioId::equals).isPresent();
     }
 
     private void registrarAuditoria(Reagendamento proposta, String ip) {

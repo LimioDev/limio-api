@@ -279,4 +279,17 @@ class ConsultarReagendamentoStoryTest {
 
         mockMvc.perform(get("/reagendamentos/{id}", proposta.getId())).andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void dadoServicoCancelado_quandoOPrestadorQueFoiEscolhidoConsultaAProposta_entao200ComOStatusSemEfeito()
+            throws Exception {
+        Anuncio anuncio = anuncio(StatusAnuncio.ENCERRADO, Duration.ofDays(3));
+        aplicacao(anuncio.getId(), rafael.getId(), StatusAplicacao.ENCERRADA); // cancelado: a candidatura encerra
+        Reagendamento proposta = proposta(anuncio, maria.getId(), StatusReagendamento.SEM_EFEITO,
+                agora.plus(Duration.ofHours(24)));
+
+        consultar(logar("rafael@example.com"), proposta.getId())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("SEM_EFEITO")));
+    }
 }
