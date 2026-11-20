@@ -10,8 +10,10 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -77,12 +79,15 @@ class RealizarCheckoutUseCaseTest {
     @Mock
     private TravaTransacional trava;
 
+    @Mock
+    private ReagendamentoService reagendamentoService;
+
     private RealizarCheckoutUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new RealizarCheckoutUseCase(anuncioService, aplicacaoService, midiaService, armazenamentoService,
-                eventos, trava, DataSize.ofMegabytes(5), 5);
+        useCase = new RealizarCheckoutUseCase(anuncioService, aplicacaoService, reagendamentoService, midiaService,
+                armazenamentoService, eventos, trava, DataSize.ofMegabytes(5), 5);
     }
 
     private Anuncio anuncio(StatusAnuncio status) {
@@ -145,6 +150,36 @@ class RealizarCheckoutUseCaseTest {
         assertThat(evento.getValue().contratanteId()).isEqualTo(CONTRATANTE_ID);
         assertThat(evento.getValue().prestadorId()).isEqualTo(PRESTADOR_ID);
         assertThat(evento.getValue().anuncioTitulo()).isEqualTo("Instalar 3 tomadas");
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = StatusAnuncio.class, names = { "PUBLICADO", "EM_ANDAMENTO" })
+    void dadoPropostaDeReagendamentoPendente_quandoFazCheckout_entaoEncerraSemEfeitoNoMesmoInstante(
+            StatusAnuncio status) {
+        Anuncio anuncio = anuncio(status);
+        comAnuncio(anuncio);
+        comCandidatura(candidatura(StatusAplicacao.ESCOLHIDA));
+        when(midiaService.salvar(any(Midia.class))).thenAnswer(i -> i.getArgument(0));
+        when(anuncioService.salvar(anuncio)).thenReturn(anuncio);
+
+        Anuncio resultado = useCase.executar(ANUNCIO_ID, PRESTADOR_ID, umaFoto(), null);
+
+        verify(reagendamentoService).encerrarPendentesSemEfeito(List.of(ANUNCIO_ID), resultado.getCheckoutEm());
+    }
+
+    @Test
+    void dadoCheckoutRecusado_quandoFazCheckout_entaoNaoMexeNasPropostasDeReagendamento() {
+        comAnuncio(anuncio(StatusAnuncio.AGUARDANDO_VALIDACAO));
+        comCandidatura(candidatura(StatusAplicacao.ESCOLHIDA));
+
+        assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, PRESTADOR_ID, umaFoto(), null))
+                .isInstanceOf(ServicoEstadoInvalidoException.class);
+
+        comAnuncio(anuncio(StatusAnuncio.EM_ANDAMENTO));
+        assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, PRESTADOR_ID, List.of(), null))
+                .isInstanceOf(FotoObrigatoriaException.class);
+
+        verifyNoInteractions(reagendamentoService);
     }
 
     @Test

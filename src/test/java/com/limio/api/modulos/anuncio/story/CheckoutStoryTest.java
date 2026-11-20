@@ -15,6 +15,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.limio.api.modulos.anuncio.enums.StatusReagendamento;
+import com.limio.api.modulos.anuncio.reagendamento.Reagendamento;
+import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -99,6 +102,9 @@ class CheckoutStoryTest {
     private AplicacaoRepository aplicacaoRepository;
 
     @Autowired
+    private ReagendamentoRepository reagendamentoRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -126,6 +132,7 @@ class CheckoutStoryTest {
     void limparBase() {
         // Ordem inversa de dependência; as tabelas de outros módulos podem ter sobrado de outras stories.
         jdbc.execute("delete from midia");
+        reagendamentoRepository.deleteAll();
         aplicacaoRepository.deleteAll();
         anuncioRepository.deleteAll();
         jdbc.execute("delete from endereco_salvo");
@@ -185,6 +192,23 @@ class CheckoutStoryTest {
         Anuncio anuncio = anuncio(status);
         aplicacao(anuncio.getId(), carlos.getId(), StatusAplicacao.ESCOLHIDA);
         return anuncio;
+    }
+
+    /** Proposta de reagendamento pendente do Empregador, ainda dentro do prazo, gravada direto no banco. */
+    private Reagendamento propostaPendente(Anuncio anuncio) {
+        return reagendamentoRepository.save(Reagendamento.builder()
+                .anuncioId(anuncio.getId())
+                .dataAnterior(anuncio.getDataHoraPretendida())
+                .dataProposta(anuncio.getDataHoraPretendida().plus(Duration.ofDays(2)))
+                .justificativa("Imprevisto de agenda")
+                .status(StatusReagendamento.PENDENTE)
+                .proponenteId(maria.getId())
+                .expiraEm(Instant.now().plus(Duration.ofHours(24)))
+                .build());
+    }
+
+    private Reagendamento recarregar(Reagendamento proposta) {
+        return reagendamentoRepository.findById(proposta.getId()).orElseThrow();
     }
 
     private static MockMultipartFile foto(String nome, String tipo, byte[] conteudo) {
@@ -448,5 +472,56 @@ class CheckoutStoryTest {
     void dadoSemToken_quandoFazCheckout_entao401() throws Exception {
         mockMvc.perform(multipart("/anuncios/" + UUID.randomUUID() + "/checkout").file(jpeg()))
                 .andExpect(status().isUnauthorized());
+    }
+
+    // ---------------------------------------------------------------- reagendamento (ETI-99)
+
+    @Test
+    void dadaPropostaDeReagendamentoPendente_quandoOPrestadorFazCheckout_entaoAPropostaFicaSemEfeitoENadaMaisMuda()
+            throws Exception {
+        Anuncio anuncio = anuncioComCarlosEscolhido(StatusAnuncio.PUBLICADO);
+        Reagendamento proposta = propostaPendente(anuncio);
+        Instant vigenteAntes = recarregar(anuncio.getId()).getDataHoraPretendida();
+
+        checkout(logar("carlos@example.com"), anuncio.getId(), jpeg())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("AGUARDANDO_VALIDACAO")));
+
+        Reagendamento depois = recarregar(proposta);
+        assertThat(depois.getStatus()).isEqualTo(StatusReagendamento.SEM_EFEITO);
+        assertThat(depois.getRespondidoEm()).isEqualTo(recarregar(anuncio.getId()).getCheckoutEm());
+        // sem efeito: a data vigente não muda e nenhum aceite acontece
+        assertThat(recarregar(anuncio.getId()).getDataHoraPretendida()).isEqualTo(vigenteAntes);
+    }
+
+    @Test
+    void dadaPropostaDeReagendamentoPendente_quandoOCheckoutEhRecusado_entaoAPropostaContinuaPendente()
+            throws Exception {
+        Anuncio semFoto = anuncioComCarlosEscolhido(StatusAnuncio.EM_ANDAMENTO);
+        Reagendamento propostaSemFoto = propostaPendente(semFoto);
+
+        checkout(logar("carlos@example.com"), semFoto.getId(), "Sem foto")
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.codigo", is("FOTO_OBRIGATORIA")));
+
+        assertThat(recarregar(propostaSemFoto).getStatus()).isEqualTo(StatusReagendamento.PENDENTE);
+        assertThat(recarregar(propostaSemFoto).getRespondidoEm()).isNull();
+    }
+
+    @Test
+    void dadaPropostaDeReagendamentoPendente_quandoOStorageFalhaNoCheckout_entaoRollbackEAPropostaContinuaPendente()
+            throws Exception {
+        Anuncio anuncio = anuncioComCarlosEscolhido(StatusAnuncio.PUBLICADO);
+        Reagendamento proposta = propostaPendente(anuncio);
+        doThrow(new ArmazenamentoIndisponivelException()).when(armazenamentoService)
+                .enviar(anyString(), any(), anyString());
+
+        checkout(logar("carlos@example.com"), anuncio.getId(), jpeg())
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.codigo", is("ARMAZENAMENTO_INDISPONIVEL")));
+
+        assertThat(recarregar(proposta).getStatus()).isEqualTo(StatusReagendamento.PENDENTE);
+        assertThat(recarregar(proposta).getRespondidoEm()).isNull();
+        assertThat(recarregar(anuncio.getId()).getStatus()).isEqualTo(StatusAnuncio.PUBLICADO);
     }
 }
