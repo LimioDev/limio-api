@@ -109,7 +109,7 @@ class AbrirChatUseCaseTest {
         ChatAberto aberto = useCase.executar(APLICACAO_ID, CONTRATANTE_ID, null, 30);
 
         assertThat(aberto.outraParte())
-                .isEqualTo(new OutraParte("Rafael Souza", "https://foto", EXPIRA, PapelNoChat.CANDIDATO));
+                .isEqualTo(new OutraParte(PRESTADOR_ID, "Rafael Souza", "https://foto", EXPIRA, PapelNoChat.CANDIDATO));
         assertThat(aberto.candidatura().anuncioTitulo()).isEqualTo("Instalar 3 tomadas");
         verifyNoInteractions(consultaPerfilEmpregador);
     }
@@ -123,7 +123,8 @@ class AbrirChatUseCaseTest {
 
         ChatAberto aberto = useCase.executar(APLICACAO_ID, PRESTADOR_ID, null, 30);
 
-        assertThat(aberto.outraParte()).isEqualTo(new OutraParte("Marina Bertoldi", null, null, PapelNoChat.EMPREGADOR));
+        assertThat(aberto.outraParte())
+                .isEqualTo(new OutraParte(CONTRATANTE_ID, "Marina Bertoldi", null, null, PapelNoChat.EMPREGADOR));
         verifyNoInteractions(consultaFotoPerfil, consultaDadosUsuario);
     }
 
@@ -135,7 +136,7 @@ class AbrirChatUseCaseTest {
 
         ChatAberto aberto = useCase.executar(APLICACAO_ID, CONTRATANTE_ID, null, 30);
 
-        assertThat(aberto.outraParte()).isEqualTo(OutraParte.contaEncerrada(PapelNoChat.CANDIDATO));
+        assertThat(aberto.outraParte()).isEqualTo(OutraParte.contaEncerrada(PRESTADOR_ID, PapelNoChat.CANDIDATO));
         assertThat(aberto.outraParte().nome()).isEqualTo("Usuário excluído");
         verifyNoInteractions(consultaFotoPerfil, consultaPerfilEmpregador);
     }

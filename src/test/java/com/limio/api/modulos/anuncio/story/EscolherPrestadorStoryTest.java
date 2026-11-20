@@ -308,6 +308,11 @@ class EscolherPrestadorStoryTest {
         assertThat(publicados).hasSize(1);
         assertThat(publicados.get(0).candidaturaEscolhidaId()).isEqualTo(doRafael.getId());
         assertThat(publicados.get(0).candidaturasNaoEscolhidasIds()).containsExactly(daAna.getId());
+        // Avisos da escolha (ETI-112): os não escolhidos saem da porta em lote, com a query de verdade.
+        assertThat(jdbc.queryForList("select tipo from notificacao where usuario_id = ?", String.class, ana.getId()))
+                .containsExactly("CANDIDATURA_ENCERRADA");
+        assertThat(jdbc.queryForList("select tipo from notificacao where usuario_id = ?", String.class,
+                rafael.getId())).containsExactly("PRESTADOR_ESCOLHIDO");
     }
 
     @Test
