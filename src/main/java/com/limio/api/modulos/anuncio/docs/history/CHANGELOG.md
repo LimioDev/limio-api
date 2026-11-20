@@ -378,3 +378,29 @@ anúncio), pro app abrir `GET /perfis-publicos/{usuarioId}` (ETI-105). No mural,
 pelo `DetalheDoMural.empregadorId`, sem mexer na porta `ResumoPerfilEmpregador`. Sem migration nem `CodigoErro` novo.
 O chat ganhou o mesmo campo (ver `chat/docs/history/CHANGELOG.md`). Detalhe em
 `../features/ETI-136-usuario-id-nas-telas-do-perfil-publico.md`.
+
+## 2026-11-20 — ETI-99: reagendar o serviço combinado
+
+Propor, consultar, cancelar, responder (aceitar ou recusar) e expirar a proposta de nova data, em
+`POST /anuncios/{id}/reagendamentos`, `GET /reagendamentos/{id}`, `POST /reagendamentos/{id}/cancelar` e
+`POST /reagendamentos/{id}/responder`, mais o job de expiração. Detalhe completo em
+`docs/features/ETI-99-reagendar-o-servico.md`.
+
+Reaproveitou `Reagendamento` (TICKET-0049) e a carência do ETI-94: o aceite grava `respondidoEm` e troca
+`dataHoraPretendida`, e o cancelamento do Empregador passa a cair em `TARDIO` de ponta a ponta, com a antecedência de 24h
+sobre a nova data. O contador de aceitos é `COUNT(status = ACEITO)`, sem coluna nova no `Anuncio`; limite (2) e prazo de
+resposta (24h) viraram propriedades. Migration `V39` (proponente, `expira_em`, marca de proposta depois da data vigente e
+os índices parciais). Estados novos `EXPIRADO` e `SEM_EFEITO`: o "serviço deixou de estar combinado" (iniciar, cancelar,
+conta encerrada, check-out e validar) passou a um ponto único, `ReagendamentoService.encerrarPendentesSemEfeito`, e o
+`cancelarSemEfeito` antigo saiu.
+
+Tudo toma a trava `ANUNCIO` primeiro; nas rotas por id da proposta o `anuncioId` sai de consulta escalar antes da trava.
+O Prestador é reconhecido como parte pela escolha permanente (`buscarPrestadorEscolhido`), e não pela candidatura
+ativa: o teste de concorrência mostrou que, depois de o serviço ser cancelado, ele receberia 404 em vez do 409 de
+estado. Proposta vencida e ainda não expirada pelo job devolve `PROPOSTA_EXPIRADA` e só o job grava `EXPIRADO`.
+
+Pendências: a conclusão por silêncio (ETI-98) deve checar `existePendente` depois da trava e antes de `Anuncio.validar`
+(contrato fixado em `ReagendamentoPendenteGanchoStoryTest`), e definir a data de referência do silêncio; o cancelamento
+do serviço pelo Prestador (ETI-96/97) deve chamar o ponto único de encerramento; os eventos de reagendamento ainda não
+têm ouvinte em `notificacao` (US56).
+

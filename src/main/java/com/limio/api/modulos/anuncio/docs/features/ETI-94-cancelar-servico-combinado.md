@@ -48,7 +48,8 @@ publicado), penalidade ou registro de reputação do cancelamento tardio, UI.
   contavam por `escolhidaEm`, então o estorno não liberava a vaga. `aplicacao.cota_estornada_em` (também a marca de
   idempotência) faz essas duas consultas ignorarem escolhas estornadas. No cancelamento tardio a escolha continua
   contando, porque não estorna.
-- **Proposta de reagendamento pendente** perde o efeito (`cancelarSemEfeito`), como em `IniciarServicoUseCase`.
+- **Proposta de reagendamento pendente** perde o efeito (`ReagendamentoService.encerrarPendentesSemEfeito`, status
+  `SEM_EFEITO` desde o ETI-99), como em `IniciarServicoUseCase`.
 - **Ordem das travas:** advisory `ANUNCIO` → `FOR UPDATE` na candidatura escolhida → `COTA_PRESTADOR` no estorno.
 - **404 para não-dono.** Anúncio inexistente, outro Empregador e Prestador recebem `SERVICO_NAO_ENCONTRADO`.
 - **Chat.** `DeixarChatSomenteLeituraUseCase.aoCancelarServico` (`AFTER_COMMIT` + `REQUIRES_NEW`, motivo
@@ -82,8 +83,8 @@ Erros: 404 `SERVICO_NAO_ENCONTRADO`, 409 `PRAZO_CANCELAMENTO_ESGOTADO`, 409 `USE
 
 ## Pendências
 
-- Nenhum fluxo cria ou aceita reagendamento (ETI-99/100): o ramo `TARDIO` é testado com reagendamento semeado no
-  banco e precisa continuar coerente quando esses cards gravarem `respondidoEm` e `ACEITO`.
+- ~~Nenhum fluxo cria ou aceita reagendamento~~ Resolvido pelo ETI-99: o aceite grava `respondidoEm` e `ACEITO`, e
+  `ResponderReagendamentoStoryTest` cobre o `TARDIO` de ponta a ponta (aceite, depois cancelamento na carência).
 - As constantes de 24h seguem duplicadas em `ConsultarServicoUseCase` e `EncerrarAnunciosEAplicacoesUseCase`.
 - Notificação ao Prestador: ETI-112 (o evento já é publicado).
 

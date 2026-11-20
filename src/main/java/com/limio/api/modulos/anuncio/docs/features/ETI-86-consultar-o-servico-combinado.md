@@ -45,8 +45,8 @@ mesmo a coluna já existindo (V13).
 | Andamento: `escolhidaEm`, `iniciadoEm`, `checkoutEm`, `validadoEm` | `escolhidaEm` vem da candidatura; os outros três são colunas que já existem em `Anuncio` desde a V13, mas nenhum usecase ainda os preenche (ETI-88, ETI-92/93, ETI-90/91) — saem `null` na prática. |
 | Prazo de cancelamento (data vigente − 24h) | Calculado no usecase (`dataHoraPretendida.minus(24h)`), sem tocar a entity. |
 | Carência de reagendamento aceito (ETI-94/ETI-95) | **Não implementado** — a regra de carência não está definida em nenhum card ainda (`pendente-definicao`). Nenhum campo "falso" foi criado pra não sugerir uma lógica que não existe; ver "Pontos em aberto". |
-| Reagendamentos aceitos e limite ("1 de 2") | `ReagendamentoService.contarAceitos` (conta `status = ACEITO`) + constante `LIMITE_REAGENDAMENTOS = 2`. Hoje sempre 0: ninguém cria reagendamento ainda. |
-| Proposta de reagendamento pendente | `ReagendamentoService.buscarPendentesDosAnuncios`, já existente (TICKET-0049). `quem propôs` e `prazo` **não saem**: a tabela `reagendamento` não guarda isso — fica pro ETI-99, que cria a proposta e decide o schema. |
+| Reagendamentos aceitos e limite ("1 de 2") | `ReagendamentoService.contarAceitos` (conta `status = ACEITO`) + propriedade `anuncio.reagendamento.limite` (2; era constante até o ETI-99, que passou a criar propostas). |
+| Proposta de reagendamento pendente | `ReagendamentoService.buscarPendentesDosAnuncios`, já existente (TICKET-0049). `quem propôs` e `prazo` não saem aqui: o ETI-99 criou as colunas (`proponente_id`, `expira_em`) e os expõe em `GET /reagendamentos/{id}`. |
 | Id do chat e mensagens não lidas | Porta nova `ConsultaChatDoServico` (`comum/portas/`), implementada em `chat`. Conta mensagens com `lida_em is null` e remetente diferente de quem consulta. |
 
 ## Decisões técnicas
@@ -85,8 +85,8 @@ mesmo a coluna já existindo (V13).
 
 - **Média de avaliações**: aguarda o módulo de avaliações.
 - **Carência de reagendamento aceito**: regra ainda não definida em nenhum card (ETI-94/95).
-- **Quem propôs o reagendamento e o prazo de resposta**: schema de `reagendamento` precisa de coluna nova
-  (ETI-99).
+- **Quem propôs o reagendamento e o prazo de resposta**: resolvido pelo ETI-99 (colunas novas na V39), expostos em
+  `GET /reagendamentos/{id}`.
 - **Conflito de nome esperado com a PR#26** (`SERVICO_NAO_ENCONTRADO`/`ServicoNaoEncontradoException`):
   resolver no merge, ficando com uma cópia só.
 - **Planilha/Figma não revisados em detalhe** (o próprio card já avisa disso).
