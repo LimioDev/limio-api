@@ -42,7 +42,7 @@ import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
  *
  * <p>Ordem de trava do agregado: advisory {@code ANUNCIO} (1ª instrução) e a linha da candidatura {@code FOR UPDATE}.
  * Quem não é parte do serviço recebe 404, igual a um serviço inexistente. O índice único parcial de proposta
- * pendente (V39) é só a rede de segurança do banco: sob a trava, a checagem de pendente já serializa as propostas.
+ * pendente (V40) é só a rede de segurança do banco: sob a trava, a checagem de pendente já serializa as propostas.
  */
 @Service
 public class ProporReagendamentoUseCase {

@@ -389,7 +389,7 @@ Propor, consultar, cancelar, responder (aceitar ou recusar) e expirar a proposta
 Reaproveitou `Reagendamento` (TICKET-0049) e a carência do ETI-94: o aceite grava `respondidoEm` e troca
 `dataHoraPretendida`, e o cancelamento do Empregador passa a cair em `TARDIO` de ponta a ponta, com a antecedência de 24h
 sobre a nova data. O contador de aceitos é `COUNT(status = ACEITO)`, sem coluna nova no `Anuncio`; limite (2) e prazo de
-resposta (24h) viraram propriedades. Migration `V39` (proponente, `expira_em`, marca de proposta depois da data vigente e
+resposta (24h) viraram propriedades. Migration `V40` (proponente, `expira_em`, marca de proposta depois da data vigente e
 os índices parciais). Estados novos `EXPIRADO` e `SEM_EFEITO`: o "serviço deixou de estar combinado" (iniciar, cancelar,
 conta encerrada, check-out e validar) passou a um ponto único, `ReagendamentoService.encerrarPendentesSemEfeito`, e o
 `cancelarSemEfeito` antigo saiu.

@@ -85,7 +85,7 @@ mesmo a coluna já existindo (V13).
 
 - **Média de avaliações**: aguarda o módulo de avaliações.
 - **Carência de reagendamento aceito**: regra ainda não definida em nenhum card (ETI-94/95).
-- **Quem propôs o reagendamento e o prazo de resposta**: resolvido pelo ETI-99 (colunas novas na V39), expostos em
+- **Quem propôs o reagendamento e o prazo de resposta**: resolvido pelo ETI-99 (colunas novas na V40), expostos em
   `GET /reagendamentos/{id}`.
 - **Conflito de nome esperado com a PR#26** (`SERVICO_NAO_ENCONTRADO`/`ServicoNaoEncontradoException`):
   resolver no merge, ficando com uma cópia só.
