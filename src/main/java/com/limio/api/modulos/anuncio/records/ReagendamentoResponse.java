@@ -9,10 +9,12 @@ public record ReagendamentoResponse(
         UUID id,
         UUID anuncioId,
         StatusReagendamento status,
+        Instant dataVigente,
         Instant dataAnterior,
         Instant dataProposta,
         String justificativa,
         UUID proponenteId,
         Instant criadoEm,
-        Instant expiraEm) {
+        Instant expiraEm,
+        Instant respondidoEm) {
 }

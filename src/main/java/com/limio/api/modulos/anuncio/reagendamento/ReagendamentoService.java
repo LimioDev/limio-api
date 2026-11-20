@@ -18,6 +18,14 @@ public class ReagendamentoService extends BaseService<Reagendamento, UUID, Reage
         super(repository);
     }
 
+    public Optional<UUID> buscarAnuncioId(UUID id) {
+        return repository.findAnuncioIdById(id);
+    }
+
+    public Optional<Reagendamento> buscarPorId(UUID id) {
+        return repository.findById(id);
+    }
+
     public List<Reagendamento> buscarPendentesDosAnuncios(List<UUID> anuncioIds) {
         if (anuncioIds.isEmpty()) {
             return List.of();
