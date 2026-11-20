@@ -94,7 +94,64 @@ class AsaasClientTest {
         AsaasClient cliente = clienteContra("/payments", 401, "{\"errors\":[{\"code\":\"invalid_access_token\"}]}");
 
         assertThatThrownBy(() -> cliente.cobrar("cus_000123", "tok_abc", 2990, "chave-1"))
-                .isInstanceOf(GatewayIndisponivelException.class);
+                .isInstanceOf(GatewayIndisponivelException.class)
+                .extracting(e -> ((GatewayIndisponivelException) e).cobrancaPodeTerOcorrido()).isEqualTo(false);
+    }
+
+    @Test
+    void dadoErro5xxDoAsaas_quandoCobrar_entaoGatewayIndisponivelComResultadoIncerto() throws IOException {
+        AsaasClient cliente = clienteContra("/payments", 500, "{\"errors\":[{\"code\":\"internal_error\"}]}");
+
+        assertThatThrownBy(() -> cliente.cobrar("cus_000123", "tok_abc", 2990, "chave-1"))
+                .isInstanceOf(GatewayIndisponivelException.class)
+                .extracting(e -> ((GatewayIndisponivelException) e).cobrancaPodeTerOcorrido()).isEqualTo(true);
+    }
+
+    @Test
+    void dadoRespostaSemId_quandoCobrar_entaoGatewayIndisponivelComResultadoIncerto() throws IOException {
+        AsaasClient cliente = clienteContra("/payments", 200, "{\"status\":\"CONFIRMED\"}");
+
+        assertThatThrownBy(() -> cliente.cobrar("cus_000123", "tok_abc", 2990, "chave-1"))
+                .isInstanceOf(GatewayIndisponivelException.class)
+                .extracting(e -> ((GatewayIndisponivelException) e).cobrancaPodeTerOcorrido()).isEqualTo(true);
+    }
+
+    @Test
+    void dadoAsaasForaDoAr_quandoCobrar_entaoGatewayIndisponivelSemCobranca() throws IOException {
+        AsaasClient cliente = new AsaasClient("http://127.0.0.1:" + portaFechada(), API_KEY, Duration.ofMillis(500));
+
+        assertThatThrownBy(() -> cliente.cobrar("cus_000123", "tok_abc", 2990, "chave-1"))
+                .isInstanceOf(GatewayIndisponivelException.class)
+                .extracting(e -> ((GatewayIndisponivelException) e).cobrancaPodeTerOcorrido()).isEqualTo(false);
+    }
+
+    @Test
+    void dadoAsaasSemResponderAntesDoTimeout_quandoCobrar_entaoGatewayIndisponivelComResultadoIncerto()
+            throws IOException {
+        servidor = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
+        servidor.createContext("/payments", troca -> {
+            try {
+                Thread.sleep(1_500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            troca.close();
+        });
+        servidor.start();
+        AsaasClient cliente = new AsaasClient("http://127.0.0.1:" + servidor.getAddress().getPort(), API_KEY,
+                Duration.ofMillis(300));
+
+        assertThatThrownBy(() -> cliente.cobrar("cus_000123", "tok_abc", 2990, "chave-1"))
+                .isInstanceOf(GatewayIndisponivelException.class)
+                .extracting(e -> ((GatewayIndisponivelException) e).cobrancaPodeTerOcorrido()).isEqualTo(true);
+    }
+
+    private int portaFechada() throws IOException {
+        HttpServer temporario = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
+        temporario.start();
+        int porta = temporario.getAddress().getPort();
+        temporario.stop(0);
+        return porta;
     }
 
     @Test

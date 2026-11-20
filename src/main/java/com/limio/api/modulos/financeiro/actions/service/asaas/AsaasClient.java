@@ -1,6 +1,9 @@
 package com.limio.api.modulos.financeiro.actions.service.asaas;
 
+import java.net.ConnectException;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
+import java.net.http.HttpConnectTimeoutException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -30,6 +33,11 @@ import com.limio.api.modulos.financeiro.excecao.GatewayIndisponivelException;
  * — problema de configuração ou do provedor, não do cartão. Qualquer outro 4xx na criação da cobrança é
  * tratado como recusa do cartão: é o caso dominante desse endpoint quando customer e token já são
  * válidos. Ajustar se o sandbox revelar um código de erro do Asaas que precise de tratamento próprio.
+ *
+ * <p>Na cobrança, a {@link GatewayIndisponivelException} diz se o Asaas pode ter cobrado: não quando a
+ * conexão nem abriu ou a chave foi recusada (401/403); talvez quando a requisição chegou e a resposta se
+ * perdeu (timeout de leitura), veio 5xx ou veio 2xx sem id
+ * ({@link GatewayIndisponivelException#resultadoIncerto()}).
  */
 @Component
 @ConditionalOnProperty(name = "financeiro.gateway.provedor", havingValue = "asaas")
@@ -89,12 +97,17 @@ public class AsaasClient {
                     .retrieve()
                     .body(CobrancaResposta.class);
             if (resposta == null || resposta.id() == null) {
-                throw respostaInvalida("payments");
+                log.error("Asaas devolveu 2xx sem id em /payments");
+                throw GatewayIndisponivelException.resultadoIncerto();
             }
             return resposta;
         } catch (RestClientResponseException e) {
             if (configuracaoInvalida(e.getStatusCode())) {
                 throw erroDeConfiguracaoOuIndisponivel(e, "payments");
+            }
+            if (e.getStatusCode().is5xxServerError()) {
+                log.warn("Asaas respondeu {} ao cobrar: {}", e.getStatusCode(), e.getResponseBodyAsString());
+                throw GatewayIndisponivelException.resultadoIncerto();
             }
             // 4xx que não é erro de chave/permissão: recusa do cartão (ex.: saldo insuficiente, cartão
             // expirado) — o chamador decide o que fazer com isso.
@@ -102,8 +115,23 @@ public class AsaasClient {
             return CobrancaResposta.recusada();
         } catch (RestClientException e) {
             log.warn("Asaas indisponível ao cobrar: {}", e.getMessage());
-            throw new GatewayIndisponivelException();
+            throw conexaoNaoAbriu(e) ? new GatewayIndisponivelException()
+                    : GatewayIndisponivelException.resultadoIncerto();
         }
+    }
+
+    /**
+     * A requisição nem saiu (host não resolvido, conexão recusada ou timeout de conexão): o Asaas não
+     * recebeu a cobrança. Qualquer outra falha de I/O pode ter acontecido depois de a cobrança chegar.
+     */
+    static boolean conexaoNaoAbriu(Throwable erro) {
+        for (Throwable causa = erro; causa != null; causa = causa.getCause()) {
+            if (causa instanceof ConnectException || causa instanceof UnknownHostException
+                    || causa instanceof HttpConnectTimeoutException) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

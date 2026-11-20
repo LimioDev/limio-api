@@ -36,15 +36,18 @@ import com.limio.api.modulos.financeiro.assinaturagold.AssinaturaGold;
 import com.limio.api.modulos.financeiro.assinaturagold.AssinaturaGoldService;
 import com.limio.api.modulos.financeiro.assinaturagold.cobranca.Cobranca;
 import com.limio.api.modulos.financeiro.assinaturagold.cobranca.CobrancaService;
-import com.limio.api.modulos.financeiro.assinaturagold.cobranca.documentofiscal.DocumentoFiscal;
+import com.limio.api.modulos.financeiro.assinaturagold.cobranca.enums.StatusCobranca;
 import com.limio.api.modulos.financeiro.assinaturagold.cobranca.documentofiscal.DocumentoFiscalService;
 import com.limio.api.modulos.financeiro.assinaturagold.enums.StatusAssinatura;
 import com.limio.api.modulos.financeiro.eventos.GoldAssinadoEvent;
 import com.limio.api.modulos.financeiro.excecao.AssinaturaJaAtivaException;
+import com.limio.api.modulos.financeiro.excecao.CartaoNaoCadastradoException;
 import com.limio.api.modulos.financeiro.excecao.CobrancaEmAndamentoException;
+import com.limio.api.modulos.financeiro.excecao.GatewayIndisponivelException;
 import com.limio.api.modulos.financeiro.excecao.PagamentoRecusadoException;
 import com.limio.api.modulos.financeiro.excecao.PlanoNaoEncontradoException;
 import com.limio.api.modulos.financeiro.excecao.SomentePrestadorAssinaGoldException;
+import com.limio.api.modulos.financeiro.meiopagamento.MeioPagamento;
 import com.limio.api.modulos.financeiro.meiopagamento.MeioPagamentoService;
 import com.limio.api.modulos.financeiro.plano.Plano;
 import com.limio.api.modulos.financeiro.plano.PlanoService;
@@ -276,5 +279,86 @@ class AssinarGoldUseCaseTest {
 
         assertThat(resultado.getId()).isEqualTo(idExistente);
         assertThat(resultado.estaAtiva()).isTrue();
+    }
+
+    @Test
+    void dadoSemTokenNaRequisicaoComCartaoSalvo_quandoAssina_entaoCobraOCartaoSalvoSemRegravarMeioPagamento() {
+        when(planoService.buscarAtivoPorCodigo(Plano.CODIGO_GOLD)).thenReturn(Optional.of(planoGold()));
+        when(assinaturaGoldService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.empty());
+        when(meioPagamentoService.buscarPorUsuario(USUARIO_ID))
+                .thenReturn(Optional.of(MeioPagamento.novo(USUARIO_ID, "tok_salvo", "VISA", "4419")));
+        when(gatewayPagamento.cobrar(eq(USUARIO_ID), eq("tok_salvo"), eq(2990L), eq("BRL"), anyString()))
+                .thenReturn(new ResultadoCobranca(true, "SIM-123", null, null));
+        stubarPersistencia();
+        when(documentoFiscalService.salvar(any())).thenAnswer(chamada -> chamada.getArgument(0));
+
+        AssinaturaGold resultado = useCase.executar(USUARIO_ID, PapelUsuario.PRESTADOR, Plano.CODIGO_GOLD, null);
+
+        assertThat(resultado.estaAtiva()).isTrue();
+        verify(meioPagamentoService, never()).salvarOuSubstituir(any(), any(), any(), any());
+    }
+
+    @Test
+    void dadoSemTokenNaRequisicaoESemCartaoSalvo_quandoAssina_entaoCartaoNaoCadastradoSemReservar() {
+        when(planoService.buscarAtivoPorCodigo(Plano.CODIGO_GOLD)).thenReturn(Optional.of(planoGold()));
+        when(assinaturaGoldService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.empty());
+        when(meioPagamentoService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> useCase.executar(USUARIO_ID, PapelUsuario.PRESTADOR, Plano.CODIGO_GOLD, " "))
+                .isInstanceOf(CartaoNaoCadastradoException.class);
+
+        verify(assinaturaGoldService, never()).salvar(any());
+        verify(cobrancaService, never()).salvar(any());
+        verify(gatewayPagamento, never()).cobrar(any(), any(), anyLong(), any(), any());
+    }
+
+    @Test
+    void dadoGatewayForaDoArSemReceberACobranca_quandoAssina_entaoCancelaAPendenciaERelancaOErro() {
+        when(planoService.buscarAtivoPorCodigo(Plano.CODIGO_GOLD)).thenReturn(Optional.of(planoGold()));
+        when(assinaturaGoldService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.empty());
+        when(gatewayPagamento.cobrar(eq(USUARIO_ID), eq(TOKEN), eq(2990L), eq("BRL"), anyString()))
+                .thenThrow(new GatewayIndisponivelException());
+        stubarPersistencia();
+
+        assertThatThrownBy(() -> useCase.executar(USUARIO_ID, PapelUsuario.PRESTADOR, Plano.CODIGO_GOLD, TOKEN))
+                .isInstanceOf(GatewayIndisponivelException.class);
+
+        ArgumentCaptor<AssinaturaGold> assinaturaCaptor = ArgumentCaptor.forClass(AssinaturaGold.class);
+        verify(assinaturaGoldService, org.mockito.Mockito.times(2)).salvar(assinaturaCaptor.capture());
+        assertThat(assinaturaCaptor.getAllValues().get(1).getStatus()).isEqualTo(StatusAssinatura.CANCELADA);
+
+        ArgumentCaptor<Cobranca> cobrancaCaptor = ArgumentCaptor.forClass(Cobranca.class);
+        verify(cobrancaService, org.mockito.Mockito.times(2)).salvar(cobrancaCaptor.capture());
+        assertThat(cobrancaCaptor.getAllValues().get(1).getStatus()).isEqualTo(StatusCobranca.FALHOU);
+
+        verify(meioPagamentoService, never()).salvarOuSubstituir(any(), any(), any(), any());
+        verify(eventos, never()).publishEvent(any());
+    }
+
+    @Test
+    void dadoGatewayComResultadoIncerto_quandoAssina_entaoMantemAPendenciaParaReconciliar() {
+        when(planoService.buscarAtivoPorCodigo(Plano.CODIGO_GOLD)).thenReturn(Optional.of(planoGold()));
+        when(assinaturaGoldService.buscarPorUsuario(USUARIO_ID)).thenReturn(Optional.empty());
+        when(gatewayPagamento.cobrar(eq(USUARIO_ID), eq(TOKEN), eq(2990L), eq("BRL"), anyString()))
+                .thenThrow(GatewayIndisponivelException.resultadoIncerto());
+        when(assinaturaGoldService.salvar(any())).thenAnswer(chamada -> {
+            AssinaturaGold a = chamada.getArgument(0);
+            ReflectionTestUtils.setField(a, "id", UUID.randomUUID());
+            return a;
+        });
+        when(cobrancaService.salvar(any())).thenAnswer(chamada -> {
+            Cobranca c = chamada.getArgument(0);
+            ReflectionTestUtils.setField(c, "id", UUID.randomUUID());
+            return c;
+        });
+
+        assertThatThrownBy(() -> useCase.executar(USUARIO_ID, PapelUsuario.PRESTADOR, Plano.CODIGO_GOLD, TOKEN))
+                .isInstanceOf(GatewayIndisponivelException.class);
+
+        ArgumentCaptor<AssinaturaGold> assinaturaCaptor = ArgumentCaptor.forClass(AssinaturaGold.class);
+        verify(assinaturaGoldService).salvar(assinaturaCaptor.capture());
+        assertThat(assinaturaCaptor.getValue().estaPendente()).isTrue();
+        verify(cobrancaService).salvar(any());
+        verify(assinaturaGoldService, never()).buscarPorIdOuFalhar(any());
     }
 }

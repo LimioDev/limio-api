@@ -93,3 +93,31 @@ Achados de code review no próprio PR, corrigidos antes do merge:
   (`AsaasWebhookPayload` → `AsaasWebhookRequest`) saiu do controller pra `records/`, padrão do projeto.
 - **`EmailService` renomeado pra `ReciboGoldEmailService`** — nome específico em vez do qualificador
   `@Component("financeiroEmailService")` pra evitar colisão com o bean de `auth`.
+
+## 2026-11 — ETI-81: cartão salvo e assinatura presa em `PENDENTE` (review da limio-app#36)
+
+O front do ETI-82 (limio-app#36) achou dois problemas ao integrar; o terceiro apareceu ao corrigir.
+
+- **`gatewayToken` virou opcional.** O app não tem o token do cartão: `GET /financeiro/gold` devolve só
+  bandeira e últimos 4, e o card proíbe digitar o cartão no LIMIO. Sem o token, a cobrança usa o
+  `meio_pagamento` salvo, que não é regravado (o Asaas nem sempre devolve `creditCard` na cobrança, e
+  regravar apagaria bandeira e últimos 4). Sem token e sem cartão salvo: `CARTAO_NAO_CADASTRADO` (422),
+  verificado antes de reservar. O `gatewayToken` explícito continua valendo pro fluxo do
+  `CartaoController` (sandbox Asaas).
+- **Recusa presa em `PENDENTE`.** `PagamentoRecusadoException` era lançada dentro do `transacao.execute`
+  do `confirmar`; o `TransactionTemplate` desfazia a transação e, com ela, o `cancelarPendencia()` e o
+  `confirmarRecusada()`. Toda tentativa seguinte recebia `COBRANCA_EM_ANDAMENTO`. Agora `confirmar`
+  devolve `Optional` vazio e a exceção sai depois do commit. Os testes não pegavam: o spec usa
+  `TransactionOperations.withoutTransaction()` e o story só conferia `estaAtiva() == false`, que vale
+  também pra `PENDENTE`. O story passou a conferir o status gravado e a nova tentativa.
+- **Gateway indisponível preso em `PENDENTE`.** A `GatewayIndisponivelException` saía entre a reserva e a
+  confirmação sem nada cancelar. Agora ela diz se a cobrança pode ter ocorrido
+  (`cobrancaPodeTerOcorrido`): se não (conexão recusada, timeout de conexão, 401/403), a pendência é
+  desfeita numa transação curta (`AssinaturaGold` `CANCELADA`, `Cobranca` no novo status `FALHOU`); se
+  sim (timeout de leitura, 5xx, 2xx sem id), a linha continua `PENDENTE`, porque cancelar e deixar
+  tentar de novo com outra `chaveIdempotencia` poderia cobrar duas vezes. A reconciliação dessa
+  pendência fica com o webhook (ETI-85).
+- **5xx do Asaas era tratado como recusa do cartão.** O `catch` de `RestClientResponseException` só
+  separava 401/403; 500/502/503 caíam em `PAGAMENTO_RECUSADO`, contrariando o javadoc do `AsaasClient`.
+  Agora 5xx é `GATEWAY_INDISPONIVEL` com resultado incerto.
+- Sem migration: `cobranca.status` é `VARCHAR(10)` sem `CHECK`, e `FALHOU` cabe.
