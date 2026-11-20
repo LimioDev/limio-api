@@ -50,6 +50,13 @@ candidaturas listadas em `candidaturasNaoEscolhidasIds`, em lote (`executarDasCa
 tocado e segue aberto. Recusadas e desistentes não entram na lista: seus chats já foram fechados com o motivo próprio
 (e `Chat.deixarSomenteLeitura` mantém o primeiro motivo). Só `SERVICO_CANCELADO` (ETI-94 a ETI-97) segue sem listener.
 
+## 2026-11-16 — ETI-136: id da outra parte no chat
+
+`ChatResponse.OutraParte` e o `OutraParte` de domínio ganharam `usuarioId`, pro menu "⋮" do chat (tela 21b) abrir o
+perfil público. Com conta encerrada o id continua vindo (`OutraParte.contaEncerrada(usuarioId, papel)`): o perfil
+público responde "Conta encerrada" e mantém a reputação. Detalhe em
+`anuncio/docs/features/ETI-136-usuario-id-nas-telas-do-perfil-publico.md`.
+
 ## 2026-11-17 — ETI-103: listar minhas conversas por papel
 
 - **`GET /chats`:** lista as conversas do papel ativo do token (Empregador: chats dos anúncios; Prestador: chats das
@@ -67,4 +74,5 @@ tocado e segue aberto. Recusadas e desistentes não entram na lista: seus chats 
 - **Código de erro:** entrada inválida responde 400 `VALIDACAO_FALHOU`; `DADOS_INVALIDOS`, sugerido no card, não existe
   na API.
 - `ChatController` deixou de ser "sem checagem de papel" só nesta rota: a lista segue o papel do token.
-
+- **Merge com a develop (ETI-136):** `outraParte.usuarioId` também na lista, pelo mesmo `OutraParte` de domínio do
+  chat; conta encerrada mantém o id.

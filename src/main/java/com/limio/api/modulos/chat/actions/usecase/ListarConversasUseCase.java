@@ -36,7 +36,8 @@ import com.limio.api.modulos.chat.enums.PapelNoChat;
  * aparece. Chat somente leitura continua na lista, é o histórico.
  *
  * <p>Título, status, nome e foto vêm das portas em lote: uma consulta por porta, qualquer que seja o tamanho da
- * página. Conta encerrada (ausente do lote) vira "Usuário excluído", sem foto.
+ * página. Conta encerrada (ausente do lote) vira "Usuário excluído", sem foto, mas mantém o {@code usuarioId}: o perfil
+ * público dela responde "Conta encerrada" (ETI-136).
  */
 @Service
 public class ListarConversasUseCase {
@@ -91,7 +92,7 @@ public class ListarConversasUseCase {
         }
         UUID outraParteId = outraParteId(linha, papelAtivo);
         OutraParte outraParte = outrasPartes.getOrDefault(outraParteId,
-                OutraParte.contaEncerrada(papelDaOutraParte(papelAtivo)));
+                OutraParte.contaEncerrada(outraParteId, papelDaOutraParte(papelAtivo)));
         UltimaMensagem ultimaMensagem = linha.getUltimaMensagemEm() == null ? null
                 : new UltimaMensagem(linha.getUltimaMensagem(), linha.getUltimaMensagemEm(),
                         usuarioId.equals(linha.getUltimaMensagemRemetenteId()));
@@ -111,21 +112,22 @@ public class ListarConversasUseCase {
                 Map<UUID, DadosUsuario> dados = consultaDadosUsuario.buscarPorIds(ids);
                 Map<UUID, LinkTemporario> fotos = consultaFotoPerfil.buscarFotosEmLote(dados.keySet());
                 dados.forEach((id, usuario) -> outrasPartes.put(id,
-                        outraParte(usuario.nomeCompleto(), Optional.ofNullable(fotos.get(id)), papel)));
+                        outraParte(id, usuario.nomeCompleto(), Optional.ofNullable(fotos.get(id)), papel)));
             }
             case PRESTADOR -> consultaPerfilEmpregador.buscarResumosEmLote(ids).forEach((id, perfil) ->
-                    outrasPartes.put(id, outraParte(perfil, papel)));
+                    outrasPartes.put(id, outraParte(id, perfil, papel)));
         }
         return outrasPartes;
     }
 
-    private static OutraParte outraParte(String nome, Optional<LinkTemporario> foto, PapelNoChat papel) {
-        return new OutraParte(nome, foto.map(LinkTemporario::url).orElse(null),
+    private static OutraParte outraParte(UUID usuarioId, String nome, Optional<LinkTemporario> foto,
+            PapelNoChat papel) {
+        return new OutraParte(usuarioId, nome, foto.map(LinkTemporario::url).orElse(null),
                 foto.map(LinkTemporario::expiraEm).orElse(null), papel);
     }
 
-    private static OutraParte outraParte(ResumoPerfilEmpregador perfil, PapelNoChat papel) {
-        return new OutraParte(perfil.nomeExibicao(), perfil.fotoUrl(), perfil.fotoExpiraEm(), papel);
+    private static OutraParte outraParte(UUID usuarioId, ResumoPerfilEmpregador perfil, PapelNoChat papel) {
+        return new OutraParte(usuarioId, perfil.nomeExibicao(), perfil.fotoUrl(), perfil.fotoExpiraEm(), papel);
     }
 
     private static UUID outraParteId(ConversaProjecao linha, PapelUsuario papelAtivo) {

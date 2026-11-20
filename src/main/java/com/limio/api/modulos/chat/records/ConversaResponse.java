@@ -23,7 +23,8 @@ public record ConversaResponse(
         @JsonProperty("isSomenteLeitura") boolean somenteLeitura,
         MotivoSomenteLeitura motivoSomenteLeitura) {
 
-    public record OutraParte(String nome, String fotoUrl, Instant fotoExpiraEm, PapelNoChat papel) {
+    /** {@code usuarioId} abre o perfil público da outra pessoa (ETI-136), como no {@code ChatResponse}. */
+    public record OutraParte(UUID usuarioId, String nome, String fotoUrl, Instant fotoExpiraEm, PapelNoChat papel) {
     }
 
     public record UltimaMensagem(String texto, Instant enviadaEm, boolean enviadaPorMim) {

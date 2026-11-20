@@ -56,6 +56,8 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 import com.limio.api.TestcontainersConfiguration;
 import com.limio.api.comum.eventos.AnuncioCanceladoEvent;
 import com.limio.api.comum.eventos.CandidaturaCriadaEvent;
+import com.limio.api.comum.eventos.ServicoCanceladoEvent;
+import com.limio.api.comum.eventos.enums.TipoCancelamento;
 import com.limio.api.comum.seguranca.JwtAuthFilter;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.anuncio.Anuncio;
@@ -274,6 +276,7 @@ class ChatDaCandidaturaStoryTest {
                 .andExpect(jsonPath("$.id", is(chatId.toString())))
                 .andExpect(jsonPath("$.candidaturaId", is(candidatura.getId().toString())))
                 .andExpect(jsonPath("$.statusCandidatura", is("ENVIADA")))
+                .andExpect(jsonPath("$.outraParte.usuarioId", is(prestador.getId().toString())))
                 .andExpect(jsonPath("$.outraParte.nome", is("Rafael Souza")))
                 .andExpect(jsonPath("$.outraParte.papel", is("CANDIDATO")))
                 .andExpect(jsonPath("$.anuncio.titulo", is("Instalar 3 tomadas")))
@@ -342,6 +345,7 @@ class ChatDaCandidaturaStoryTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenPrestador))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.outraParte.papel", is("EMPREGADOR")))
+                .andExpect(jsonPath("$.outraParte.usuarioId", is(empregador.getId().toString())))
                 .andExpect(jsonPath("$.outraParte.nome", is("Marina Bertoldi")))
                 .andExpect(jsonPath("$.historico.mensagens", hasSize(2)))
                 .andExpect(jsonPath("$.historico.mensagens[0].texto", is("terceira")))
@@ -423,6 +427,32 @@ class ChatDaCandidaturaStoryTest {
     }
 
     @Test
+    void dadoServicoCancelado_quandoEnvia_entaoRecusadoEHistoricoContinuaParaOsDois() throws Exception {
+        UUID chatId = candidaturaCriada();
+        String tokenEmpregador = logar(empregador);
+        enviar(tokenEmpregador, chatId, "Combinado, te espero no sábado.", 201);
+
+        transacao.executeWithoutResult(status -> eventos.publishEvent(new ServicoCanceladoEvent(anuncio.getId(),
+                anuncio.getTitulo(), candidatura.getId(), empregador.getId(), prestador.getId(),
+                TipoCancelamento.NORMAL, true, Instant.now().plus(Duration.ofDays(3)), Instant.now())));
+
+        mockMvc.perform(post("/chats/{chatId}/mensagens", chatId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenEmpregador)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("texto", "Mudei de ideia."))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo", is("CHAT_SOMENTE_LEITURA")));
+        for (Usuario parte : List.of(empregador, prestador)) {
+            mockMvc.perform(get("/candidaturas/{id}/chat", candidatura.getId())
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + logar(parte)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.isSomenteLeitura", is(true)))
+                    .andExpect(jsonPath("$.motivoSomenteLeitura", is("SERVICO_CANCELADO")))
+                    .andExpect(jsonPath("$.historico.mensagens", hasSize(1)));
+        }
+    }
+
+    @Test
     void dadoTerceiro_quandoTentaAbrirOuEnviar_entaoChatNaoEncontrado() throws Exception {
         UUID chatId = candidaturaCriada();
         String tokenTerceiro = logar(cadastrar("Curioso", "curioso@example.com", "39053344705",
@@ -474,12 +504,19 @@ class ChatDaCandidaturaStoryTest {
         mockMvc.perform(get("/candidaturas/{id}/chat", candidatura.getId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + logar(empregador)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.outraParte.usuarioId", is(prestador.getId().toString())))
                 .andExpect(jsonPath("$.outraParte.nome", is(OutraParte.NOME_CONTA_ENCERRADA)))
                 .andExpect(jsonPath("$.outraParte.fotoUrl", nullValue()))
                 .andExpect(jsonPath("$.historico.mensagens", hasSize(1)))
                 .andExpect(jsonPath("$.historico.mensagens[0].texto", is("Boa tarde! Vi o anúncio.")))
                 .andExpect(jsonPath("$.isSomenteLeitura", is(true)))
                 .andExpect(jsonPath("$.motivoSomenteLeitura", is("CONTA_ENCERRADA")));
+
+        // ETI-136: o mesmo id abre o perfil público, que responde "Conta encerrada" e mantém a reputação.
+        mockMvc.perform(get("/perfis-publicos/{id}", prestador.getId()).param("papel", "PRESTADOR")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + logar(empregador)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nomeExibicao", is("Conta encerrada")));
         enviar(logar(empregador), chatId, "Ainda está aí?", 409);
     }
 

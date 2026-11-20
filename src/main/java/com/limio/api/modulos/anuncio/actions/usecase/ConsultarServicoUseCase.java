@@ -1,6 +1,5 @@
 package com.limio.api.modulos.anuncio.actions.usecase;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -42,9 +41,6 @@ public class ConsultarServicoUseCase {
 
     /** ETI-99/ETI-100: limite de reagendamentos aceitos por anúncio. Não existe usecase que crie proposta ainda. */
     static final int LIMITE_REAGENDAMENTOS = 2;
-
-    /** "Até quando o Empregador pode cancelar" (ETI-86): a carência de um reagendamento aceito é do ETI-94/95. */
-    static final Duration PRAZO_CANCELAMENTO = Duration.ofHours(24);
 
     private final AnuncioService anuncioService;
     private final AplicacaoService aplicacaoService;
@@ -96,7 +92,7 @@ public class ConsultarServicoUseCase {
                 .stream().findFirst().orElse(null);
 
         ResumoChatDoServico chat = consultaChatDoServico.buscar(escolhida.getId(), usuarioId).orElse(null);
-        Instant prazoCancelamentoEm = anuncio.getDataHoraPretendida().minus(PRAZO_CANCELAMENTO);
+        Instant prazoCancelamentoEm = anuncio.prazoCancelamentoServicoEm();
 
         return new ServicoCombinado(anuncio, categoria, escolhida.getEscolhidaEm(), prazoCancelamentoEm, outraParte,
                 reagendamentoService.contarAceitos(anuncioId), LIMITE_REAGENDAMENTOS, propostaPendente, chat);

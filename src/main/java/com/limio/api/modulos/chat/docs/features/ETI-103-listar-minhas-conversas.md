@@ -21,7 +21,7 @@ Backlog US49 (sem card original no Jira) · card par: [chat] [FRONT-END] Tela "C
 |---|---|---|---|
 | Listar conversas do papel ativo | `GET /chats?pagina=0&tamanho=20` | query `pagina` (≥ 0, padrão 0) e `tamanho` (1 a 50, padrão 20) | `200 { conversas: PageResponse<Conversa>, totalComNaoLidas }` |
 
-`Conversa`: `{ chatId, candidaturaId, outraParte: { nome, fotoUrl, fotoExpiraEm, papel }, tituloAnuncio,
+`Conversa`: `{ chatId, candidaturaId, outraParte: { usuarioId, nome, fotoUrl, fotoExpiraEm, papel }, tituloAnuncio,
 statusCandidatura, ultimaMensagem: { texto, enviadaEm, enviadaPorMim } | null, mensagensNaoLidas, isSomenteLeitura,
 motivoSomenteLeitura }`.
 
@@ -32,6 +32,8 @@ motivoSomenteLeitura }`.
   `RECUSADA`, `ENCERRADA`, ...) dá o selo. `ultimaMensagem.texto` é o `textoExibido`; `enviadaPorMim` deixa o app
   prefixar "Você:". `motivoSomenteLeitura` é `null` enquanto o chat recebe mensagens.
 - `outraParte.papel`: `CANDIDATO` para o Empregador e `EMPREGADOR` para o Prestador (mesma regra do cabeçalho do chat).
+- `outraParte.usuarioId`: abre o perfil público da outra pessoa (ETI-136, mesmo campo do `ChatResponse`). Com conta
+  encerrada continua vindo; o perfil público responde "Conta encerrada".
 - Erros: 400 `VALIDACAO_FALHOU` (`pagina` negativa, `tamanho` fora de 1 a 50 ou não numérico) e 401. Lista vazia é 200.
   O card sugeria `DADOS_INVALIDOS`, que não existe; `VALIDACAO_FALHOU` é o código que a API já usa.
 

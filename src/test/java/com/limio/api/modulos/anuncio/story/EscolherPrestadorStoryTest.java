@@ -291,7 +291,9 @@ class EscolherPrestadorStoryTest {
         Aplicacao escolhida = recarregar(doRafael);
         assertThat(escolhida.getStatus()).isEqualTo(StatusAplicacao.ESCOLHIDA);
         assertThat(escolhida.getEscolhidaEm()).isNotNull();
+        assertThat(escolhida.isCotaConsumida()).isTrue();
         Aplicacao encerrada = recarregar(daAna);
+        assertThat(encerrada.isCotaConsumida()).isFalse();
         assertThat(encerrada.getStatus()).isEqualTo(StatusAplicacao.ENCERRADA);
         assertThat(encerrada.getEncerradaEm()).isNotNull();
         assertThat(encerrada.getMotivoEncerramento()).isEqualTo("Outro prestador escolhido");
@@ -306,6 +308,11 @@ class EscolherPrestadorStoryTest {
         assertThat(publicados).hasSize(1);
         assertThat(publicados.get(0).candidaturaEscolhidaId()).isEqualTo(doRafael.getId());
         assertThat(publicados.get(0).candidaturasNaoEscolhidasIds()).containsExactly(daAna.getId());
+        // Avisos da escolha (ETI-112): os não escolhidos saem da porta em lote, com a query de verdade.
+        assertThat(jdbc.queryForList("select tipo from notificacao where usuario_id = ?", String.class, ana.getId()))
+                .containsExactly("CANDIDATURA_ENCERRADA");
+        assertThat(jdbc.queryForList("select tipo from notificacao where usuario_id = ?", String.class,
+                rafael.getId())).containsExactly("PRESTADOR_ESCOLHIDO");
     }
 
     @Test
@@ -319,6 +326,7 @@ class EscolherPrestadorStoryTest {
         escolher(logar("maria@example.com"), anuncio.getId(), doRafael.getId()).andExpect(status().isOk());
 
         assertThat(recarregar(doRafael).getStatus()).isEqualTo(StatusAplicacao.ESCOLHIDA);
+        assertThat(recarregar(doRafael).isCotaConsumida()).isFalse();
         assertThat(consumidas(rafael)).isEqualTo(TETO);
     }
 

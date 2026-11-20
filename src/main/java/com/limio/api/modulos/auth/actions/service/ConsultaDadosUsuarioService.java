@@ -3,6 +3,7 @@ package com.limio.api.modulos.auth.actions.service;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -41,6 +42,19 @@ public class ConsultaDadosUsuarioService implements ConsultaDadosUsuario, Consul
     @Override
     public boolean existe(UUID usuarioId) {
         return usuarioService.existePorId(usuarioId);
+    }
+
+    @Override
+    public Set<UUID> filtrarAptosAReceberAviso(Collection<UUID> usuarioIds) {
+        if (usuarioIds.isEmpty()) {
+            return Set.of();
+        }
+        return usuarioService.buscarPorIds(usuarioIds).stream()
+                .filter(usuario -> !usuario.isEncerrada())
+                .filter(usuario -> !usuario.isSuspensa())
+                .filter(usuario -> usuario.getEmailConfirmadoEm() != null)
+                .map(Usuario::getId)
+                .collect(Collectors.toSet());
     }
 
     @Override

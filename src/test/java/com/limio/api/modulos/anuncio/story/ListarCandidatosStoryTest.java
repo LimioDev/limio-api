@@ -196,8 +196,10 @@ class ListarCandidatosStoryTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.candidatos", hasSize(2)))
                 .andExpect(jsonPath("$.candidatos[0].candidaturaId", is(daAna.getId().toString())))
+                .andExpect(jsonPath("$.candidatos[0].usuarioId", is(ana.getId().toString())))
                 .andExpect(jsonPath("$.candidatos[0].nome", is("Ana L.")))
                 .andExpect(jsonPath("$.candidatos[1].candidaturaId", is(doRafael.getId().toString())))
+                .andExpect(jsonPath("$.candidatos[1].usuarioId", is(rafael.getId().toString())))
                 .andExpect(jsonPath("$.candidatos[1].nome", is("Rafael S.")));
     }
 

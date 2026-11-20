@@ -21,7 +21,10 @@ import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
 
-/** Implementa {@link ConsultaCandidatura} para o cabeçalho do chat ({@code modulos.chat}, ETI-101). */
+/**
+ * Implementa {@link ConsultaCandidatura} para o cabeçalho do chat ({@code modulos.chat}, ETI-101) e os avisos da
+ * escolha ({@code modulos.notificacao}, ETI-112).
+ */
 @Component
 public class ConsultaCandidaturaService implements ConsultaCandidatura {
 
@@ -44,6 +47,12 @@ public class ConsultaCandidaturaService implements ConsultaCandidatura {
                         .map(anuncio -> new ResumoCandidatura(aplicacao.getId(), aplicacao.getStatus().name(),
                                 anuncio.getId(), anuncio.getContratanteId(), aplicacao.getPrestadorId(),
                                 anuncio.getTitulo(), nomeDaCategoria(anuncio.getCategoriaId()))));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> buscarPrestadoresIds(Collection<UUID> candidaturaIds) {
+        return aplicacaoService.buscarPrestadoresIds(candidaturaIds);
     }
 
     @Override

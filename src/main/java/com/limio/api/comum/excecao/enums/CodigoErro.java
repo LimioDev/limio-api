@@ -53,6 +53,8 @@ public enum CodigoErro {
     CANDIDATURA_NAO_ENCONTRADA("Candidatura não encontrada."),
     CANDIDATURA_ESTADO_INVALIDO("Esta candidatura já foi encerrada."),
     USE_CANCELAMENTO_SERVICO("Você já foi escolhido para este serviço. Para desistir, cancele o serviço combinado."),
+    PRAZO_CANCELAMENTO_ESGOTADO("O serviço só pode ser cancelado com pelo menos 24 horas de antecedência."),
+    USE_DENUNCIA("O serviço já está em andamento ou aguardando validação. Para relatar um problema, abra uma denúncia."),
     CHAT_NAO_ENCONTRADO("Conversa não encontrada."),
     CHAT_SOMENTE_LEITURA("Esta conversa está encerrada e não recebe novas mensagens."),
     PERFIL_INCOMPLETO("Complete seu perfil de atuação para ver os anúncios."),
@@ -66,6 +68,7 @@ public enum CodigoErro {
     PAGAMENTO_RECUSADO("Pagamento recusado. Verifique os dados do cartão e tente novamente."),
     GATEWAY_INDISPONIVEL("Não foi possível processar o pagamento agora. Tente novamente em instantes."),
     CARTAO_INVALIDO("Dados do cartão inválidos. Confira número, validade e CVV."),
+    NOTIFICACAO_NAO_ENCONTRADA("Notificação não encontrada."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;

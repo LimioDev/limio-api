@@ -165,7 +165,7 @@ class ListarConversasUseCaseTest {
 
         ConversaResumo item = listadas.conversas().getContent().getFirst();
         assertThat(item.outraParte()).isEqualTo(
-                new OutraParte("Rafael Souza", "https://bucket/rafael", expiraEm, PapelNoChat.CANDIDATO));
+                new OutraParte(PRESTADOR_ID, "Rafael Souza", "https://bucket/rafael", expiraEm, PapelNoChat.CANDIDATO));
         assertThat(item.tituloAnuncio()).isEqualTo("Instalar 3 tomadas");
         assertThat(item.statusCandidatura()).isEqualTo("ENVIADA");
         verify(chatService, never()).listarDoPrestador(EMPREGADOR_ID, 0, 20);
@@ -186,7 +186,7 @@ class ListarConversasUseCaseTest {
 
         ConversaResumo item = listadas.conversas().getContent().getFirst();
         assertThat(item.outraParte()).isEqualTo(
-                new OutraParte("Mari", "https://bucket/mari", expiraEm, PapelNoChat.EMPREGADOR));
+                new OutraParte(EMPREGADOR_ID, "Mari", "https://bucket/mari", expiraEm, PapelNoChat.EMPREGADOR));
         assertThat(item.statusCandidatura()).isEqualTo("ESCOLHIDA");
         verify(chatService, never()).listarDoContratante(PRESTADOR_ID, 0, 20);
         verifyNoInteractions(consultaDadosUsuario, consultaFotoPerfil);
@@ -253,7 +253,7 @@ class ListarConversasUseCaseTest {
         ConversaResumo item = useCase.executar(EMPREGADOR_ID, PapelUsuario.EMPREGADOR, 0, 20)
                 .conversas().getContent().getFirst();
 
-        assertThat(item.outraParte()).isEqualTo(OutraParte.contaEncerrada(PapelNoChat.CANDIDATO));
+        assertThat(item.outraParte()).isEqualTo(OutraParte.contaEncerrada(PRESTADOR_ID, PapelNoChat.CANDIDATO));
         assertThat(item.outraParte().nome()).isEqualTo("Usuário excluído");
         assertThat(item.outraParte().fotoUrl()).isNull();
     }
@@ -269,7 +269,7 @@ class ListarConversasUseCaseTest {
         ConversaResumo item = useCase.executar(PRESTADOR_ID, PapelUsuario.PRESTADOR, 0, 20)
                 .conversas().getContent().getFirst();
 
-        assertThat(item.outraParte()).isEqualTo(OutraParte.contaEncerrada(PapelNoChat.EMPREGADOR));
+        assertThat(item.outraParte()).isEqualTo(OutraParte.contaEncerrada(EMPREGADOR_ID, PapelNoChat.EMPREGADOR));
     }
 
     @Test

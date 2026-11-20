@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.limio.api.comum.portas.DadosUsuario;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
@@ -94,5 +96,35 @@ class ConsultaDadosUsuarioServiceTest {
         when(usuarioService.buscarPorId(USUARIO_ID)).thenReturn(Optional.of(suspensa));
 
         assertThat(service.buscarPorId(USUARIO_ID)).isPresent();
+    }
+
+    /** ETI-65: só conta ativa, não suspensa e com e-mail confirmado recebe aviso; papel ativo não importa. */
+    @Test
+    void deveFiltrarSoAsContasAptasAReceberAviso() {
+        Instant confirmado = Instant.parse("2026-10-01T10:00:00Z");
+        Usuario apta = comId(usuario().emailConfirmadoEm(confirmado).build());
+        Usuario aptaNavegandoComoPrestador = comId(usuario().papelAtivo(PapelUsuario.PRESTADOR)
+                .emailConfirmadoEm(confirmado).build());
+        Usuario semEmailConfirmado = comId(usuario().build());
+        Usuario suspensa = comId(usuario().statusConta(StatusConta.BLOQUEADA).emailConfirmadoEm(confirmado).build());
+        Usuario encerrada = comId(usuario().emailConfirmadoEm(confirmado).anonimizadoEm(confirmado).build());
+        List<UUID> ids = List.of(apta.getId(), aptaNavegandoComoPrestador.getId(), semEmailConfirmado.getId(),
+                suspensa.getId(), encerrada.getId());
+        when(usuarioService.buscarPorIds(ids)).thenReturn(List.of(apta, aptaNavegandoComoPrestador,
+                semEmailConfirmado, suspensa, encerrada));
+
+        assertThat(service.filtrarAptosAReceberAviso(ids))
+                .containsExactlyInAnyOrder(apta.getId(), aptaNavegandoComoPrestador.getId());
+    }
+
+    @Test
+    void semIdsNaoConsultaOBanco() {
+        assertThat(service.filtrarAptosAReceberAviso(List.of())).isEmpty();
+        org.mockito.Mockito.verifyNoInteractions(usuarioService);
+    }
+
+    private static Usuario comId(Usuario usuario) {
+        ReflectionTestUtils.setField(usuario, "id", UUID.randomUUID());
+        return usuario;
     }
 }

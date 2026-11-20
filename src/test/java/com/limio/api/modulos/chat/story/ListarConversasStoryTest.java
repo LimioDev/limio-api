@@ -214,6 +214,7 @@ class ListarConversasStoryTest {
                 .andExpect(jsonPath("$.conversas.content[0].chatId", is(tomadas.toString())))
                 .andExpect(jsonPath("$.conversas.content[0].candidaturaId", notNullValue()))
                 .andExpect(jsonPath("$.conversas.content[0].outraParte.nome", is("Rafael Souza")))
+                .andExpect(jsonPath("$.conversas.content[0].outraParte.usuarioId", is(prestador.getId().toString())))
                 .andExpect(jsonPath("$.conversas.content[0].outraParte.papel", is("CANDIDATO")))
                 .andExpect(jsonPath("$.conversas.content[0].statusCandidatura", is("ENVIADA")))
                 .andExpect(jsonPath("$.conversas.content[0].ultimaMensagem.texto", is("Posso ir amanhã")))
@@ -239,6 +240,7 @@ class ListarConversasStoryTest {
                 .andExpect(jsonPath("$.conversas.content[0].chatId", is(tomadas.toString())))
                 .andExpect(jsonPath("$.conversas.content[0].tituloAnuncio", is("Instalar 3 tomadas")))
                 .andExpect(jsonPath("$.conversas.content[0].outraParte.nome", is("Marina Bertoldi")))
+                .andExpect(jsonPath("$.conversas.content[0].outraParte.usuarioId", is(empregador.getId().toString())))
                 .andExpect(jsonPath("$.conversas.content[0].outraParte.papel", is("EMPREGADOR")))
                 .andExpect(jsonPath("$.conversas.content[0].statusCandidatura", is("ESCOLHIDA")))
                 .andExpect(jsonPath("$.conversas.content[0].ultimaMensagem.texto", is("Fechado, pode vir amanhã")));
@@ -319,6 +321,7 @@ class ListarConversasStoryTest {
                 .andExpect(jsonPath("$.conversas.content", hasSize(1)))
                 .andExpect(jsonPath("$.conversas.content[0].outraParte.nome", is(OutraParte.NOME_CONTA_ENCERRADA)))
                 .andExpect(jsonPath("$.conversas.content[0].outraParte.fotoUrl", nullValue()))
+                .andExpect(jsonPath("$.conversas.content[0].outraParte.usuarioId", is(prestador.getId().toString())))
                 .andExpect(jsonPath("$.conversas.content[0].ultimaMensagem.texto", is("Boa tarde! Vi o anúncio.")))
                 .andExpect(jsonPath("$.conversas.content[0].mensagensNaoLidas", is(1)))
                 .andExpect(jsonPath("$.conversas.content[0].isSomenteLeitura", is(true)))
