@@ -16,7 +16,6 @@ import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
 import com.limio.api.modulos.anuncio.excecao.ServicoEstadoInvalidoException;
 import com.limio.api.modulos.anuncio.excecao.ServicoNaoEncontradoException;
-import com.limio.api.modulos.anuncio.reagendamento.Reagendamento;
 import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
 
 /**
@@ -67,10 +66,7 @@ public class IniciarServicoUseCase {
 
         Instant agora = Instant.now();
 
-        for (Reagendamento reagendamento : reagendamentoService.buscarPendentesDosAnuncios(List.of(anuncioId))) {
-            reagendamento.cancelarSemEfeito(agora);
-            reagendamentoService.salvar(reagendamento);
-        }
+        reagendamentoService.encerrarPendentesSemEfeito(List.of(anuncioId), agora);
 
         anuncio.iniciar(agora);
         Anuncio salvo = anuncioService.salvar(anuncio);

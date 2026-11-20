@@ -108,10 +108,7 @@ public class CancelarServicoCombinadoUseCase {
         TipoCancelamento tipo = naCarencia.isPresent() ? TipoCancelamento.TARDIO : TipoCancelamento.NORMAL;
         Instant dataHoraVigente = anuncio.getDataHoraPretendida();
 
-        for (Reagendamento pendente : reagendamentoService.buscarPendentesDosAnuncios(List.of(anuncioId))) {
-            pendente.cancelarSemEfeito(agora);
-            reagendamentoService.salvar(pendente);
-        }
+        reagendamentoService.encerrarPendentesSemEfeito(List.of(anuncioId), agora);
 
         anuncio.cancelarServicoCombinado(agora, tipo);
         Anuncio salvo = anuncioService.salvar(anuncio);

@@ -100,7 +100,6 @@ class CancelarServicoCombinadoUseCaseTest {
                 24);
         lenient().when(anuncioService.salvar(any(Anuncio.class))).thenAnswer(i -> i.getArgument(0));
         lenient().when(reagendamentoService.buscarUltimoAceito(ANUNCIO_ID)).thenReturn(Optional.empty());
-        lenient().when(reagendamentoService.buscarPendentesDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of());
     }
 
     // ---------------------------------------------------------------- cenário
@@ -368,15 +367,11 @@ class CancelarServicoCombinadoUseCaseTest {
     void dadaPropostaDeReagendamentoPendente_quandoCancela_entaoPerdeOEfeito() {
         Aplicacao escolhida = escolhida(true);
         combinado(Duration.ofDays(3), escolhida);
-        Reagendamento pendente = reagendamento(StatusReagendamento.PENDENTE, null);
-        when(reagendamentoService.buscarPendentesDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of(pendente));
         when(consumoCotaPrestador.estornarEscolha(any(), any())).thenReturn(true);
 
         useCase.executar(CONTRATANTE_ID, ANUNCIO_ID, IP);
 
-        assertThat(pendente.getStatus()).isEqualTo(StatusReagendamento.CANCELADO);
-        assertThat(pendente.getRespondidoEm()).isEqualTo(AGORA);
-        verify(reagendamentoService).salvar(pendente);
+        verify(reagendamentoService).encerrarPendentesSemEfeito(List.of(ANUNCIO_ID), AGORA);
     }
 
     // ---------------------------------------------------------------- estado e autorização

@@ -10,6 +10,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.limio.api.modulos.anuncio.enums.StatusReagendamento;
+import com.limio.api.modulos.anuncio.reagendamento.Reagendamento;
+import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -87,6 +90,9 @@ class ValidarServicoStoryTest {
     private AplicacaoRepository aplicacaoRepository;
 
     @Autowired
+    private ReagendamentoRepository reagendamentoRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -104,6 +110,7 @@ class ValidarServicoStoryTest {
 
     @AfterEach
     void limparBase() {
+        reagendamentoRepository.deleteAll();
         aplicacaoRepository.deleteAll();
         anuncioRepository.deleteAll();
         sessaoRepository.deleteAll();
@@ -155,6 +162,23 @@ class ValidarServicoStoryTest {
                 .escolhidaEm(Instant.now())
                 .build());
         return anuncio;
+    }
+
+    /** Proposta de reagendamento pendente do Empregador, ainda dentro do prazo, gravada direto no banco. */
+    private Reagendamento propostaPendente(Anuncio anuncio) {
+        return reagendamentoRepository.save(Reagendamento.builder()
+                .anuncioId(anuncio.getId())
+                .dataAnterior(anuncio.getDataHoraPretendida())
+                .dataProposta(anuncio.getDataHoraPretendida().plus(Duration.ofDays(2)))
+                .justificativa("Imprevisto de agenda")
+                .status(StatusReagendamento.PENDENTE)
+                .proponenteId(maria.getId())
+                .expiraEm(Instant.now().plus(Duration.ofHours(24)))
+                .build());
+    }
+
+    private Reagendamento recarregar(Reagendamento proposta) {
+        return reagendamentoRepository.findById(proposta.getId()).orElseThrow();
     }
 
     private ResultActions validar(String token, UUID anuncioId, ModoValidacao modo) throws Exception {
@@ -348,5 +372,39 @@ class ValidarServicoStoryTest {
         consultarValidacao(logar("carlos@example.com"), anuncio.getId())
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.codigo", is("SERVICO_NAO_ENCONTRADO")));
+    }
+
+    // ---------------------------------------------------------------- reagendamento (ETI-99)
+
+    @Test
+    void dadaPropostaDeReagendamentoPendente_quandoOEmpregadorValida_entaoAPropostaFicaSemEfeitoNoInstanteDaValidacao()
+            throws Exception {
+        Anuncio anuncio = anuncioComCarlosEscolhido(StatusAnuncio.PUBLICADO);
+        Reagendamento proposta = propostaPendente(anuncio);
+        Instant vigenteAntes = recarregar(anuncio).getDataHoraPretendida();
+
+        validar(logar("maria@example.com"), anuncio.getId(), ModoValidacao.PRESENCIAL)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("CONCLUIDO")));
+
+        Reagendamento depois = recarregar(proposta);
+        assertThat(depois.getStatus()).isEqualTo(StatusReagendamento.SEM_EFEITO);
+        assertThat(depois.getRespondidoEm()).isEqualTo(recarregar(anuncio).getValidadoEm());
+        assertThat(recarregar(anuncio).getDataHoraPretendida()).isEqualTo(vigenteAntes);
+    }
+
+    @Test
+    void dadaPropostaDeReagendamentoPendente_quandoAValidacaoEhRecusada_entaoAPropostaContinuaPendente()
+            throws Exception {
+        Anuncio anuncio = anuncioComCarlosEscolhido(StatusAnuncio.PUBLICADO);
+        Reagendamento proposta = propostaPendente(anuncio);
+
+        validar(logar("maria@example.com"), anuncio.getId(), ModoValidacao.PELA_FOTO)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo", is("VALIDACAO_SEM_CHECKOUT")));
+
+        assertThat(recarregar(proposta).getStatus()).isEqualTo(StatusReagendamento.PENDENTE);
+        assertThat(recarregar(proposta).getRespondidoEm()).isNull();
+        assertThat(recarregar(anuncio).getStatus()).isEqualTo(StatusAnuncio.PUBLICADO);
     }
 }

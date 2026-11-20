@@ -3,6 +3,7 @@ package com.limio.api.modulos.anuncio.spec;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -91,14 +92,13 @@ class IniciarServicoUseCaseTest {
     void dadoPrestadorEscolhido_quandoInicia_entaoAnuncioFicaEmAndamentoEPublicaEvento() {
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO);
         comAnuncioEPrestadorEscolhido(anuncio);
-        when(reagendamentoService.buscarPendentesDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of());
         when(anuncioService.salvar(anuncio)).thenReturn(anuncio);
 
         Anuncio iniciado = useCase.executar(ANUNCIO_ID, PRESTADOR_ID);
 
         assertThat(iniciado.getStatus()).isEqualTo(StatusAnuncio.EM_ANDAMENTO);
         assertThat(iniciado.getIniciadoEm()).isNotNull();
-        verify(reagendamentoService, never()).salvar(any());
+        verify(reagendamentoService).encerrarPendentesSemEfeito(eq(List.of(ANUNCIO_ID)), any(Instant.class));
 
         ArgumentCaptor<ServicoIniciadoEvent> evento = ArgumentCaptor.forClass(ServicoIniciadoEvent.class);
         verify(eventos).publishEvent(evento.capture());
@@ -112,18 +112,11 @@ class IniciarServicoUseCaseTest {
     @Test
     void dadoPropostaPendente_quandoInicia_entaoEncerraSemEfeito() {
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO);
-        Reagendamento pendente = Reagendamento.builder()
-                .anuncioId(ANUNCIO_ID)
-                .status(StatusReagendamento.PENDENTE)
-                .build();
         comAnuncioEPrestadorEscolhido(anuncio);
-        when(reagendamentoService.buscarPendentesDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of(pendente));
 
         useCase.executar(ANUNCIO_ID, PRESTADOR_ID);
 
-        assertThat(pendente.getStatus()).isEqualTo(StatusReagendamento.CANCELADO);
-        assertThat(pendente.getRespondidoEm()).isNotNull();
-        verify(reagendamentoService).salvar(pendente);
+        verify(reagendamentoService).encerrarPendentesSemEfeito(eq(List.of(ANUNCIO_ID)), any(Instant.class));
     }
 
     @ParameterizedTest
@@ -145,7 +138,6 @@ class IniciarServicoUseCaseTest {
     void dadoPrestadorEscolhido_quandoInicia_entaoTravaOAnuncioAntesDeLerOEstado() {
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO);
         comAnuncioEPrestadorEscolhido(anuncio);
-        when(reagendamentoService.buscarPendentesDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of());
         when(anuncioService.salvar(anuncio)).thenReturn(anuncio);
 
         useCase.executar(ANUNCIO_ID, PRESTADOR_ID);

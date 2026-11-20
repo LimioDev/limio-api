@@ -9,8 +9,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -60,11 +62,14 @@ class ValidarServicoUseCaseTest {
     @Mock
     private TravaTransacional trava;
 
+    @Mock
+    private ReagendamentoService reagendamentoService;
+
     private ValidarServicoUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new ValidarServicoUseCase(anuncioService, aplicacaoService, eventos, trava);
+        useCase = new ValidarServicoUseCase(anuncioService, aplicacaoService, reagendamentoService, eventos, trava);
     }
 
     private Anuncio anuncio(StatusAnuncio status) {
@@ -112,6 +117,29 @@ class ValidarServicoUseCaseTest {
         assertThat(evento.getValue().contratanteId()).isEqualTo(CONTRATANTE_ID);
         assertThat(evento.getValue().prestadorId()).isEqualTo(PRESTADOR_ID);
         assertThat(evento.getValue().ocorridoEm()).isEqualTo(validado.getValidadoEm());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ModoValidacao.class)
+    void dadoPropostaDeReagendamentoPendente_quandoValida_entaoEncerraSemEfeitoNoMesmoInstante(ModoValidacao modo) {
+        Anuncio anuncio = anuncio(modo == ModoValidacao.PELA_FOTO ? StatusAnuncio.AGUARDANDO_VALIDACAO
+                : StatusAnuncio.PUBLICADO);
+        comAnuncioEEscolhida(anuncio);
+        when(anuncioService.salvar(anuncio)).thenReturn(anuncio);
+
+        Anuncio validado = useCase.executar(ANUNCIO_ID, CONTRATANTE_ID, modo);
+
+        verify(reagendamentoService).encerrarPendentesSemEfeito(List.of(ANUNCIO_ID), validado.getValidadoEm());
+    }
+
+    @Test
+    void dadaValidacaoRecusada_quandoValida_entaoNaoMexeNasPropostasDeReagendamento() {
+        comAnuncioEEscolhida(anuncio(StatusAnuncio.CONCLUIDO));
+
+        assertThatThrownBy(() -> useCase.executar(ANUNCIO_ID, CONTRATANTE_ID, ModoValidacao.PRESENCIAL))
+                .isInstanceOf(ServicoEstadoInvalidoException.class);
+
+        verifyNoInteractions(reagendamentoService);
     }
 
     @Test

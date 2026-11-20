@@ -1,6 +1,7 @@
 package com.limio.api.modulos.anuncio.actions.usecase;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -17,6 +18,7 @@ import com.limio.api.modulos.anuncio.enums.ModoValidacao;
 import com.limio.api.modulos.anuncio.excecao.ServicoEstadoInvalidoException;
 import com.limio.api.modulos.anuncio.excecao.ServicoNaoEncontradoException;
 import com.limio.api.modulos.anuncio.excecao.ValidacaoSemCheckoutException;
+import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
 
 /**
  * UC — Empregador valida o serviço, presencial ou pela foto (ETI-92): o anúncio vai pra {@code CONCLUIDO}
@@ -30,6 +32,9 @@ import com.limio.api.modulos.anuncio.excecao.ValidacaoSemCheckoutException;
  * segunda requisição encontra {@code CONCLUIDO} e recebe 409) e coloca a validação na mesma fila de todo
  * escritor do agregado.
  *
+ * Uma proposta de reagendamento pendente perde o efeito ({@code SEM_EFEITO}) ao validar: com o serviço concluído
+ * não há mais data a combinar (ETI-99).
+ *
  * Só o Empregador dono do anúncio valida; os demais recebem o mesmo 404 {@code SERVICO_NAO_ENCONTRADO} de
  * um id inexistente, mesmo critério de {@code ConsultarServicoUseCase} (ETI-86).
  */
@@ -38,13 +43,15 @@ public class ValidarServicoUseCase {
 
     private final AnuncioService anuncioService;
     private final AplicacaoService aplicacaoService;
+    private final ReagendamentoService reagendamentoService;
     private final ApplicationEventPublisher eventos;
     private final TravaTransacional trava;
 
     public ValidarServicoUseCase(AnuncioService anuncioService, AplicacaoService aplicacaoService,
-            ApplicationEventPublisher eventos, TravaTransacional trava) {
+            ReagendamentoService reagendamentoService, ApplicationEventPublisher eventos, TravaTransacional trava) {
         this.anuncioService = anuncioService;
         this.aplicacaoService = aplicacaoService;
+        this.reagendamentoService = reagendamentoService;
         this.eventos = eventos;
         this.trava = trava;
     }
@@ -64,6 +71,8 @@ public class ValidarServicoUseCase {
         garantirQuePermite(anuncio, modo);
 
         Instant agora = Instant.now();
+        // O serviço deixa de estar "combinado": proposta de reagendamento pendente perde o efeito (ETI-99).
+        reagendamentoService.encerrarPendentesSemEfeito(List.of(anuncioId), agora);
         anuncio.validar(agora);
         Anuncio salvo = anuncioService.salvar(anuncio);
 

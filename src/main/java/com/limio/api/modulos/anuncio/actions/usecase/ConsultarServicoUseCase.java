@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,9 +40,6 @@ import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
 @Service
 public class ConsultarServicoUseCase {
 
-    /** ETI-99/ETI-100: limite de reagendamentos aceitos por anúncio. Não existe usecase que crie proposta ainda. */
-    static final int LIMITE_REAGENDAMENTOS = 2;
-
     private final AnuncioService anuncioService;
     private final AplicacaoService aplicacaoService;
     private final ReagendamentoService reagendamentoService;
@@ -50,6 +48,7 @@ public class ConsultarServicoUseCase {
     private final ConsultaFotoPerfil consultaFotoPerfil;
     private final ConsultaPlanoPrestador consultaPlanoPrestador;
     private final ConsultaChatDoServico consultaChatDoServico;
+    private final int limiteReagendamentos;
 
     public ConsultarServicoUseCase(AnuncioService anuncioService,
             AplicacaoService aplicacaoService,
@@ -58,7 +57,8 @@ public class ConsultarServicoUseCase {
             ConsultaDadosUsuario consultaDadosUsuario,
             ConsultaFotoPerfil consultaFotoPerfil,
             ConsultaPlanoPrestador consultaPlanoPrestador,
-            ConsultaChatDoServico consultaChatDoServico) {
+            ConsultaChatDoServico consultaChatDoServico,
+            @Value("${anuncio.reagendamento.limite}") int limiteReagendamentos) {
         this.anuncioService = anuncioService;
         this.aplicacaoService = aplicacaoService;
         this.reagendamentoService = reagendamentoService;
@@ -67,6 +67,7 @@ public class ConsultarServicoUseCase {
         this.consultaFotoPerfil = consultaFotoPerfil;
         this.consultaPlanoPrestador = consultaPlanoPrestador;
         this.consultaChatDoServico = consultaChatDoServico;
+        this.limiteReagendamentos = limiteReagendamentos;
     }
 
     @Transactional(readOnly = true)
@@ -95,7 +96,7 @@ public class ConsultarServicoUseCase {
         Instant prazoCancelamentoEm = anuncio.prazoCancelamentoServicoEm();
 
         return new ServicoCombinado(anuncio, categoria, escolhida.getEscolhidaEm(), prazoCancelamentoEm, outraParte,
-                reagendamentoService.contarAceitos(anuncioId), LIMITE_REAGENDAMENTOS, propostaPendente, chat);
+                reagendamentoService.contarAceitos(anuncioId), limiteReagendamentos, propostaPendente, chat);
     }
 
     /** Vazio se a conta da outra parte já foi encerrada. GOLD só é calculado pro Empregador ver do Prestador. */

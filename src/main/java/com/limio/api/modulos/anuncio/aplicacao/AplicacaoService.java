@@ -228,6 +228,10 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
         return repository.findEscolhidaDoAnuncioParaAtualizar(anuncioId);
     }
 
+    public Optional<UUID> buscarPrestadorEscolhido(UUID anuncioId) {
+        return buscarEscolhidaDoAnuncio(anuncioId).map(Aplicacao::getPrestadorId);
+    }
+
     /**
      * A candidatura que foi escolhida pro anúncio, se alguma já foi — vale mesmo depois do serviço concluir ou
      * o anúncio cancelar ou encerrar (ETI-86, ETI-92): {@code escolhidaEm} é permanente, diferente do {@code status}

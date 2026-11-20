@@ -27,7 +27,6 @@ import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
-import com.limio.api.modulos.anuncio.reagendamento.Reagendamento;
 import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
 
 /**
@@ -96,7 +95,7 @@ public class EncerrarAnunciosEAplicacoesUseCase {
         Map<UUID, List<Aplicacao>> candidaturasPorAnuncio = aplicacaoService.buscarAbertasDosAnuncios(anuncioIds)
                 .stream()
                 .collect(Collectors.groupingBy(Aplicacao::getAnuncioId));
-        cancelarReagendamentosPendentes(anuncioIds, agora);
+        reagendamentoService.encerrarPendentesSemEfeito(anuncioIds, agora);
 
         for (Anuncio anuncio : anuncios) {
             List<Aplicacao> candidaturasAbertas = candidaturasPorAnuncio.getOrDefault(anuncio.getId(), List.of());
@@ -153,7 +152,7 @@ public class EncerrarAnunciosEAplicacoesUseCase {
 
         anuncio.encerrarPorExclusaoDeConta(agora);
         anuncioService.salvar(anuncio);
-        cancelarReagendamentosPendentes(List.of(anuncio.getId()), agora);
+        reagendamentoService.encerrarPendentesSemEfeito(List.of(anuncio.getId()), agora);
 
         for (Aplicacao outra : aplicacaoService.buscarAbertasDoAnuncio(anuncio.getId())) {
             if (Objects.equals(outra.getId(), aplicacao.getId())) {
@@ -179,13 +178,6 @@ public class EncerrarAnunciosEAplicacoesUseCase {
             avisar(destinatarioId, anuncioId, "Combinado cancelado por impossibilidade operacional", agora);
         } else {
             avisar(destinatarioId, anuncioId, assuntoPadrao, agora);
-        }
-    }
-
-    private void cancelarReagendamentosPendentes(List<UUID> anuncioIds, Instant agora) {
-        for (Reagendamento reagendamento : reagendamentoService.buscarPendentesDosAnuncios(anuncioIds)) {
-            reagendamento.cancelarSemEfeito(agora);
-            reagendamentoService.salvar(reagendamento);
         }
     }
 

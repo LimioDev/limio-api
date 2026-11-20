@@ -40,8 +40,8 @@ import com.limio.api.modulos.notificacao.eventos.NotificacaoRegistradaEvent;
  * de quem publicou, em transação própria: falha aqui não desfaz a ação que gerou o aviso (a escolha continua valendo).
  *
  * <p>Fora desta entrega (decisão de 2026-11-16): {@code ServicoCanceladoEvent} (#38) e {@code AnuncioExpiradoEvent}
- * (#39) ganham ouvinte quando as PRs deles entrarem; reagendamento e cobrança GOLD ainda não publicam evento entre
- * módulos.
+ * (#39) ganham ouvinte quando as PRs deles entrarem; reagendamento (ETI-99) já publica os eventos, mas o ouvinte de
+ * cada um é da US56; cobrança GOLD ainda não publica evento entre módulos.
  */
 @Service
 public class RegistrarAvisosUseCase {

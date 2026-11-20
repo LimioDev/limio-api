@@ -96,3 +96,13 @@ Cada canal virou uma `CanalDeEnvioService` (push, e-mail, WhatsApp) e o `Entrega
 novo não mexe no usecase. Envio desligado no ambiente não grava mais `ENVIADO`. O push trata cada lote à parte e não
 perde os tokens inválidos quando outro lote falha. Fila do executor cheia roda o envio em quem publicou, em vez de
 descartar. Os não escolhidos da escolha saem numa consulta só (`ConsultaCandidatura.buscarPrestadoresIds`).
+
+## 2026-11-20 — eventos de reagendamento disponíveis para os avisos (ETI-99)
+
+O módulo `anuncio` passou a publicar `ReagendamentoPropostoEvent`, `ReagendamentoCanceladoEvent`,
+`ReagendamentoAceitoEvent`, `ReagendamentoRecusadoEvent` e `ReagendamentoExpiradoEvent` (`comum/eventos/`), dentro da
+transação de cada operação. Ainda não há ouvinte em `RegistrarAvisosUseCase`: ligar cada evento a um aviso é da US56
+(ouvinte `AFTER_COMMIT` + `REQUIRES_NEW`, como os demais). Todos trazem `contratanteId`, `prestadorId` e `proponenteId`
+para decidir o destinatário: o aceite avisa as duas partes; proposta e cancelamento, a contraparte; recusa, o
+proponente; expiração, as duas. Detalhe em `anuncio/docs/features/ETI-99-reagendar-o-servico.md`.
+
