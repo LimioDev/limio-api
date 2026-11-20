@@ -38,7 +38,8 @@ public class ReagendamentoService extends BaseService<Reagendamento, UUID, Reage
     }
 
     /**
-     * O serviço deixou de estar combinado (cancelado, iniciado ou conta encerrada): toda proposta pendente dos
+     * O serviço deixou de estar combinado (cancelado pelo Empregador ou pelo Prestador, iniciado, com check-out,
+     * validado ou com conta encerrada): toda proposta pendente dos
      * anúncios perde o efeito. A data vigente não muda. Ponto único dessa regra; quem tira o serviço de "combinado"
      * chama aqui em vez de repetir o laço.
      */
