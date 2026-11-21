@@ -48,6 +48,8 @@ import com.limio.api.modulos.chat.Chat;
 import com.limio.api.modulos.chat.ChatRepository;
 import com.limio.api.modulos.chat.mensagem.Mensagem;
 import com.limio.api.modulos.chat.mensagem.MensagemRepository;
+import com.limio.api.modulos.moderacao.avaliacao.Avaliacao;
+import com.limio.api.modulos.moderacao.avaliacao.AvaliacaoRepository;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -91,6 +93,9 @@ class ConsultarServicoStoryTest {
     private MensagemRepository mensagemRepository;
 
     @Autowired
+    private AvaliacaoRepository avaliacaoRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private Usuario empregador;
@@ -129,6 +134,7 @@ class ConsultarServicoStoryTest {
     }
 
     private void limparBase() {
+        avaliacaoRepository.deleteAll();
         mensagemRepository.deleteAll();
         chatRepository.deleteAll();
         reagendamentoRepository.deleteAll();
@@ -174,12 +180,15 @@ class ConsultarServicoStoryTest {
         consultar(token, anuncio.getId())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.anuncioId", is(anuncio.getId().toString())))
+                .andExpect(jsonPath("$.candidaturaId", is(candidatura.getId().toString())))
                 .andExpect(jsonPath("$.status", is("EM_ANDAMENTO")))
                 .andExpect(jsonPath("$.enderecoCompleto", is("Rua dos Pinheiros, 100, Pinheiros, São Paulo - SP")))
                 .andExpect(jsonPath("$.bairroRegiao", is("Pinheiros")))
                 .andExpect(jsonPath("$.outraParte.nome", is("Rafael Souza")))
                 .andExpect(jsonPath("$.outraParte.telefone", is("+5511999998888")))
                 .andExpect(jsonPath("$.outraParte.gold", is(false)))
+                .andExpect(jsonPath("$.outraParte.qtdAvaliacoes", is(0)))
+                .andExpect(jsonPath("$.outraParte.mediaAvaliacoes", nullValue()))
                 .andExpect(jsonPath("$.escolhidaEm", notNullValue()))
                 .andExpect(jsonPath("$.reagendamentosAceitos", is(0)))
                 .andExpect(jsonPath("$.limiteReagendamentos", is(2)))
@@ -188,15 +197,54 @@ class ConsultarServicoStoryTest {
                 .andExpect(jsonPath("$.mensagensNaoLidas", is(0)));
     }
 
+    /**
+     * ETI-138: a reputação vem da {@code ConsultaAvaliacoes} real (moderacao), sem mock. As avaliações nascem
+     * direto pelo repository, de serviços anteriores do Prestador (anúncios que não precisam existir aqui).
+     */
+    @Test
+    void dadoPrestadorJaAvaliado_quandoEmpregadorConsulta_entaoOutraParteTrazAReputacaoDele() throws Exception {
+        Instant ontem = Instant.now().minus(Duration.ofDays(1));
+        avaliacaoRepository.save(Avaliacao.publicar(UUID.randomUUID(), empregador.getId(), prestador.getId(),
+                PapelUsuario.PRESTADOR, 5, "Pontual e educado.", ontem));
+        avaliacaoRepository.save(Avaliacao.publicar(UUID.randomUUID(), empregador.getId(), prestador.getId(),
+                PapelUsuario.PRESTADOR, 4, null, ontem));
+        String token = logar("maria@example.com");
+
+        consultar(token, anuncio.getId())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.outraParte.qtdAvaliacoes", is(2)))
+                .andExpect(jsonPath("$.outraParte.mediaAvaliacoes", is(4.5)));
+    }
+
     @Test
     void dadoPrestadorEscolhido_quandoConsulta_entao200ComOEmpregadorSemGold() throws Exception {
         String token = logar("rafael@example.com");
 
         consultar(token, anuncio.getId())
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.candidaturaId", is(candidatura.getId().toString())))
                 .andExpect(jsonPath("$.outraParte.nome", is("Maria da Silva")))
                 .andExpect(jsonPath("$.outraParte.telefone", is("+5511999998888")))
-                .andExpect(jsonPath("$.outraParte.gold", nullValue()));
+                .andExpect(jsonPath("$.outraParte.gold", nullValue()))
+                .andExpect(jsonPath("$.outraParte.qtdAvaliacoes", nullValue()))
+                .andExpect(jsonPath("$.outraParte.mediaAvaliacoes", nullValue()));
+    }
+
+    /** ETI-138: "Conversar com (nome)" abre o chat com o candidaturaId devolvido, pelos dois lados. */
+    @Test
+    void dadoCandidaturaIdDoServico_quandoAbreOChatPelosDoisLados_entao200() throws Exception {
+        for (String email : new String[] {"maria@example.com", "rafael@example.com"}) {
+            String token = logar(email);
+            String corpo = consultar(token, anuncio.getId())
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+            String candidaturaId = objectMapper.readTree(corpo).get("candidaturaId").asString();
+
+            mockMvc.perform(get("/candidaturas/{id}/chat", candidaturaId)
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.candidaturaId", is(candidatura.getId().toString())));
+        }
     }
 
     @Test
