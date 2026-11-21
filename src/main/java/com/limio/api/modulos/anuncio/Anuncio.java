@@ -9,6 +9,7 @@ import com.limio.api.comum.base.BaseEntity;
 import com.limio.api.comum.eventos.enums.TipoCancelamento;
 import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.comum.portas.EnderecoLocalizado;
+import com.limio.api.modulos.anuncio.enums.CausaEncerramento;
 import com.limio.api.modulos.anuncio.enums.SituacaoCancelamentoServico;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 
@@ -129,6 +130,10 @@ public class Anuncio extends BaseEntity {
      */
     @Column(name = "motivo_encerramento")
     private String motivoEncerramento;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "causa_encerramento", length = 20)
+    private CausaEncerramento causaEncerramento;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_cancelamento", length = 20)
@@ -259,19 +264,19 @@ public class Anuncio extends BaseEntity {
 
     /** UC16 (encerrar conta do contratante): tira do mural, não conclui. */
     public void encerrarPorExclusaoDeConta(Instant agora) {
-        encerrar(agora, MOTIVO_EXCLUSAO_DE_CONTA);
+        encerrar(agora, MOTIVO_EXCLUSAO_DE_CONTA, CausaEncerramento.CANCELAMENTO);
     }
 
     /** ETI-63: Empregador cancela antes de escolher alguém. Quem chama já validou o estado do anúncio. */
     public void cancelarPeloEmpregador(Instant agora) {
-        encerrar(agora, MOTIVO_CANCELAMENTO_PELO_EMPREGADOR);
+        encerrar(agora, MOTIVO_CANCELAMENTO_PELO_EMPREGADOR, CausaEncerramento.CANCELAMENTO);
     }
 
     public void cancelarServicoCombinado(Instant agora, TipoCancelamento tipo) {
         encerrar(agora, switch (tipo) {
             case NORMAL -> MOTIVO_SERVICO_CANCELADO;
             case TARDIO -> MOTIVO_SERVICO_CANCELADO_NA_CARENCIA;
-        });
+        }, CausaEncerramento.CANCELAMENTO);
         this.tipoCancelamento = tipo;
     }
 
@@ -313,13 +318,14 @@ public class Anuncio extends BaseEntity {
     }
 
     public void expirar(Instant agora) {
-        encerrar(agora, MOTIVO_EXPIRACAO);
+        encerrar(agora, MOTIVO_EXPIRACAO, CausaEncerramento.EXPIRACAO);
     }
 
-    private void encerrar(Instant agora, String motivo) {
+    private void encerrar(Instant agora, String motivo, CausaEncerramento causa) {
         this.status = StatusAnuncio.ENCERRADO;
         this.encerradoEm = agora;
         this.motivoEncerramento = motivo;
+        this.causaEncerramento = causa;
     }
 
     /**
