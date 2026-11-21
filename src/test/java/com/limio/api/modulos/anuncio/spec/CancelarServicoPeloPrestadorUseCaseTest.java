@@ -41,10 +41,8 @@ import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
-import com.limio.api.modulos.anuncio.enums.StatusReagendamento;
 import com.limio.api.modulos.anuncio.excecao.ServicoEstadoInvalidoException;
 import com.limio.api.modulos.anuncio.excecao.ServicoNaoEncontradoException;
-import com.limio.api.modulos.anuncio.reagendamento.Reagendamento;
 import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
 
 /** UC43 "Prestador cancelar após ser escolhido" (ETI-96), sem Spring: o que o caso de uso decide e grava. */
@@ -79,7 +77,6 @@ class CancelarServicoPeloPrestadorUseCaseTest {
         useCase = new CancelarServicoPeloPrestadorUseCase(anuncioService, aplicacaoService, reagendamentoService,
                 eventos, trava, Clock.fixed(AGORA, ZoneOffset.UTC));
         lenient().when(anuncioService.salvar(any(Anuncio.class))).thenAnswer(i -> i.getArgument(0));
-        lenient().when(reagendamentoService.buscarPendentesDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of());
     }
 
     // ---------------------------------------------------------------- cenário
@@ -107,15 +104,6 @@ class CancelarServicoPeloPrestadorUseCaseTest {
         return aplicacao;
     }
 
-    private Reagendamento pendente() {
-        return Reagendamento.builder()
-                .anuncioId(ANUNCIO_ID)
-                .dataAnterior(AGORA.plus(Duration.ofHours(2)))
-                .dataProposta(AGORA.plus(Duration.ofDays(2)))
-                .status(StatusReagendamento.PENDENTE)
-                .build();
-    }
-
     private Aplicacao darComoCombinado(StatusAnuncio status) {
         Aplicacao escolhida = escolhida();
         when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio(status)));
@@ -127,7 +115,7 @@ class CancelarServicoPeloPrestadorUseCaseTest {
     private void verificarNadaGravadoNemPublicado() {
         verify(anuncioService, never()).salvar(any(Anuncio.class));
         verify(aplicacaoService, never()).salvar(any(Aplicacao.class));
-        verify(reagendamentoService, never()).salvar(any(Reagendamento.class));
+        verify(reagendamentoService, never()).encerrarPendentesSemEfeito(any(), any());
         verify(eventos, never()).publishEvent(any(Object.class));
     }
 
@@ -162,25 +150,14 @@ class CancelarServicoPeloPrestadorUseCaseTest {
     }
 
     @Test
-    void dadoPropostaDeReagendamentoPendente_quandoCancela_entaoPropostaEncerradaSemEfeito() {
-        darComoCombinado(StatusAnuncio.PUBLICADO);
-        Reagendamento pendente = pendente();
-        when(reagendamentoService.buscarPendentesDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of(pendente));
-
-        useCase.executar(PRESTADOR_ID, ANUNCIO_ID);
-
-        assertThat(pendente.getStatus()).isEqualTo(StatusReagendamento.CANCELADO);
-        assertThat(pendente.getRespondidoEm()).isEqualTo(AGORA);
-        verify(reagendamentoService).salvar(pendente);
-    }
-
-    @Test
-    void dadoSemPropostaPendente_quandoCancela_entaoNadaDeReagendamentoEGravado() {
+    void dadoServicoCombinado_quandoCancela_entaoEncerraAsPropostasPendentesSemEfeito() {
         darComoCombinado(StatusAnuncio.PUBLICADO);
 
         useCase.executar(PRESTADOR_ID, ANUNCIO_ID);
 
-        verify(reagendamentoService, never()).salvar(any(Reagendamento.class));
+        // O laço sobre as pendentes mora no ReagendamentoService (ponto único, ETI-99); o estado gravado é
+        // conferido no story.
+        verify(reagendamentoService).encerrarPendentesSemEfeito(List.of(ANUNCIO_ID), AGORA);
     }
 
     @Test

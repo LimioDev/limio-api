@@ -40,7 +40,10 @@ auditoria do cancelamento, UI.
 - **Sem cota (RB18).** O caso de uso não conhece `ConsumoCotaPrestador`: a escolha consumida segue consumida e
   continua contando na barreira de candidatura (`cota_estornada_em` fica nulo). Sem cancelamento tardio (RB36): vale
   a qualquer momento, sem prazo de 24h e sem `tipoCancelamento`.
-- **Reagendamento pendente** perde o efeito (`Reagendamento.cancelarSemEfeito`), na mesma transação.
+- **Reagendamento pendente** perde o efeito (`ReagendamentoService.encerrarPendentesSemEfeito`), na mesma transação.
+  É o ponto único que o ETI-99 (#49) também cria, com a mesma assinatura: hoje grava `CANCELADO` pelo
+  `cancelarSemEfeito`; com o #49, `SEM_EFEITO`. Quem mergear por último resolve o conflito no `ReagendamentoService`
+  ficando com a versão do #49.
 - **Ordem das travas:** advisory `ANUNCIO` → leitura do anúncio e do vínculo → `FOR UPDATE` na candidatura
   escolhida. Não há `COTA_PRESTADOR`. Check-out, validação, iniciar e o cancelamento do Empregador também travam
   `ANUNCIO` primeiro, então o perdedor de uma corrida relê o estado e recebe 409.
@@ -62,7 +65,7 @@ auditoria do cancelamento, UI.
 | `PUBLICADO` ou `EM_ANDAMENTO` com candidatura `ESCOLHIDA` | `servicoEmAberto()` e `buscarEscolhidaDoAnuncioParaAtualizar`; senão 409 `SERVICO_ESTADO_INVALIDO`. |
 | `AGUARDANDO_VALIDACAO` recusa | `servicoEmAberto()` é falso: 409 `SERVICO_ESTADO_INVALIDO`. |
 | `ENCERRADO` e `encerradoEm` | `Anuncio.cancelarServicoPeloPrestador`. |
-| Proposta pendente sem efeito | `ReagendamentoService.buscarPendentesDosAnuncios` e `cancelarSemEfeito`. |
+| Proposta pendente sem efeito | `ReagendamentoService.encerrarPendentesSemEfeito` (ponto único, igual ao do ETI-99). |
 | Sem estorno de cota (RB18) | Nenhuma chamada à porta de cota. |
 | Não volta ao mural | `ENCERRADO` é terminal; candidatar-se devolve 409 `ANUNCIO_ESTADO_INVALIDO`. |
 | Chat somente leitura | `aoCancelarServicoPeloPrestador` após o commit. |

@@ -84,3 +84,11 @@ público responde "Conta encerrada" e mantém a reputação. Detalhe em
 - `ChatController` deixou de ser "sem checagem de papel" só nesta rota: a lista segue o papel do token.
 - **Merge com a develop (ETI-136):** `outraParte.usuarioId` também na lista, pelo mesmo `OutraParte` de domínio do
   chat; conta encerrada mantém o id.
+
+## 2026-11-18 — ETI-96: chat somente leitura quando o Prestador cancela o serviço
+
+`DeixarChatSomenteLeituraUseCase.aoCancelarServicoPeloPrestador` escuta `ServicoCanceladoPeloPrestadorEvent`
+(`comum/eventos`, publicado por `anuncio`) em `AFTER_COMMIT` + `REQUIRES_NEW` e deixa somente leitura o chat da
+`candidaturaEscolhidaId`, com o mesmo motivo `SERVICO_CANCELADO` do cancelamento pelo Empregador (ETI-94,
+`aoCancelarServico`): a faixa do front não depende de quem cancelou. Com isso `SERVICO_CANCELADO` tem listener nos dois
+sentidos. Falha do listener é só logada e o chat fica aberto, como nos demais.

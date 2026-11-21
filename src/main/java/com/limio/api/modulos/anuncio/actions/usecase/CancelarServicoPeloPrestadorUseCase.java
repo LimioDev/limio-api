@@ -18,7 +18,6 @@ import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
 import com.limio.api.modulos.anuncio.excecao.ServicoEstadoInvalidoException;
 import com.limio.api.modulos.anuncio.excecao.ServicoNaoEncontradoException;
-import com.limio.api.modulos.anuncio.reagendamento.Reagendamento;
 import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
 
 /**
@@ -76,10 +75,7 @@ public class CancelarServicoPeloPrestadorUseCase {
                 .orElseThrow(ServicoEstadoInvalidoException::new);
 
         Instant agora = relogio.instant();
-        for (Reagendamento pendente : reagendamentoService.buscarPendentesDosAnuncios(List.of(anuncioId))) {
-            pendente.cancelarSemEfeito(agora);
-            reagendamentoService.salvar(pendente);
-        }
+        reagendamentoService.encerrarPendentesSemEfeito(List.of(anuncioId), agora);
 
         anuncio.cancelarServicoPeloPrestador(agora);
         Anuncio salvo = anuncioService.salvar(anuncio);
