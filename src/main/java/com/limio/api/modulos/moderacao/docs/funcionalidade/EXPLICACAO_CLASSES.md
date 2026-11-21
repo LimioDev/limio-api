@@ -20,6 +20,13 @@ publica `AvaliacaoPublicadaEvent` → no `perfil`, `RegistrarMediaAvaliacoesUseC
 `ListarCandidatosUseCase`, ETI-67) e `listarRecentes` (top-N por avaliado+papel, nome do avaliador abreviado por
 `comum/texto/NomeHelper`; conta encerrada do avaliador aparece como "Conta encerrada", nunca cai da lista).
 
+**`POST /denuncias` (ETI-114)**
+`DenunciaController.registrar` (`RegistrarDenunciaRequest` validado como campos de formulário, parte `foto` opcional) →
+`DenunciaMapper.toAlvo` → `RegistrarDenunciaUseCase` (resolve o alvo pela porta certa: `ConsultaChat.buscarMensagem`,
+`ConsultaCandidatura`, `ConsultaServico` ou `ConsultaDadosUsuario`; recusa com `AlvoNaoAcessivelException`; a foto passa
+por `ImagemHelper`, vai pro storage, publica `EvidenciaDenunciaEnviadaEvent` e vira `Midia.evidenciaDenuncia`;
+`Denuncia.registrar` + `DenunciaService.salvarAgora`) → `DenunciaMapper.toResponse` → `DenunciaRegistradaResponse`.
+
 ## Classes
 
 | Classe | Papel |
@@ -34,8 +41,17 @@ publica `AvaliacaoPublicadaEvent` → no `perfil`, `RegistrarMediaAvaliacoesUseC
 | `actions/usecase/AvaliarUseCase` | Regras do UC "Avaliar a outra parte" e publicação do evento com o total. |
 | `actions/controller/AvaliacaoController` | As duas rotas. Sem checagem de papel: o acesso é ser uma das partes. |
 | `actions/mapper/AvaliacaoMapper` | `AvaliacaoPendente` e `Avaliacao` para os records de resposta. |
-| `excecao/*` | Uma por cenário: `ServicoNaoEncontrado` (404), `ServicoNaoConcluido`, `JanelaAvaliacaoEncerrada` e `AvaliacaoDuplicada` (409), `ComentarioSemNota` e `NotaObrigatoria` (400). |
+| `excecao/*` | Uma por cenário: `AlvoNaoAcessivel` (404, denúncia), `ServicoNaoEncontrado` (404), `ServicoNaoConcluido`, `JanelaAvaliacaoEncerrada` e `AvaliacaoDuplicada` (409), `ComentarioSemNota` e `NotaObrigatoria` (400). |
 | `actions/service/ConsultaAvaliacoesService` | Implementa `comum/portas/ConsultaAvaliacoes` (ETI-105): resumo em lote e avaliações recentes, lidas direto de `Avaliacao`. |
+| `denuncia/Denuncia` | Entity da tabela `denuncia`. `registrar(...)` é a única forma de criar; `numero` vem do banco. |
+| `denuncia/AlvoDenuncia` | Denunciado e contexto (anúncio, candidatura, mensagem), como o cliente mandou ou já resolvido. |
+| `denuncia/DenunciaRepository`, `denuncia/DenunciaService` | Persistência; `salvarAgora` faz o flush pra o `numero` sair na resposta. |
+| `enums/MotivoDenuncia`, `enums/StatusResolucao` | Os cinco motivos da tela 46 e o andamento da denúncia (só `ABERTA` por enquanto). |
+| `actions/usecase/RegistrarDenunciaUseCase` | Regras do UC "Registrar denúncia": quem pode denunciar o quê, evidência e prazo de análise. |
+| `actions/controller/DenunciaController` | `POST /denuncias`, `multipart/form-data`. Sem checagem de papel: o acesso é decidido pelo alvo. |
+| `actions/mapper/DenunciaMapper` | Request para `AlvoDenuncia` e `Denuncia` para a resposta. |
+| `actions/service/EvidenciaDenunciaEventosService` | Apaga do storage a foto de uma denúncia cuja transação desfez (`AFTER_ROLLBACK`). |
+| `eventos/EvidenciaDenunciaEnviadaEvent` | Evento interno: chave da foto enviada, pra limpeza no rollback. |
 | `avaliacao/ResumoAvaliacaoProjecao` | Projeção de `resumirPorAvaliados` — id, média e quantidade, direto do banco, sem carregar a entity. |
 
 Fora do módulo: a porta `comum/portas/ConsultaServico` (implementada por `anuncio/actions/service/ConsultaServicoService`)

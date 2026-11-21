@@ -57,6 +57,13 @@ perfil público. Com conta encerrada o id continua vindo (`OutraParte.contaEncer
 público responde "Conta encerrada" e mantém a reputação. Detalhe em
 `anuncio/docs/features/ETI-136-usuario-id-nas-telas-do-perfil-publico.md`.
 
+## 2026-11-19 — ETI-114: `ConsultaChat.buscarMensagem` pra denúncia de mensagem
+
+A porta `comum/portas/ConsultaChat` ganhou `buscarMensagem(mensagemId)`, que devolve `ResumoMensagem`: o remetente, a
+candidatura, o anúncio e as duas partes do chat. Quem usa é a denúncia de `moderacao`, pra conferir que o denunciante
+participa da conversa e pra saber quem é o denunciado. `ChatService` e `MensagemService` ganharam `buscarPorId`. Só
+leitura. Ver `moderacao/docs/features/ETI-114-registrar-denuncia.md`.
+
 ## 2026-11-17 — ETI-103: listar minhas conversas por papel
 
 - **`GET /chats`:** lista as conversas do papel ativo do token (Empregador: chats dos anúncios; Prestador: chats das

@@ -15,3 +15,12 @@ a implementação (`actions/service/ConsultaAvaliacoesService`) migrou pra este 
 previa o comentário do stub antigo. Ganhou também `listarRecentes(avaliadoId, papel, limite)`, pro card de
 reputação do perfil público (ETI-105): top-N avaliações de um usuário num papel, com o nome do avaliador
 abreviado. Avaliador com conta encerrada aparece como "Conta encerrada" em vez de desaparecer da lista.
+
+## 2026-11-19 — ETI-114: registrar denúncia
+
+Segunda entidade do módulo: `Denuncia` (`denuncia/`, tabela da V39), registrada por `POST /denuncias`
+(`multipart/form-data`, foto opcional). O alvo é um perfil, um anúncio ou serviço, uma candidatura (chat) ou uma
+mensagem. O acesso é conferido pelas portas `ConsultaDadosUsuario`, `ConsultaServico`, `ConsultaCandidatura` e
+`ConsultaChat.buscarMensagem` (nova). A foto vira `Midia` `EVIDENCIA_DENUNCIA` (valor novo em `comum/midia`), e a
+denúncia aponta pra ela em `evidencia_id`. Nasce `ABERTA` com prazo de análise (72h provisórias) e entra na fila do
+admin (US58). Não toca no serviço. Detalhe em `../features/ETI-114-registrar-denuncia.md`.
