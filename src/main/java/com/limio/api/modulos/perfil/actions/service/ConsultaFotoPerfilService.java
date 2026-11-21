@@ -1,11 +1,15 @@
 package com.limio.api.modulos.perfil.actions.service;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.midia.ArmazenamentoService;
 import com.limio.api.comum.midia.LinkTemporario;
@@ -42,5 +46,22 @@ public class ConsultaFotoPerfilService implements ConsultaFotoPerfil {
             log.warn("link da foto de perfil indisponível; consulta segue sem foto");
             return Optional.empty();
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<UUID, LinkTemporario> buscarFotosEmLote(Collection<UUID> usuarioIds) {
+        if (usuarioIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, LinkTemporario> links = new HashMap<>();
+        midiaService.buscarFotosPerfilAtivas(usuarioIds).forEach((usuarioId, foto) -> {
+            try {
+                links.put(usuarioId, armazenamentoService.gerarLink(foto.getUrlS3()));
+            } catch (ArmazenamentoIndisponivelException e) {
+                log.warn("link da foto de perfil indisponível; consulta segue sem foto");
+            }
+        });
+        return links;
     }
 }

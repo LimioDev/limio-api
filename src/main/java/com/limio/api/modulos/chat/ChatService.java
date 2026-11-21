@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 import com.limio.api.comum.base.BaseService;
@@ -52,6 +54,22 @@ public class ChatService extends BaseService<Chat, UUID, ChatRepository> {
     /** Chats do anúncio que ainda recebem mensagens. */
     public List<Chat> buscarAbertosDoAnuncio(UUID anuncioId) {
         return repository.findByAnuncioIdAndSomenteLeituraFalse(anuncioId);
+    }
+
+    public Page<ConversaProjecao> listarDoContratante(UUID usuarioId, int pagina, int tamanho) {
+        return repository.listarDoContratante(usuarioId, PageRequest.of(pagina, tamanho));
+    }
+
+    public Page<ConversaProjecao> listarDoPrestador(UUID usuarioId, int pagina, int tamanho) {
+        return repository.listarDoPrestador(usuarioId, PageRequest.of(pagina, tamanho));
+    }
+
+    public long contarDoContratanteComNaoLidas(UUID usuarioId) {
+        return repository.contarDoContratanteComNaoLidas(usuarioId);
+    }
+
+    public long contarDoPrestadorComNaoLidas(UUID usuarioId) {
+        return repository.contarDoPrestadorComNaoLidas(usuarioId);
     }
 
     /** Chats em que o usuário é uma das partes e que ainda recebem mensagens. */

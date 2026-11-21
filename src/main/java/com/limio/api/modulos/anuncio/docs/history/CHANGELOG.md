@@ -378,3 +378,11 @@ anúncio), pro app abrir `GET /perfis-publicos/{usuarioId}` (ETI-105). No mural,
 pelo `DetalheDoMural.empregadorId`, sem mexer na porta `ResumoPerfilEmpregador`. Sem migration nem `CodigoErro` novo.
 O chat ganhou o mesmo campo (ver `chat/docs/history/CHANGELOG.md`). Detalhe em
 `../features/ETI-136-usuario-id-nas-telas-do-perfil-publico.md`.
+
+## 2026-11-16 — ETI-138: id da candidatura e reputação no serviço combinado
+
+`ServicoCombinadoResponse` ganhou `candidaturaId` (a candidatura escolhida, o mesmo pros dois lados), pro "Conversar
+com (nome)" abrir `GET /candidaturas/{candidaturaId}/chat`. `outraParte` ganhou `qtdAvaliacoes`/`mediaAvaliacoes` do
+Prestador, só pro Empregador (regra do `gold`), pela `ConsultaAvaliacoes`: fecha o ponto em aberto do ETI-86.
+`canceladoEm` fica pra depois da #38, que grava o `tipoCancelamento`. Sem migration. Detalhe em
+`../features/ETI-138-candidatura-id-no-servico-combinado.md`.
