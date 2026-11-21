@@ -17,8 +17,11 @@ import com.limio.api.modulos.chat.actions.mapper.ChatMapper;
 import com.limio.api.modulos.chat.actions.usecase.AbrirChatUseCase;
 import com.limio.api.modulos.chat.actions.usecase.ConfirmarMensagensUseCase;
 import com.limio.api.modulos.chat.actions.usecase.EnviarMensagemUseCase;
+import com.limio.api.modulos.chat.actions.usecase.ListarConversasUseCase;
 import com.limio.api.modulos.chat.enums.Confirmacao;
 import com.limio.api.modulos.chat.records.ChatResponse;
+import com.limio.api.modulos.chat.records.ConversasFiltro;
+import com.limio.api.modulos.chat.records.ConversasResponse;
 import com.limio.api.modulos.chat.records.EnviarMensagemRequest;
 import com.limio.api.modulos.chat.records.HistoricoFiltro;
 import com.limio.api.modulos.chat.records.MensagemResponse;
@@ -26,21 +29,25 @@ import com.limio.api.modulos.chat.records.MensagemResponse;
 import jakarta.validation.Valid;
 
 /**
- * Chat 1:1 da candidatura (ETI-101). Não há checagem de papel: quem decide o acesso é ser uma das duas partes do chat,
- * e para qualquer outra pessoa a resposta é 404 {@code CHAT_NAO_ENCONTRADO}. Mensagens novas, entregas e leituras
+ * Chat 1:1 da candidatura (ETI-101). Não há checagem de papel para abrir e escrever: quem decide o acesso é ser uma das
+ * duas partes do chat, e para qualquer outra pessoa a resposta é 404 {@code CHAT_NAO_ENCONTRADO}. A lista de conversas
+ * (ETI-103) é a exceção: ela segue o papel ativo do token. Mensagens novas, entregas e leituras
  * chegam em tempo real em {@code /user/queue/chat} (STOMP em {@code /ws}).
  */
 @RestController
 public class ChatController {
 
     private final AbrirChatUseCase abrirChatUseCase;
+    private final ListarConversasUseCase listarConversasUseCase;
     private final EnviarMensagemUseCase enviarMensagemUseCase;
     private final ConfirmarMensagensUseCase confirmarMensagensUseCase;
     private final ChatMapper chatMapper;
 
-    public ChatController(AbrirChatUseCase abrirChatUseCase, EnviarMensagemUseCase enviarMensagemUseCase,
+    public ChatController(AbrirChatUseCase abrirChatUseCase, ListarConversasUseCase listarConversasUseCase,
+            EnviarMensagemUseCase enviarMensagemUseCase,
             ConfirmarMensagensUseCase confirmarMensagensUseCase, ChatMapper chatMapper) {
         this.abrirChatUseCase = abrirChatUseCase;
+        this.listarConversasUseCase = listarConversasUseCase;
         this.enviarMensagemUseCase = enviarMensagemUseCase;
         this.confirmarMensagensUseCase = confirmarMensagensUseCase;
         this.chatMapper = chatMapper;
@@ -51,6 +58,14 @@ public class ChatController {
             @PathVariable UUID candidaturaId, @Valid @ModelAttribute HistoricoFiltro filtro) {
         return ResponseEntity.ok(chatMapper.toResponse(
                 abrirChatUseCase.executar(candidaturaId, usuario.id(), filtro.antesDe(), filtro.tamanho())));
+    }
+
+    /** Quem decide o que entra na lista é o papel do token: Empregador vê os chats dos anúncios, Prestador os das candidaturas. */
+    @GetMapping("/chats")
+    public ResponseEntity<ConversasResponse> listarConversas(@AuthenticationPrincipal UsuarioAutenticado usuario,
+            @Valid @ModelAttribute ConversasFiltro filtro) {
+        return ResponseEntity.ok(chatMapper.toResponse(
+                listarConversasUseCase.executar(usuario.id(), usuario.papel(), filtro.pagina(), filtro.tamanho())));
     }
 
     @PostMapping("/chats/{chatId}/mensagens")
