@@ -91,6 +91,7 @@ public class ListarCandidatosUseCase {
                     ResumoAvaliacoes resumo = avaliacoes.getOrDefault(prestadorId, ResumoAvaliacoes.SEM_AVALIACOES);
                     return new CandidatoDoAnuncio(
                             aplicacao.getId(),
+                            prestadorId,
                             NomeHelper.abreviar(nome),
                             consultaFotoPerfil.buscarFoto(prestadorId).orElse(null),
                             especialidades.getOrDefault(prestadorId, List.of()),

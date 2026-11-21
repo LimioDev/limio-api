@@ -57,3 +57,30 @@ tocado e segue aberto. Recusadas e desistentes não entram na lista: seus chats 
 `candidaturaEscolhidaId`, com o mesmo motivo `SERVICO_CANCELADO` do cancelamento pelo Empregador (ETI-94,
 `aoCancelarServico`): a faixa do front não depende de quem cancelou. Com isso `SERVICO_CANCELADO` tem listener nos dois
 sentidos. Falha do listener é só logada e o chat fica aberto, como nos demais.
+
+## 2026-11-16 — ETI-136: id da outra parte no chat
+
+`ChatResponse.OutraParte` e o `OutraParte` de domínio ganharam `usuarioId`, pro menu "⋮" do chat (tela 21b) abrir o
+perfil público. Com conta encerrada o id continua vindo (`OutraParte.contaEncerrada(usuarioId, papel)`): o perfil
+público responde "Conta encerrada" e mantém a reputação. Detalhe em
+`anuncio/docs/features/ETI-136-usuario-id-nas-telas-do-perfil-publico.md`.
+
+## 2026-11-17 — ETI-103: listar minhas conversas por papel
+
+- **`GET /chats`:** lista as conversas do papel ativo do token (Empregador: chats dos anúncios; Prestador: chats das
+  candidaturas), da última mensagem mais nova para a mais antiga, paginada com `PageResponse` (`pagina`, `tamanho` de
+  1 a 50). A resposta traz também `totalComNaoLidas`, que não depende da página. Contrato em
+  `docs/features/ETI-103-listar-minhas-conversas.md`.
+- **Query única por papel:** `ChatRepository.listarDoContratante` / `listarDoPrestador` (nativas, com LATERAL para a
+  última mensagem e subconsulta para as não lidas) e `contarDoContratanteComNaoLidas` / `contarDoPrestadorComNaoLidas`.
+  Mensagens enviadas pelo próprio usuário não contam como não lidas.
+- **`ListarConversasUseCase`:** monta título/status, nome e foto da outra parte em lote pelas portas
+  `ConsultaCandidatura.buscarResumosEmLote`, `ConsultaDadosUsuario.buscarPorIds`, `ConsultaFotoPerfil.buscarFotosEmLote`
+  e `ConsultaPerfilEmpregador.buscarResumosEmLote`. Conta encerrada aparece como "Usuário excluído". Chat somente
+  leitura e chat sem mensagem continuam na lista.
+- **Índices (V38):** `idx_chat_contratante_id`, `idx_chat_prestador_id` e `idx_mensagem_nao_lidas` (parcial).
+- **Código de erro:** entrada inválida responde 400 `VALIDACAO_FALHOU`; `DADOS_INVALIDOS`, sugerido no card, não existe
+  na API.
+- `ChatController` deixou de ser "sem checagem de papel" só nesta rota: a lista segue o papel do token.
+- **Merge com a develop (ETI-136):** `outraParte.usuarioId` também na lista, pelo mesmo `OutraParte` de domínio do
+  chat; conta encerrada mantém o id.

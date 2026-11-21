@@ -2,6 +2,7 @@ package com.limio.api.modulos.anuncio.aplicacao;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -49,6 +50,11 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
         return repository.existsByAnuncioIdAndStatusIn(anuncioId, STATUS_ESCOLHIDA);
     }
 
+    /** Existe candidatura ao anúncio, em qualquer estado (pendente, recusada, encerrada...) — barra a expiração. */
+    public boolean existeAlguma(UUID anuncioId) {
+        return repository.existsByAnuncioId(anuncioId);
+    }
+
     /** Prestador escolhido para o anúncio, mesmo depois de concluído. Vazio enquanto ninguém foi escolhido. */
     public Optional<UUID> buscarPrestadorDoServico(UUID anuncioId) {
         return repository.findFirstByAnuncioIdAndStatusIn(anuncioId, STATUS_DO_SERVICO).map(Aplicacao::getPrestadorId);
@@ -77,6 +83,18 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     /** Busca que não lança: quem consulta por fora do módulo ({@code ConsultaCandidatura}) decide o que fazer. */
     public Optional<Aplicacao> buscarPorId(UUID id) {
         return repository.findById(id);
+    }
+
+    /** Os prestadores das candidaturas, numa consulta só. Id que não existe fica de fora. */
+    public List<UUID> buscarPrestadoresIds(Collection<UUID> ids) {
+        return ids.isEmpty() ? List.of() : repository.findPrestadorIdsByIdIn(ids);
+    }
+
+    public List<Aplicacao> buscarPorIds(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return repository.findAllById(ids);
     }
 
     /** Candidaturas ainda abertas (não recusadas/concluídas/encerradas) em que {@code usuarioId} é o prestador. */

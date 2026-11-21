@@ -3,6 +3,7 @@ package com.limio.api.comum.portas;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -48,5 +49,15 @@ public interface ConsultaDadosUsuario {
      * @return {@code true} se já existiu uma conta com este id, encerrada ou não
      */
     boolean existe(UUID usuarioId);
+
+    /**
+     * Dos ids informados, os de contas aptas a receber aviso do sistema (ETI-65): não encerrada, não suspensa pela
+     * moderação e com e-mail confirmado, a mesma exigência de ver o mural. Não olha o papel ativo: quem alterna para
+     * Empregador continua Prestador.
+     *
+     * @param usuarioIds ids a filtrar
+     * @return só os aptos; id inexistente fica de fora
+     */
+    Set<UUID> filtrarAptosAReceberAviso(Collection<UUID> usuarioIds);
 
 }

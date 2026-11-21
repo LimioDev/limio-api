@@ -22,8 +22,12 @@ public record ChatResponse(
         MotivoSomenteLeitura motivoSomenteLeitura,
         Historico historico) {
 
-    /** {@code nome} é "Usuário excluído", sem foto, quando a conta foi encerrada. */
-    public record OutraParte(String nome, String fotoUrl, Instant fotoExpiraEm, PapelNoChat papel) {
+    /**
+     * {@code nome} é "Usuário excluído", sem foto, quando a conta foi encerrada. {@code usuarioId} vem sempre,
+     * inclusive nesse caso: é o que {@code GET /perfis-publicos/{usuarioId}} aceita, com {@code papel=PRESTADOR}
+     * quando {@code papel} é {@code CANDIDATO}, senão {@code EMPREGADOR} (ETI-136).
+     */
+    public record OutraParte(UUID usuarioId, String nome, String fotoUrl, Instant fotoExpiraEm, PapelNoChat papel) {
     }
 
     public record Anuncio(String titulo, String categoria) {

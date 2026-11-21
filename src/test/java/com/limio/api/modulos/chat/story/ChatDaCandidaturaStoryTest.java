@@ -277,6 +277,7 @@ class ChatDaCandidaturaStoryTest {
                 .andExpect(jsonPath("$.id", is(chatId.toString())))
                 .andExpect(jsonPath("$.candidaturaId", is(candidatura.getId().toString())))
                 .andExpect(jsonPath("$.statusCandidatura", is("ENVIADA")))
+                .andExpect(jsonPath("$.outraParte.usuarioId", is(prestador.getId().toString())))
                 .andExpect(jsonPath("$.outraParte.nome", is("Rafael Souza")))
                 .andExpect(jsonPath("$.outraParte.papel", is("CANDIDATO")))
                 .andExpect(jsonPath("$.anuncio.titulo", is("Instalar 3 tomadas")))
@@ -345,6 +346,7 @@ class ChatDaCandidaturaStoryTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenPrestador))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.outraParte.papel", is("EMPREGADOR")))
+                .andExpect(jsonPath("$.outraParte.usuarioId", is(empregador.getId().toString())))
                 .andExpect(jsonPath("$.outraParte.nome", is("Marina Bertoldi")))
                 .andExpect(jsonPath("$.historico.mensagens", hasSize(2)))
                 .andExpect(jsonPath("$.historico.mensagens[0].texto", is("terceira")))
@@ -529,12 +531,19 @@ class ChatDaCandidaturaStoryTest {
         mockMvc.perform(get("/candidaturas/{id}/chat", candidatura.getId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + logar(empregador)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.outraParte.usuarioId", is(prestador.getId().toString())))
                 .andExpect(jsonPath("$.outraParte.nome", is(OutraParte.NOME_CONTA_ENCERRADA)))
                 .andExpect(jsonPath("$.outraParte.fotoUrl", nullValue()))
                 .andExpect(jsonPath("$.historico.mensagens", hasSize(1)))
                 .andExpect(jsonPath("$.historico.mensagens[0].texto", is("Boa tarde! Vi o anúncio.")))
                 .andExpect(jsonPath("$.isSomenteLeitura", is(true)))
                 .andExpect(jsonPath("$.motivoSomenteLeitura", is("CONTA_ENCERRADA")));
+
+        // ETI-136: o mesmo id abre o perfil público, que responde "Conta encerrada" e mantém a reputação.
+        mockMvc.perform(get("/perfis-publicos/{id}", prestador.getId()).param("papel", "PRESTADOR")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + logar(empregador)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nomeExibicao", is("Conta encerrada")));
         enviar(logar(empregador), chatId, "Ainda está aí?", 409);
     }
 

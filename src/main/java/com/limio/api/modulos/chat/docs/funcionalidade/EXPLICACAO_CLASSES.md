@@ -30,6 +30,12 @@ pede é parte, `ChatService.garantirDaCandidatura`, a outra parte por `ConsultaP
 `ConsultaDadosUsuario` + `ConsultaFotoPerfil`, e a página do histórico a partir de `antesDe`) → `ChatAberto` →
 `ChatMapper` → `ChatResponse`.
 
+**`GET /chats`** (ETI-103)
+`ChatController.listarConversas` (`ConversasFiltro` validado, papel e id vêm do `UsuarioAutenticado`) →
+`ListarConversasUseCase` (`switch` no papel → `ChatService.listarDoContratante` ou `listarDoPrestador` e a contagem de
+conversas com não lidas; depois, em lote, `ConsultaCandidatura`, `ConsultaDadosUsuario` + `ConsultaFotoPerfil` ou
+`ConsultaPerfilEmpregador`) → `ConversasListadas` → `ChatMapper` → `ConversasResponse`.
+
 **`POST /chats/{id}/mensagens`**
 `ChatController.enviarMensagem` → `EnviarMensagemUseCase` (recusa se somente leitura, grava `Mensagem.enviada`,
 publica `MensagemEnviadaEvent`) → depois do commit, `ChatTempoRealService` entrega `MENSAGEM_NOVA` ao destinatário.
@@ -47,7 +53,12 @@ depois do commit, `ChatTempoRealService` entrega `ENTREGUE`/`LIDA` ao remetente.
 | `ChatService` / `ChatRepository` | Persistência. `buscarDoParticipante` responde 404 para quem não é parte; `garantirDaCandidatura` cria o chat que faltar, com o índice único decidindo a corrida. |
 | `mensagem/Mensagem` | Mensagem com texto, texto exibido, envio, entrega e leitura. |
 | `mensagem/MensagemService` / `MensagemRepository` | Histórico por referência (`antesDe`) e confirmação de entrega/leitura num UPDATE só. |
+| `ConversaProjecao` | Linha da query nativa da lista: chat, última mensagem e não lidas. Só o `ChatRepository` e o `ChatService` a veem. |
+| `ConversaResumo`, `ConversasListadas` | Modelo de leitura da tela "Conversas": um item e a página com o total de conversas não lidas. |
+| `records/ConversasFiltro` | Query do `GET /chats`: `pagina` (≥ 0) e `tamanho` (1 a 50, padrão 20). |
+| `records/ConversasResponse`, `records/ConversaResponse` | Resposta do `GET /chats`: `PageResponse` de conversas e `totalComNaoLidas`. |
 | `records/HistoricoFiltro` | Query do `GET` do chat: `antesDe` e `tamanho` (1 a 100, 400 fora disso). |
+| `actions/usecase/ListarConversasUseCase` | Lista do papel ativo: escolhe a query pelo papel e monta título, status e a outra parte em lote. |
 | `ChatAberto`, `OutraParte` | Modelo de leitura da tela, devolvido pelo usecase ao controller. |
 | `enums/MotivoSomenteLeitura` | Por que o chat parou de receber mensagens. |
 | `enums/PapelNoChat` | Papel da outra parte no cabeçalho. |
@@ -59,6 +70,6 @@ depois do commit, `ChatTempoRealService` entrega `ENTREGUE`/`LIDA` ao remetente.
 
 Fora do módulo: `comum/config/WebSocketConfig`; `comum/seguranca/LeitorTokenAcesso` (lê o token para o
 `JwtAuthFilter` e para o WebSocket), `WebSocketAuthInterceptor` e `ExpiracaoSessaoWebSocket`;
-`comum/portas/ConsultaCandidatura` (implementada em `anuncio/actions/service/ConsultaCandidaturaService`);
+`comum/portas/ConsultaCandidatura` (`buscarPorId` e, desde o ETI-103, `buscarResumosEmLote`; implementada em `anuncio/actions/service/ConsultaCandidaturaService`);
 `comum/portas/ConsultaFotoPerfil` (implementada em `perfil/actions/service/ConsultaFotoPerfilService`, também usada
 pelo `anuncio` e pelo resumo do Empregador); `ConsultaPerfilEmpregador.buscarResumoSemCriar`.
