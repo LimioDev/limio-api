@@ -1,6 +1,7 @@
 package com.limio.api.modulos.anuncio;
 
 import java.time.Instant;
+import java.util.UUID;
 
 import com.limio.api.comum.portas.ResumoCategoria;
 import com.limio.api.comum.portas.ResumoChatDoServico;
@@ -14,10 +15,13 @@ import com.limio.api.modulos.anuncio.reagendamento.Reagendamento;
  * {@code reagendamento} (já existe, TICKET-0049) mas de nenhum usecase que a preencha ainda (ETI-99/ETI-100) —
  * nesta sprint sempre voltam zero/vazio, como o próprio card prevê.
  *
+ * @param candidaturaId id da candidatura escolhida: abre o chat do serviço ({@code GET /candidaturas/{id}/chat}),
+ *                      o mesmo pros dois lados (ETI-138)
  * @param chat {@code null} se o chat da candidatura ainda não existe
  */
 public record ServicoCombinado(
         Anuncio anuncio,
+        UUID candidaturaId,
         ResumoCategoria categoria,
         Instant escolhidaEm,
         Instant prazoCancelamentoEm,
