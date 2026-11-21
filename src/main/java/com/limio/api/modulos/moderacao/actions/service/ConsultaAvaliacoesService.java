@@ -1,9 +1,13 @@
 package com.limio.api.modulos.moderacao.actions.service;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -16,8 +20,10 @@ import com.limio.api.comum.portas.ConsultaAvaliacoes;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.DadosUsuario;
 import com.limio.api.comum.portas.ResumoAvaliacoes;
+import com.limio.api.comum.portas.SituacaoAvaliacao;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.comum.texto.NomeHelper;
+import com.limio.api.modulos.moderacao.actions.helper.JanelaAvaliacaoHelper;
 import com.limio.api.modulos.moderacao.avaliacao.Avaliacao;
 import com.limio.api.modulos.moderacao.avaliacao.AvaliacaoRepository;
 import com.limio.api.modulos.moderacao.avaliacao.AvaliacaoService;
@@ -25,7 +31,7 @@ import com.limio.api.modulos.moderacao.avaliacao.ResumoAvaliacaoProjecao;
 
 /**
  * Implementa {@link ConsultaAvaliacoes} para os candidatos do anúncio ({@code modulos.anuncio}, ETI-67) e o perfil
- * público ({@code modulos.perfil}, ETI-105). Avaliador com conta encerrada aparece como
+ * público ({@code modulos.perfil}, ETI-105), e a situação de avaliação por serviço no histórico (ETI-71). Avaliador com conta encerrada aparece como
  * {@link NomeHelper#CONTA_ENCERRADA} em vez de desaparecer da lista — a nota e o comentário continuam valendo.
  */
 @Component
@@ -33,11 +39,34 @@ public class ConsultaAvaliacoesService implements ConsultaAvaliacoes {
 
     private final AvaliacaoRepository avaliacaoRepository;
     private final ConsultaDadosUsuario consultaDadosUsuario;
+    private final Clock relogio;
 
     public ConsultaAvaliacoesService(AvaliacaoRepository avaliacaoRepository,
-            ConsultaDadosUsuario consultaDadosUsuario) {
+            ConsultaDadosUsuario consultaDadosUsuario, Clock relogio) {
         this.avaliacaoRepository = avaliacaoRepository;
         this.consultaDadosUsuario = consultaDadosUsuario;
+        this.relogio = relogio;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<UUID, SituacaoAvaliacao> situacaoPorServico(UUID usuarioId, Map<UUID, Instant> concluidoEmPorAnuncio) {
+        if (concluidoEmPorAnuncio.isEmpty()) {
+            return Map.of();
+        }
+        Set<UUID> anuncioIds = concluidoEmPorAnuncio.keySet();
+        Map<UUID, Integer> notasRecebidas = avaliacaoRepository.findByAvaliadoIdAndAnuncioIdIn(usuarioId, anuncioIds)
+                .stream().collect(Collectors.toMap(Avaliacao::getAnuncioId, Avaliacao::getNota));
+        Set<UUID> jaAvaliados = Set.copyOf(avaliacaoRepository.findAnuncioIdsAvaliadosPor(usuarioId, anuncioIds));
+        Instant agora = Instant.now(relogio);
+
+        Map<UUID, SituacaoAvaliacao> situacoes = new HashMap<>();
+        concluidoEmPorAnuncio.forEach((anuncioId, concluidoEm) -> {
+            boolean podeAvaliar = concluidoEm != null && JanelaAvaliacaoHelper.aberta(concluidoEm, agora)
+                    && !jaAvaliados.contains(anuncioId);
+            situacoes.put(anuncioId, new SituacaoAvaliacao(notasRecebidas.get(anuncioId), podeAvaliar));
+        });
+        return situacoes;
     }
 
     @Override
