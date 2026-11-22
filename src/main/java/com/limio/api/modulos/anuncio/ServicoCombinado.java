@@ -1,6 +1,7 @@
 package com.limio.api.modulos.anuncio;
 
 import java.time.Instant;
+import java.util.UUID;
 
 import com.limio.api.comum.portas.ResumoCategoria;
 import com.limio.api.comum.portas.ResumoChatDoServico;
@@ -14,10 +15,13 @@ import com.limio.api.modulos.anuncio.reagendamento.Reagendamento;
  * {@code reagendamento}, preenchida pelos usecases de reagendamento (ETI-99): o limite é a propriedade {@code
  * anuncio.reagendamento.limite} e a proposta pendente é a que aguarda a resposta da contraparte.
  *
+ * @param candidaturaId id da candidatura escolhida: abre o chat do serviço ({@code GET /candidaturas/{id}/chat}),
+ *                      o mesmo pros dois lados (ETI-138)
  * @param chat {@code null} se o chat da candidatura ainda não existe
  */
 public record ServicoCombinado(
         Anuncio anuncio,
+        UUID candidaturaId,
         ResumoCategoria categoria,
         Instant escolhidaEm,
         Instant prazoCancelamentoEm,

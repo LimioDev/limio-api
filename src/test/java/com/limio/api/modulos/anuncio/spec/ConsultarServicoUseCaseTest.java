@@ -3,11 +3,14 @@ package com.limio.api.modulos.anuncio.spec;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,12 +22,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.limio.api.comum.midia.LinkTemporario;
+import com.limio.api.comum.portas.ConsultaAvaliacoes;
 import com.limio.api.comum.portas.ConsultaCategoria;
 import com.limio.api.comum.portas.ConsultaChatDoServico;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.ConsultaFotoPerfil;
 import com.limio.api.comum.portas.ConsultaPlanoPrestador;
 import com.limio.api.comum.portas.DadosUsuario;
+import com.limio.api.comum.portas.ResumoAvaliacoes;
 import com.limio.api.comum.portas.ResumoCategoria;
 import com.limio.api.comum.portas.ResumoChatDoServico;
 import com.limio.api.comum.portas.enums.Plano;
@@ -75,13 +80,16 @@ class ConsultarServicoUseCaseTest {
     @Mock
     private ConsultaChatDoServico consultaChatDoServico;
 
+    @Mock
+    private ConsultaAvaliacoes consultaAvaliacoes;
+
     private ConsultarServicoUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
         useCase = new ConsultarServicoUseCase(anuncioService, aplicacaoService, reagendamentoService,
                 consultaCategoria, consultaDadosUsuario, consultaFotoPerfil, consultaPlanoPrestador,
-                consultaChatDoServico, 2);
+                consultaChatDoServico, consultaAvaliacoes, 2);
     }
 
     private Anuncio anuncio(StatusAnuncio status) {
@@ -136,6 +144,9 @@ class ConsultarServicoUseCaseTest {
         assertThat(servico.outraParte().nome()).isEqualTo("Rafael Souza");
         assertThat(servico.outraParte().telefone()).isEqualTo("+5511999990000");
         assertThat(servico.outraParte().gold()).isFalse();
+        assertThat(servico.outraParte().qtdAvaliacoes()).isZero();
+        assertThat(servico.outraParte().mediaAvaliacoes()).isNull();
+        assertThat(servico.candidaturaId()).isEqualTo(CANDIDATURA_ID);
         assertThat(servico.escolhidaEm()).isEqualTo(ESCOLHIDA_EM);
         assertThat(servico.prazoCancelamentoEm()).isEqualTo(DATA_PRETENDIDA.minus(Duration.ofHours(24)));
     }
@@ -154,6 +165,30 @@ class ConsultarServicoUseCaseTest {
 
         assertThat(servico.outraParte().nome()).isEqualTo("Maria Silva");
         assertThat(servico.outraParte().gold()).isNull();
+        assertThat(servico.outraParte().qtdAvaliacoes()).isNull();
+        assertThat(servico.outraParte().mediaAvaliacoes()).isNull();
+        assertThat(servico.candidaturaId()).as("o mesmo id pros dois lados").isEqualTo(CANDIDATURA_ID);
+        verifyNoInteractions(consultaAvaliacoes);
+    }
+
+    @Test
+    void dadoPrestadorAvaliado_quandoEmpregadorConsulta_entaoTrazAReputacaoDele() {
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio(StatusAnuncio.EM_ANDAMENTO)));
+        when(aplicacaoService.buscarEscolhidaDoAnuncio(ANUNCIO_ID)).thenReturn(Optional.of(escolhida()));
+        categoria();
+        semReagendamentosNemChat();
+        when(consultaDadosUsuario.buscarPorId(PRESTADOR_ID)).thenReturn(
+                Optional.of(new DadosUsuario("Rafael Souza", "rafael@example.com", "+5511999990000", null)));
+        when(consultaFotoPerfil.buscarFoto(PRESTADOR_ID)).thenReturn(Optional.empty());
+        when(consultaPlanoPrestador.planoAtual(PRESTADOR_ID)).thenReturn(Plano.GOLD);
+        when(consultaAvaliacoes.resumir(List.of(PRESTADOR_ID)))
+                .thenReturn(Map.of(PRESTADOR_ID, new ResumoAvaliacoes(12, new BigDecimal("4.6"))));
+
+        ServicoCombinado servico = useCase.executar(EMPREGADOR_ID, ANUNCIO_ID);
+
+        assertThat(servico.outraParte().qtdAvaliacoes()).isEqualTo(12);
+        assertThat(servico.outraParte().mediaAvaliacoes()).isEqualByComparingTo("4.6");
+        assertThat(servico.outraParte().gold()).isTrue();
     }
 
     @Test

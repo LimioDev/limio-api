@@ -90,6 +90,13 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
         return ids.isEmpty() ? List.of() : repository.findPrestadorIdsByIdIn(ids);
     }
 
+    public List<Aplicacao> buscarPorIds(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return repository.findAllById(ids);
+    }
+
     /** Candidaturas ainda abertas (não recusadas/concluídas/encerradas) em que {@code usuarioId} é o prestador. */
     public List<Aplicacao> buscarAbertasDoPrestador(UUID usuarioId) {
         return repository.findByPrestadorIdAndStatusIn(usuarioId, STATUS_ABERTOS);

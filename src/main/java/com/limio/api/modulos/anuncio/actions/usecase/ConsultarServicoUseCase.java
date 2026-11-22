@@ -9,12 +9,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.limio.api.comum.midia.LinkTemporario;
+import com.limio.api.comum.portas.ConsultaAvaliacoes;
 import com.limio.api.comum.portas.ConsultaCategoria;
 import com.limio.api.comum.portas.ConsultaChatDoServico;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.ConsultaFotoPerfil;
 import com.limio.api.comum.portas.ConsultaPlanoPrestador;
 import com.limio.api.comum.portas.DadosUsuario;
+import com.limio.api.comum.portas.ResumoAvaliacoes;
 import com.limio.api.comum.portas.ResumoCategoria;
 import com.limio.api.comum.portas.ResumoChatDoServico;
 import com.limio.api.comum.portas.enums.Plano;
@@ -48,6 +51,7 @@ public class ConsultarServicoUseCase {
     private final ConsultaFotoPerfil consultaFotoPerfil;
     private final ConsultaPlanoPrestador consultaPlanoPrestador;
     private final ConsultaChatDoServico consultaChatDoServico;
+    private final ConsultaAvaliacoes consultaAvaliacoes;
     private final int limiteReagendamentos;
 
     public ConsultarServicoUseCase(AnuncioService anuncioService,
@@ -58,6 +62,7 @@ public class ConsultarServicoUseCase {
             ConsultaFotoPerfil consultaFotoPerfil,
             ConsultaPlanoPrestador consultaPlanoPrestador,
             ConsultaChatDoServico consultaChatDoServico,
+            ConsultaAvaliacoes consultaAvaliacoes,
             @Value("${anuncio.reagendamento.limite}") int limiteReagendamentos) {
         this.anuncioService = anuncioService;
         this.aplicacaoService = aplicacaoService;
@@ -67,6 +72,7 @@ public class ConsultarServicoUseCase {
         this.consultaFotoPerfil = consultaFotoPerfil;
         this.consultaPlanoPrestador = consultaPlanoPrestador;
         this.consultaChatDoServico = consultaChatDoServico;
+        this.consultaAvaliacoes = consultaAvaliacoes;
         this.limiteReagendamentos = limiteReagendamentos;
     }
 
@@ -86,8 +92,9 @@ public class ConsultarServicoUseCase {
         ResumoCategoria categoria = consultaCategoria.buscarPorId(anuncio.getCategoriaId())
                 .orElseThrow(() -> new IllegalStateException("categoria do anúncio não existe: " + anuncioId));
 
-        UUID outraParteId = souEmpregador ? escolhida.getPrestadorId() : anuncio.getContratanteId();
-        OutraParteDoServico outraParte = outraParte(outraParteId, souEmpregador);
+        OutraParteDoServico outraParte = souEmpregador
+                ? prestadorVistoPeloEmpregador(escolhida.getPrestadorId())
+                : empregadorVistoPeloPrestador(anuncio.getContratanteId());
 
         Reagendamento propostaPendente = reagendamentoService.buscarPendentesDosAnuncios(List.of(anuncioId))
                 .stream().findFirst().orElse(null);
@@ -95,18 +102,39 @@ public class ConsultarServicoUseCase {
         ResumoChatDoServico chat = consultaChatDoServico.buscar(escolhida.getId(), usuarioId).orElse(null);
         Instant prazoCancelamentoEm = anuncio.prazoCancelamentoServicoEm();
 
-        return new ServicoCombinado(anuncio, categoria, escolhida.getEscolhidaEm(), prazoCancelamentoEm, outraParte,
-                reagendamentoService.contarAceitos(anuncioId), limiteReagendamentos, propostaPendente, chat);
+        return new ServicoCombinado(anuncio, escolhida.getId(), categoria, escolhida.getEscolhidaEm(),
+                prazoCancelamentoEm, outraParte, reagendamentoService.contarAceitos(anuncioId), limiteReagendamentos,
+                propostaPendente, chat);
     }
 
-    /** Vazio se a conta da outra parte já foi encerrada. GOLD só é calculado pro Empregador ver do Prestador. */
-    private OutraParteDoServico outraParte(UUID outraParteId, boolean souEmpregador) {
-        Optional<DadosUsuario> dados = consultaDadosUsuario.buscarPorId(outraParteId);
+    /**
+     * GOLD e reputação só são calculados pro Empregador ver do Prestador, como na lista de candidatos (ETI-67).
+     * Vazio se a conta do Prestador já foi encerrada.
+     */
+    private OutraParteDoServico prestadorVistoPeloEmpregador(UUID prestadorId) {
+        Optional<DadosUsuario> dados = consultaDadosUsuario.buscarPorId(prestadorId);
         if (dados.isEmpty()) {
             return OutraParteDoServico.CONTA_ENCERRADA;
         }
-        Boolean gold = souEmpregador ? consultaPlanoPrestador.planoAtual(outraParteId) == Plano.GOLD : null;
-        return new OutraParteDoServico(dados.get().nomeCompleto(),
-                consultaFotoPerfil.buscarFoto(outraParteId).orElse(null), dados.get().telefone(), gold);
+        boolean gold = consultaPlanoPrestador.planoAtual(prestadorId) == Plano.GOLD;
+        ResumoAvaliacoes reputacao = consultaAvaliacoes.resumir(List.of(prestadorId))
+                .getOrDefault(prestadorId, ResumoAvaliacoes.SEM_AVALIACOES);
+        return new OutraParteDoServico(dados.get().nomeCompleto(), foto(prestadorId), dados.get().telefone(), gold,
+                reputacao.quantidade(), reputacao.media());
+    }
+
+    /**
+     * Sem GOLD (não existe GOLD de Empregador) e sem reputação (a dele já aparece no detalhe do mural).
+     * Vazio se a conta do Empregador já foi encerrada.
+     */
+    private OutraParteDoServico empregadorVistoPeloPrestador(UUID empregadorId) {
+        return consultaDadosUsuario.buscarPorId(empregadorId)
+                .map(dados -> new OutraParteDoServico(dados.nomeCompleto(), foto(empregadorId), dados.telefone(),
+                        null, null, null))
+                .orElse(OutraParteDoServico.CONTA_ENCERRADA);
+    }
+
+    private LinkTemporario foto(UUID usuarioId) {
+        return consultaFotoPerfil.buscarFoto(usuarioId).orElse(null);
     }
 }

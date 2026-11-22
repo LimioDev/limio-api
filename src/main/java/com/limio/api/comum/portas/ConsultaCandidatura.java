@@ -2,6 +2,7 @@ package com.limio.api.comum.portas;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,5 +25,13 @@ public interface ConsultaCandidatura {
      * @return quem se candidatou em cada uma; candidatura que não existe fica de fora
      */
     List<UUID> buscarPrestadoresIds(Collection<UUID> candidaturaIds);
+
+    /**
+     * Numa consulta só (lista de conversas, ETI-103).
+     *
+     * @param candidaturaIds ids das candidaturas ({@code aplicacao})
+     * @return o resumo de cada candidatura, pelo id; candidatura ou anúncio que não existe fica de fora
+     */
+    Map<UUID, ResumoCandidatura> buscarResumosEmLote(Collection<UUID> candidaturaIds);
 
 }
