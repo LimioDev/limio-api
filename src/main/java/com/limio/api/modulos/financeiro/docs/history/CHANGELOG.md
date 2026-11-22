@@ -93,3 +93,8 @@ Achados de code review no próprio PR, corrigidos antes do merge:
   (`AsaasWebhookPayload` → `AsaasWebhookRequest`) saiu do controller pra `records/`, padrão do projeto.
 - **`EmailService` renomeado pra `ReciboGoldEmailService`** — nome específico em vez do qualificador
   `@Component("financeiroEmailService")` pra evitar colisão com o bean de `auth`.
+
+## 2026-11-22 — ETI-117 (dashboard do administrador, em `administracao`): porta de totais
+
+`actions/service/ConsultaTotaisDeAssinaturasService` implementa a porta `ConsultaTotaisDeAssinaturas`: conta as assinaturas GOLD
+`ATIVA` para o dashboard do administrador. Detalhe em `administracao/docs/features/ETI-117-dashboard-administrativo.md`.

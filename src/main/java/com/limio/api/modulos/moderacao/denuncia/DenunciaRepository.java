@@ -3,6 +3,9 @@ package com.limio.api.modulos.moderacao.denuncia;
 import java.util.UUID;
 
 import com.limio.api.comum.base.BaseRepository;
+import com.limio.api.modulos.moderacao.enums.StatusResolucao;
 
 public interface DenunciaRepository extends BaseRepository<Denuncia, UUID> {
+
+    long countByStatusResolucao(StatusResolucao statusResolucao);
 }

@@ -13,6 +13,7 @@ import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
@@ -62,6 +63,35 @@ class JwtAuthFilterTest {
         Authentication autenticacao = filtrar(token(jwtConfig.jwtEncoder(), id, Instant.now().plusSeconds(900)));
 
         assertThat(autenticacao.getPrincipal()).isEqualTo(new UsuarioAutenticado(id, PapelUsuario.PRESTADOR));
+        assertThat(autenticacao.getAuthorities()).extracting(GrantedAuthority::getAuthority)
+                .containsExactly("ROLE_" + JwtAuthFilter.ROLE_USUARIO);
+    }
+
+    @Test
+    void tokenDeAdministradorViraAdministradorAutenticado() throws Exception {
+        UUID id = UUID.randomUUID();
+
+        Authentication autenticacao = filtrar(TokensDeTeste.administrador(jwtConfig.jwtEncoder(), id));
+
+        assertThat(autenticacao.getPrincipal()).isEqualTo(new AdministradorAutenticado(id));
+        assertThat(autenticacao.getAuthorities()).extracting(GrantedAuthority::getAuthority)
+                .containsExactly("ROLE_" + JwtAuthFilter.ROLE_ADMINISTRADOR);
+    }
+
+    @Test
+    void tokenDeAdministradorNaoEhLidoComoUsuario() {
+        var leitor = new LeitorTokenAcesso(jwtConfig.jwtDecoder());
+        String token = TokensDeTeste.administrador(jwtConfig.jwtEncoder(), UUID.randomUUID());
+
+        assertThat(leitor.ler(token)).as("rotas do app e canal em tempo real").isEmpty();
+    }
+
+    @Test
+    void tokenDeUsuarioNaoEhLidoComoAdministrador() {
+        var leitor = new LeitorTokenAcesso(jwtConfig.jwtDecoder());
+        String token = token(jwtConfig.jwtEncoder(), UUID.randomUUID(), Instant.now().plusSeconds(900));
+
+        assertThat(leitor.lerAdministrador(token)).isEmpty();
     }
 
     @Test

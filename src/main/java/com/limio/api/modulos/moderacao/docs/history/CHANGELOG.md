@@ -24,3 +24,9 @@ mensagem. O acesso é conferido pelas portas `ConsultaDadosUsuario`, `ConsultaSe
 `ConsultaChat.buscarMensagem` (nova). A foto vira `Midia` `EVIDENCIA_DENUNCIA` (valor novo em `comum/midia`), e a
 denúncia aponta pra ela em `evidencia_id`. Nasce `ABERTA` com prazo de análise (72h provisórias) e entra na fila do
 admin (US58). Não toca no serviço. Detalhe em `../features/ETI-114-registrar-denuncia.md`.
+
+## 2026-11-22 — ETI-117 (dashboard do administrador, em `administracao`): porta de totais
+
+`actions/service/ConsultaTotaisDeDenunciasService` implementa a porta `ConsultaTotaisDeDenuncias`: conta as denúncias `ABERTA`,
+o mesmo número do título da fila, para o dashboard do administrador. Detalhe em
+`administracao/docs/features/ETI-117-dashboard-administrativo.md`.

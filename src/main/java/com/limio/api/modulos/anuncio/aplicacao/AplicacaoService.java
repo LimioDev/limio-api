@@ -46,6 +46,11 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     }
 
     /** Algum prestador já foi escolhido pro anúncio (ver {@link Aplicacao#isEscolhida()}). */
+    /** Candidaturas que já foram escolhidas, qualquer que seja o status atual ({@code escolhidaEm} não se apaga). */
+    public long contarEscolhidas() {
+        return repository.countByEscolhidaEmIsNotNull();
+    }
+
     public boolean existeEscolhida(UUID anuncioId) {
         return repository.existsByAnuncioIdAndStatusIn(anuncioId, STATUS_ESCOLHIDA);
     }

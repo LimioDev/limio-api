@@ -90,4 +90,9 @@ public class UsuarioService extends BaseService<Usuario, UUID, UsuarioRepository
     public boolean existePorCpf(String cpf) {
         return repository.existsByCpf(cpf);
     }
+
+    /** Contas que não foram encerradas: a conta encerrada fica anonimizada ({@link Usuario#isEncerrada()}). */
+    public long contarNaoEncerradas() {
+        return repository.countByAnonimizadoEmIsNull();
+    }
 }

@@ -263,3 +263,10 @@ migration — decisão revisável se alguém reintroduzir OTP.
 encerradas, não suspensas e com e-mail confirmado. O papel ativo não entra. Usado pelo `anuncio` para avisar os
 Prestadores compatíveis com um anúncio publicado. `DadosUsuario` não mudou: expor a suspensão lá mexeria em todo
 teste que constrói o record. Detalhe em `anuncio/docs/features/ETI-65-avisar-prestadores-compativeis.md`.
+
+## 2026-11-22 — ETI-117 (dashboard do administrador, em `administracao`): porta de totais
+
+`actions/service/ConsultaTotaisDeUsuariosService` implementa a porta `ConsultaTotaisDeUsuarios`: conta as contas não
+encerradas (`anonimizado_em` nulo), qualquer que seja o status. É o cartão "Usuários" do dashboard do administrador.
+O token do administrador não sai deste módulo: é outro ator, com o principal `AdministradorAutenticado`. Detalhe em
+`administracao/docs/features/ETI-117-dashboard-administrativo.md`.
