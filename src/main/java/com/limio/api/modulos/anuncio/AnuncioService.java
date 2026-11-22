@@ -10,10 +10,12 @@ import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import com.limio.api.comum.base.BaseService;
+import com.limio.api.modulos.anuncio.enums.CausaEncerramento;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 
 /** Camada técnica de persistência de {@link Anuncio} — CRUD genérico (herdado) + finder da entity. */
@@ -64,6 +66,49 @@ public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository
     /** Quantos anúncios {@code contratanteId} já concluiu como contratante (histórico do perfil público, ETI-105). */
     public long contarConcluidosDoContratante(UUID contratanteId) {
         return repository.countByContratanteIdAndStatus(contratanteId, StatusAnuncio.CONCLUIDO);
+    }
+
+    private static final List<StatusAnuncio> STATUS_FINAIS = List.of(StatusAnuncio.CONCLUIDO, StatusAnuncio.ENCERRADO);
+
+    private static final List<CausaEncerramento> TODAS_AS_CAUSAS = List.of(CausaEncerramento.values());
+
+    public Page<Anuncio> buscarHistoricoDoContratante(UUID contratanteId, CriterioDoHistorico criterio, int pagina,
+            int tamanho) {
+        Instant de = criterio.de() != null ? criterio.de() : Instant.EPOCH;
+        Instant ate = criterio.ate() != null ? criterio.ate() : Instant.EPOCH;
+        return repository.buscarHistoricoDoContratante(contratanteId, statusFinais(criterio),
+                causasAceitas(criterio), criterio.de() == null, de, criterio.ate() == null, ate,
+                PageRequest.of(pagina, tamanho));
+    }
+
+    public Page<Anuncio> buscarHistoricoDoPrestador(UUID prestadorId, CriterioDoHistorico criterio, int pagina,
+            int tamanho) {
+        Instant de = criterio.de() != null ? criterio.de() : Instant.EPOCH;
+        Instant ate = criterio.ate() != null ? criterio.ate() : Instant.EPOCH;
+        return repository.buscarHistoricoDoPrestador(prestadorId, statusFinais(criterio),
+                causasAceitas(criterio), criterio.de() == null, de, criterio.ate() == null, ate,
+                PageRequest.of(pagina, tamanho));
+    }
+
+    private static List<StatusAnuncio> statusFinais(CriterioDoHistorico criterio) {
+        if (criterio.status() == null) {
+            return STATUS_FINAIS;
+        }
+        return switch (criterio.status()) {
+            case CONCLUIDO -> List.of(StatusAnuncio.CONCLUIDO);
+            case CANCELADO, EXPIRADO -> List.of(StatusAnuncio.ENCERRADO);
+        };
+    }
+
+    private static List<CausaEncerramento> causasAceitas(CriterioDoHistorico criterio) {
+        if (criterio.status() == null) {
+            return TODAS_AS_CAUSAS;
+        }
+        return switch (criterio.status()) {
+            case CONCLUIDO -> TODAS_AS_CAUSAS;
+            case CANCELADO -> List.of(CausaEncerramento.CANCELAMENTO);
+            case EXPIRADO -> List.of(CausaEncerramento.EXPIRACAO);
+        };
     }
 
     public List<UUID> buscarIdsParaExpirar(Instant agora, int lote) {

@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.limio.api.comum.base.BaseRepository;
+import com.limio.api.modulos.anuncio.enums.CausaEncerramento;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 
 public interface AnuncioRepository extends BaseRepository<Anuncio, UUID> {
@@ -32,6 +33,45 @@ public interface AnuncioRepository extends BaseRepository<Anuncio, UUID> {
 
     List<Anuncio> findByContratanteIdAndStatusInOrderByDataHoraPretendidaAsc(UUID contratanteId,
             List<StatusAnuncio> status);
+
+    /**
+     * Filtros comuns do histórico (ETI-71). {@code status}: os status de anúncio em estado final aceitos;
+     * {@code causas}: dentre os {@code ENCERRADO}, quais causas (anúncio não encerrado tem causa nula, então passa).
+     * Os dois nunca vão vazios. Período sobre a data do desfecho, {@code coalesce(validadoEm, encerradoEm)}; os
+     * booleanos ligam/desligam cada ponta (como no mural, evita parâmetro nulo tipado no Postgres).
+     */
+    String HISTORICO_FILTROS = """
+            a.status in :status
+            and (a.causaEncerramento is null or a.causaEncerramento in :causas)
+            and (:semInicio = true or coalesce(a.validadoEm, a.encerradoEm) >= :de)
+            and (:semFim = true or coalesce(a.validadoEm, a.encerradoEm) < :ate)
+            """;
+
+    String HISTORICO_ORDEM = "coalesce(a.validadoEm, a.encerradoEm) desc, a.id desc";
+
+    /** Histórico do Empregador: os anúncios dele em estado final. O {@code pageable} não deve trazer {@code Sort}. */
+    @Query(value = "select a from Anuncio a where a.contratanteId = :usuarioId and " + HISTORICO_FILTROS
+            + " order by " + HISTORICO_ORDEM,
+            countQuery = "select count(a) from Anuncio a where a.contratanteId = :usuarioId and "
+                    + HISTORICO_FILTROS)
+    Page<Anuncio> buscarHistoricoDoContratante(@Param("usuarioId") UUID usuarioId,
+            @Param("status") Collection<StatusAnuncio> status, @Param("causas") Collection<CausaEncerramento> causas,
+            @Param("semInicio") boolean semInicio, @Param("de") Instant de,
+            @Param("semFim") boolean semFim, @Param("ate") Instant ate, Pageable pageable);
+
+    /**
+     * Histórico do Prestador: anúncios em estado final em que ele tem alguma candidatura. {@code EXISTS}, não join:
+     * o mesmo Prestador pode ter várias candidaturas no mesmo anúncio e o anúncio só pode aparecer uma vez.
+     * O {@code pageable} não deve trazer {@code Sort}.
+     */
+    @Query(value = "select a from Anuncio a where exists (select 1 from Aplicacao ap where ap.anuncioId = a.id "
+            + "and ap.prestadorId = :usuarioId) and " + HISTORICO_FILTROS + " order by " + HISTORICO_ORDEM,
+            countQuery = "select count(a) from Anuncio a where exists (select 1 from Aplicacao ap "
+                    + "where ap.anuncioId = a.id and ap.prestadorId = :usuarioId) and " + HISTORICO_FILTROS)
+    Page<Anuncio> buscarHistoricoDoPrestador(@Param("usuarioId") UUID usuarioId,
+            @Param("status") Collection<StatusAnuncio> status, @Param("causas") Collection<CausaEncerramento> causas,
+            @Param("semInicio") boolean semInicio, @Param("de") Instant de,
+            @Param("semFim") boolean semFim, @Param("ate") Instant ate, Pageable pageable);
 
     /**
      * Anúncios candidatos do mural com a distância (haversine, km) até a base do Prestador. A caixa

@@ -92,6 +92,12 @@ public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
     /** {@code escolhidaEm} nunca é limpo, mesmo depois do serviço concluir ou cancelar (ETI-86). */
     Optional<Aplicacao> findFirstByAnuncioIdAndEscolhidaEmIsNotNull(UUID anuncioId);
 
+    /** As candidaturas de um Prestador a esses anúncios, em qualquer estado, numa consulta só (histórico, ETI-71). */
+    List<Aplicacao> findByAnuncioIdInAndPrestadorId(Collection<UUID> anuncioIds, UUID prestadorId);
+
+    /** Candidaturas que chegaram a ser escolhidas nesses anúncios, numa consulta só (histórico, ETI-71). */
+    List<Aplicacao> findByAnuncioIdInAndEscolhidaEmIsNotNull(Collection<UUID> anuncioIds);
+
     /**
      * Conta pelo {@code Anuncio.status = CONCLUIDO}, não por um status próprio da candidatura: nenhum
      * fluxo marca {@code Aplicacao} como {@code CONCLUIDA} hoje — o ETI-92 só conclui o {@code Anuncio}
