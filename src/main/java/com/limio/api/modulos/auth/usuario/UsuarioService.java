@@ -1,5 +1,6 @@
 package com.limio.api.modulos.auth.usuario;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -13,6 +14,7 @@ import com.limio.api.comum.base.BaseService;
 import com.limio.api.comum.excecao.EntidadeNaoEncontradaException;
 import com.limio.api.modulos.auth.excecao.CadastroIndisponivelException;
 import com.limio.api.modulos.auth.excecao.ContatoNaoPermitidoException;
+import com.limio.api.modulos.auth.usuario.enums.StatusConta;
 
 /** Camada técnica de persistência de {@link Usuario} — CRUD genérico (herdado) + finders da entity. */
 @Component
@@ -94,5 +96,10 @@ public class UsuarioService extends BaseService<Usuario, UUID, UsuarioRepository
     /** Contas que não foram encerradas: a conta encerrada fica anonimizada ({@link Usuario#isEncerrada()}). */
     public long contarNaoEncerradas() {
         return repository.countByAnonimizadoEmIsNull();
+    }
+
+    /** Contas suspensas pela moderação cujo prazo já passou ({@code suspensaAte <= agora}). */
+    public List<Usuario> buscarComSuspensaoVencida(Instant agora) {
+        return repository.findByStatusContaAndSuspensaAteLessThanEqual(StatusConta.BLOQUEADA, agora);
     }
 }

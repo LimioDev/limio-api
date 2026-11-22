@@ -1,5 +1,8 @@
 package com.limio.api.modulos.perfil.actions.usecase;
 
+import java.math.BigDecimal;
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
@@ -7,7 +10,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.limio.api.comum.eventos.AvaliacaoOcultadaEvent;
 import com.limio.api.comum.eventos.AvaliacaoPublicadaEvent;
+import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.perfil.empregador.PerfilEmpregadorService;
 import com.limio.api.modulos.perfil.perfilprestador.PerfilPrestadorService;
 
@@ -41,21 +46,32 @@ public class RegistrarMediaAvaliacoesUseCase {
     @EventListener
     @Transactional(propagation = Propagation.MANDATORY)
     public void aoPublicarAvaliacao(AvaliacaoPublicadaEvent evento) {
-        switch (evento.papelAvaliado()) {
-            case EMPREGADOR -> perfilEmpregadorService.garantirPerfilSeContaAtiva(evento.avaliadoId())
+        registrar(evento.avaliadoId(), evento.papelAvaliado(), evento.mediaAvaliacoes(), evento.qtdAvaliacoes());
+    }
+
+    /** ETI-116: a moderação ocultou uma avaliação, e o total já vem sem ela. Mesma gravação da publicação. */
+    @EventListener
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void aoOcultarAvaliacao(AvaliacaoOcultadaEvent evento) {
+        registrar(evento.avaliadoId(), evento.papelAvaliado(), evento.mediaAvaliacoes(), evento.qtdAvaliacoes());
+    }
+
+    private void registrar(UUID avaliadoId, PapelUsuario papel, BigDecimal media, int qtd) {
+        switch (papel) {
+            case EMPREGADOR -> perfilEmpregadorService.garantirPerfilSeContaAtiva(avaliadoId)
                     .ifPresentOrElse(perfil -> {
-                        perfil.registrarAvaliacoes(evento.mediaAvaliacoes(), evento.qtdAvaliacoes());
+                        perfil.registrarAvaliacoes(media, qtd);
                         perfilEmpregadorService.salvar(perfil);
-                    }, () -> semPerfil(evento));
-            case PRESTADOR -> perfilPrestadorService.buscarPorUsuario(evento.avaliadoId())
+                    }, () -> semPerfil(avaliadoId, papel));
+            case PRESTADOR -> perfilPrestadorService.buscarPorUsuario(avaliadoId)
                     .ifPresentOrElse(perfil -> {
-                        perfil.registrarAvaliacoes(evento.mediaAvaliacoes(), evento.qtdAvaliacoes());
+                        perfil.registrarAvaliacoes(media, qtd);
                         perfilPrestadorService.salvar(perfil);
-                    }, () -> semPerfil(evento));
+                    }, () -> semPerfil(avaliadoId, papel));
         }
     }
 
-    private static void semPerfil(AvaliacaoPublicadaEvent evento) {
-        log.info("avaliado {} sem perfil de {}; média não gravada", evento.avaliadoId(), evento.papelAvaliado());
+    private static void semPerfil(UUID avaliadoId, PapelUsuario papel) {
+        log.info("avaliado {} sem perfil de {}; média não gravada", avaliadoId, papel);
     }
 }

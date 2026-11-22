@@ -8,6 +8,7 @@ import org.hibernate.annotations.Generated;
 import com.limio.api.comum.base.BaseEntity;
 import com.limio.api.modulos.moderacao.enums.MotivoDenuncia;
 import com.limio.api.modulos.moderacao.enums.StatusResolucao;
+import com.limio.api.modulos.moderacao.enums.VereditoModeracao;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -24,7 +25,7 @@ import lombok.NoArgsConstructor;
  * {@code EVIDENCIA_DENUNCIA}, quando veio foto.
  *
  * <p>Registrar não muda nada fora da denúncia: o serviço, o anúncio e o dinheiro ficam como estão (UC). Ela nasce
- * {@code ABERTA} e entra na fila do admin (US58), que vai cuidar da análise e da decisão.
+ * {@code ABERTA} e entra na fila do admin, que analisa e decide (ETI-116, {@link DecisaoModeracao}).
  */
 @Entity
 @Table(name = "denuncia")
@@ -71,6 +72,10 @@ public class Denuncia extends BaseEntity {
     @Column(name = "prazo_analise", nullable = false)
     private Instant prazoAnalise;
 
+    /** Momento da decisão do administrador (ETI-116). Nulo enquanto a denúncia está na fila. */
+    @Column(name = "analisada_em")
+    private Instant analisadaEm;
+
     /**
      * Quem chama já resolveu o alvo (o denunciado preenchido e o acesso conferido) e validou o resto. Aqui só o
      * retrato do que foi enviado. Não persiste.
@@ -89,5 +94,15 @@ public class Denuncia extends BaseEntity {
         denuncia.statusResolucao = StatusResolucao.ABERTA;
         denuncia.prazoAnalise = prazoAnalise;
         return denuncia;
+    }
+
+    public boolean isAberta() {
+        return statusResolucao == StatusResolucao.ABERTA;
+    }
+
+    /** Decisão do administrador (ETI-116): sai da fila. Quem chama já conferiu que ela estava aberta. */
+    public void resolver(VereditoModeracao veredito, Instant agora) {
+        this.statusResolucao = StatusResolucao.de(veredito);
+        this.analisadaEm = agora;
     }
 }

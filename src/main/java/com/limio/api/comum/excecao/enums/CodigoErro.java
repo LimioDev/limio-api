@@ -70,6 +70,8 @@ public enum CodigoErro {
     CARTAO_INVALIDO("Dados do cartão inválidos. Confira número, validade e CVV."),
     NOTIFICACAO_NAO_ENCONTRADA("Notificação não encontrada."),
     ALVO_NAO_ACESSIVEL("Não é possível denunciar este conteúdo."),
+    DENUNCIA_NAO_ENCONTRADA("Denúncia não encontrada."),
+    DENUNCIA_JA_RESOLVIDA("Esta denúncia já foi decidida."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;

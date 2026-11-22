@@ -71,6 +71,10 @@ public class Usuario extends BaseEntity {
     @Column(name = "anonimizado_em")
     private Instant anonimizadoEm;
 
+    /** Fim da suspensão aplicada pela moderação (ETI-116). Nulo fora da suspensão com prazo. */
+    @Column(name = "suspensa_ate")
+    private Instant suspensaAte;
+
     /**
      * Conta encerrada pelo titular (UC10): o encerramento anonimiza os dados, então
      * {@code anonimizadoEm} preenchido é o que marca a conta como encerrada — o
@@ -112,6 +116,21 @@ public class Usuario extends BaseEntity {
      * Quem chama ainda precisa gravar {@link com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueado}
      * com o CPF original, antes de chamar isto.
      */
+    /**
+     * Suspensão pela moderação (ETI-116): {@code BLOQUEADA} até {@code ate}. Uma suspensão nova substitui o prazo da
+     * anterior. Quem chama também encerra as sessões.
+     */
+    public void suspender(Instant ate) {
+        this.statusConta = StatusConta.BLOQUEADA;
+        this.suspensaAte = ate;
+    }
+
+    /** Prazo da suspensão vencido: a conta volta a {@code ATIVA}. Só a rotina de {@code auth} chama. */
+    public void encerrarSuspensao() {
+        this.statusConta = StatusConta.ATIVA;
+        this.suspensaAte = null;
+    }
+
     public void encerrar(Instant agora) {
         this.nomeCompleto = NomeHelper.CONTA_ENCERRADA;
         this.email = "encerrada+" + getId() + "@anonimizado.limio";

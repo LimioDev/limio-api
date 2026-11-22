@@ -30,3 +30,11 @@ admin (US58). Não toca no serviço. Detalhe em `../features/ETI-114-registrar-d
 `actions/service/ConsultaTotaisDeDenunciasService` implementa a porta `ConsultaTotaisDeDenuncias`: conta as denúncias `ABERTA`,
 o mesmo número do título da fila, para o dashboard do administrador. Detalhe em
 `administracao/docs/features/ETI-117-dashboard-administrativo.md`.
+
+## 2026-11-22 — ETI-116: fila, análise e decisão do administrador
+
+`DecisaoModeracao` e `Sancao` entram na subentidade `denuncia/` (V43). A denúncia ganha `analisada_em` e sai da fila
+como `PROCEDENTE` ou `IMPROCEDENTE`, e a avaliação ganha `oculta_em`/`oculta_por`. Rotas em `/admin/denuncias`, só do
+administrador (token do ETI-117). As quatro sanções são aceitas, mesmo as que o painel v1 não mostra. Suspensão,
+encerramento de conta, remoção da foto e nova média saem por evento para `auth`, `anuncio` e `perfil`. Avaliação oculta
+deixou de contar em todas as consultas de avaliação. Detalhe em `../features/ETI-116-analisar-denuncia-e-aplicar-sancao.md`.

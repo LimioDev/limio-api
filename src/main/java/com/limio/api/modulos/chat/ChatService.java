@@ -36,6 +36,11 @@ public class ChatService extends BaseService<Chat, UUID, ChatRepository> {
     }
 
     /** Chats que já existem entre as candidaturas. */
+    /** Conversas do Prestador num anúncio (normalmente uma; mais de uma se ele se candidatou de novo). */
+    public List<Chat> buscarDoPrestadorNoAnuncio(UUID anuncioId, UUID prestadorId) {
+        return repository.findByAnuncioIdAndPrestadorId(anuncioId, prestadorId);
+    }
+
     public List<Chat> buscarDasCandidaturas(Collection<UUID> aplicacaoIds) {
         return repository.findByAplicacaoIdIn(aplicacaoIds);
     }

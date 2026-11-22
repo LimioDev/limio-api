@@ -91,7 +91,7 @@ class ConsultaAvaliacoesServiceTest {
     void dadoAvaliadorComContaAtiva_quandoListarRecentes_entaoNomeAbreviado() {
         Avaliacao avaliacao = Avaliacao.publicar(UUID.randomUUID(), AVALIADOR_ID, AVALIADO_ID, PapelUsuario.PRESTADOR,
                 5, "Ótimo serviço!", Instant.parse("2026-10-20T14:00:00Z"));
-        when(avaliacaoRepository.findByAvaliadoIdAndPapelAvaliadoOrderByPublicadaEmDesc(AVALIADO_ID,
+        when(avaliacaoRepository.findByAvaliadoIdAndPapelAvaliadoAndOcultaEmIsNullOrderByPublicadaEmDesc(AVALIADO_ID,
                 PapelUsuario.PRESTADOR, PageRequest.of(0, 5))).thenReturn(List.of(avaliacao));
         when(consultaDadosUsuario.buscarPorIds(List.of(AVALIADOR_ID)))
                 .thenReturn(Map.of(AVALIADOR_ID, new DadosUsuario("Camila Rocha", "camila@example.com", null, null)));
@@ -106,7 +106,7 @@ class ConsultaAvaliacoesServiceTest {
     void dadoAvaliadorComContaEncerrada_quandoListarRecentes_entaoNomeContaEncerrada() {
         Avaliacao avaliacao = Avaliacao.publicar(UUID.randomUUID(), AVALIADOR_ID, AVALIADO_ID, PapelUsuario.EMPREGADOR,
                 4, null, Instant.parse("2026-10-20T14:00:00Z"));
-        when(avaliacaoRepository.findByAvaliadoIdAndPapelAvaliadoOrderByPublicadaEmDesc(AVALIADO_ID,
+        when(avaliacaoRepository.findByAvaliadoIdAndPapelAvaliadoAndOcultaEmIsNullOrderByPublicadaEmDesc(AVALIADO_ID,
                 PapelUsuario.EMPREGADOR, PageRequest.of(0, 5))).thenReturn(List.of(avaliacao));
         when(consultaDadosUsuario.buscarPorIds(List.of(AVALIADOR_ID))).thenReturn(Map.of());
 
@@ -117,7 +117,7 @@ class ConsultaAvaliacoesServiceTest {
 
     @Test
     void dadoSemAvaliacoes_quandoListarRecentes_entaoListaVazia() {
-        when(avaliacaoRepository.findByAvaliadoIdAndPapelAvaliadoOrderByPublicadaEmDesc(AVALIADO_ID,
+        when(avaliacaoRepository.findByAvaliadoIdAndPapelAvaliadoAndOcultaEmIsNullOrderByPublicadaEmDesc(AVALIADO_ID,
                 PapelUsuario.PRESTADOR, PageRequest.of(0, 5))).thenReturn(List.of());
 
         assertThat(service.listarRecentes(AVALIADO_ID, PapelUsuario.PRESTADOR, 5)).isEmpty();

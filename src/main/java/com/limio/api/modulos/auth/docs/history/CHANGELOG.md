@@ -270,3 +270,11 @@ teste que constrói o record. Detalhe em `anuncio/docs/features/ETI-65-avisar-pr
 encerradas (`anonimizado_em` nulo), qualquer que seja o status. É o cartão "Usuários" do dashboard do administrador.
 O token do administrador não sai deste módulo: é outro ator, com o principal `AdministradorAutenticado`. Detalhe em
 `administracao/docs/features/ETI-117-dashboard-administrativo.md`.
+
+## 2026-11-22 — ETI-116 (decisão de denúncia, em `moderacao`)
+
+`SuspenderContaUseCase` escuta `ContaSuspensaEvent` na transação da decisão: conta `BLOQUEADA` até `suspensa_ate`
+(V44) e sessões encerradas. A rotina `auth.suspensao.cron` (10 min) volta a `ATIVA` as contas com prazo vencido.
+`EncerrarContaUseCase.aoDecidirEncerramento` faz o encerramento do ETI-36 quando a moderação decide, com a auditoria na
+origem `moderacao-decidir-denuncia`. Porta nova `ConsultaContasParaModeracao` (nome, papel e situação, inclusive conta
+encerrada, sem contato). Detalhe em `moderacao/docs/features/ETI-116-analisar-denuncia-e-aplicar-sancao.md`.

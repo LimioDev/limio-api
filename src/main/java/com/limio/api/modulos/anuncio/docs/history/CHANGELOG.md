@@ -392,3 +392,9 @@ Prestador, só pro Empregador (regra do `gold`), pela `ConsultaAvaliacoes`: fech
 `actions/service/ConsultaTotaisDeAnunciosService` implementa a porta `ConsultaTotaisDeAnuncios`, com os totais de anúncios,
 candidaturas e escolhas (`escolhida_em` preenchido, mesmo que a candidatura tenha sido encerrada depois) para o
 dashboard do administrador. Detalhe em `administracao/docs/features/ETI-117-dashboard-administrativo.md`.
+
+## 2026-11-22 — ETI-116 (decisão de denúncia, em `moderacao`)
+
+`EncerrarAnunciosEAplicacoesUseCase.aoSuspenderConta` escuta `ContaSuspensaEvent` depois do commit e encerra os
+compromissos abertos pelo mesmo fluxo da saída de conta (inclusive reagendamentos pendentes), com o motivo "Cancelado
+por suspensão de conta". Detalhe em `moderacao/docs/features/ETI-116-analisar-denuncia-e-aplicar-sancao.md`.

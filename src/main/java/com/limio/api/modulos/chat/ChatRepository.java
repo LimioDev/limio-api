@@ -21,6 +21,8 @@ public interface ChatRepository extends BaseRepository<Chat, UUID> {
 
     List<Chat> findByAnuncioIdAndSomenteLeituraFalse(UUID anuncioId);
 
+    List<Chat> findByAnuncioIdAndPrestadorId(UUID anuncioId, UUID prestadorId);
+
     @Query("""
             select c from Chat c
             where (c.contratanteId = :usuarioId or c.prestadorId = :usuarioId) and c.somenteLeitura = false

@@ -4,10 +4,13 @@ import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.eventos.ContaEncerradaEvent;
+import com.limio.api.comum.eventos.EncerramentoDeContaDecididoEvent;
 import com.limio.api.comum.auditoria.LogAuditoriaService;
 import com.limio.api.comum.auditoria.enums.TipoAcaoAuditoria;
 import com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueadoService;
@@ -32,6 +35,9 @@ import com.limio.api.modulos.auth.verificacaocontato.VerificacaoContatoService;
 @Service
 public class EncerrarContaUseCase {
 
+    private static final String ORIGEM_PEDIDO_DO_TITULAR = "auth-encerrar-conta";
+    private static final String ORIGEM_MODERACAO = "moderacao-decidir-denuncia";
+
     private final UsuarioService usuarioService;
     private final CpfBloqueadoService cpfBloqueadoService;
     private final SessaoService sessaoService;
@@ -55,6 +61,20 @@ public class EncerrarContaUseCase {
 
     @Transactional
     public void executar(UUID usuarioId, String ip) {
+        encerrar(usuarioId, ip, ORIGEM_PEDIDO_DO_TITULAR);
+    }
+
+    /**
+     * Encerramento decidido pelo administrador numa denúncia (ETI-116): mesma anonimização do pedido do titular, na
+     * transação da decisão. Só a origem da auditoria muda.
+     */
+    @EventListener
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void aoDecidirEncerramento(EncerramentoDeContaDecididoEvent evento) {
+        encerrar(evento.usuarioId(), null, ORIGEM_MODERACAO);
+    }
+
+    private void encerrar(UUID usuarioId, String ip, String origem) {
         Instant agora = Instant.now();
         Usuario usuario = usuarioService.buscarPorIdOuFalhar(usuarioId);
         if (usuario.isEncerrada()) {
@@ -71,7 +91,7 @@ public class EncerrarContaUseCase {
         verificacaoContatoService.apagarDoUsuario(usuarioId);
 
         logAuditoriaService.registrar("Usuario", usuarioId, TipoAcaoAuditoria.CONTA_ENCERRADA,
-                "auth-encerrar-conta", ip);
+                origem, ip);
 
         eventPublisher.publishEvent(new ContaEncerradaEvent(usuarioId, agora));
     }

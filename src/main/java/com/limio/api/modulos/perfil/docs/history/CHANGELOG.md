@@ -252,3 +252,10 @@ completa (porquê, módulo `auth` envolvido) em `auth/docs/history/CHANGELOG.md`
 completo, categoria/"Outros" e haversine ≤ raio de cada um, a regra do mural (ETI-73) no sentido inverso. Usada pelo
 `anuncio` no aviso de anúncio publicado. Sem migration nem índice novo. Decisão completa em
 `anuncio/docs/features/ETI-65-avisar-prestadores-compativeis.md`.
+
+## 2026-11-22 — ETI-116 (decisão de denúncia, em `moderacao`)
+
+`RemoverFotoPerfilPelaModeracaoUseCase` escuta `FotoPerfilRemovidaPelaModeracaoEvent` na transação da decisão e
+expurga a foto (o objeto sai do storage depois do commit). `RegistrarMediaAvaliacoesUseCase` também escuta
+`AvaliacaoOcultadaEvent` e grava a média sem a avaliação oculta. Detalhe em
+`moderacao/docs/features/ETI-116-analisar-denuncia-e-aplicar-sancao.md`.
