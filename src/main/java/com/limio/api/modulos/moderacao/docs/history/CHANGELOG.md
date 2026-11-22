@@ -15,3 +15,11 @@ a implementação (`actions/service/ConsultaAvaliacoesService`) migrou pra este 
 previa o comentário do stub antigo. Ganhou também `listarRecentes(avaliadoId, papel, limite)`, pro card de
 reputação do perfil público (ETI-105): top-N avaliações de um usuário num papel, com o nome do avaliador
 abreviado. Avaliador com conta encerrada aparece como "Conta encerrada" em vez de desaparecer da lista.
+
+## 2026-11-21 — ETI-71: nota recebida e "pode avaliar" por serviço
+
+`ConsultaAvaliacoes` ganhou `situacaoPorServico(usuarioId, concluidoEmPorAnuncio)`, que devolve `SituacaoAvaliacao`
+(`notaRecebida`, `podeAvaliar`) por anúncio, para o histórico do `anuncio`. Faz 2 consultas em lote
+(`AvaliacaoRepository`) e reusa `JanelaAvaliacaoHelper`, então a regra dos 7 dias continua só neste módulo.
+`concluidoEm` nulo = `podeAvaliar` falso. `ConsultaAvaliacoesService` passou a receber o `Clock`. Sem migration.
+Detalhe em `anuncio/docs/features/ETI-71-consultar-historico-com-filtros.md`.
