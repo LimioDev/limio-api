@@ -276,20 +276,24 @@ class ConsultarServicoStoryTest {
     @Test
     void dadoPropostaDeReagendamentoPendente_quandoConsulta_entaoTrazNaResposta() throws Exception {
         Instant dataProposta = anuncio.getDataHoraPretendida().plus(Duration.ofDays(2));
-        reagendamentoRepository.save(Reagendamento.builder()
+        UUID proponenteId = UUID.randomUUID();
+        Reagendamento proposta = reagendamentoRepository.save(Reagendamento.builder()
                 .anuncioId(anuncio.getId())
                 .dataAnterior(anuncio.getDataHoraPretendida())
                 .dataProposta(dataProposta)
                 .status(StatusReagendamento.PENDENTE)
                 .justificativa("Imprevisto de agenda")
-                .proponenteId(UUID.randomUUID())
+                .proponenteId(proponenteId)
                 .expiraEm(Instant.now().plus(Duration.ofDays(1)))
                 .build());
         String token = logar("maria@example.com");
 
         consultar(token, anuncio.getId())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.propostaPendente.justificativa", is("Imprevisto de agenda")));
+                .andExpect(jsonPath("$.propostaPendente.id", is(proposta.getId().toString())))
+                .andExpect(jsonPath("$.propostaPendente.proponenteId", is(proponenteId.toString())))
+                .andExpect(jsonPath("$.propostaPendente.justificativa", is("Imprevisto de agenda")))
+                .andExpect(jsonPath("$.propostaPendente.expiraEm", notNullValue()));
     }
 
     @Test

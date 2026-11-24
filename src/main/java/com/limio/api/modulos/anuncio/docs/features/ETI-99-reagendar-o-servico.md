@@ -143,6 +143,14 @@ Erros novos em `CodigoErro`: `REAGENDAMENTO_NAO_ENCONTRADO` (404), `PROPOSTA_PEN
   modelado é `checkoutEm + prazoValidacaoHoras`, mas o card fala em silêncio depois da data vigente, sem check-out) e se
   uma proposta pendente já vencida, que o job de expiração ainda não encerrou, continua bloqueando a conclusão (atraso
   máximo igual ao cron, 5 minutos por padrão).
+- **Leitura da regra "proposta depois da data vigente" (a confirmar com o PO).** O card diz que, com a data vigente já
+  passada, só se aceita proposta se não houve proposta recusada ou expirada no serviço. A implementação lê de outro
+  jeito: a única proposta permitida é a **primeira feita depois da data vigente** (marca `proposta_apos_data_vigente`),
+  e qualquer desfecho dela, inclusive cancelada pelo proponente, esgota a chance. Duas diferenças: (1) uma proposta
+  recusada ou expirada **antes** da data vigente não bloqueia nada aqui, então a primeira proposta "atrasada" é
+  aceita, mas o card a recusaria; (2) uma proposta cancelada pelo proponente depois da data vigente bloqueia, e o card
+  não a cita. Se o PO quiser a leitura literal do card, a mudança é `existePropostaAposDataVigente` passar a contar
+  `RECUSADO` e `EXPIRADO` de qualquer momento, sem a marca e sem contar `CANCELADO`.
 - **Notificações (US56).** `notificacao` já recebe eventos de aviso (ETI-112, `RegistrarAvisosUseCase`), mas não escuta
   os cinco eventos de reagendamento: falta um ouvinte `AFTER_COMMIT` + `REQUIRES_NEW` por evento, e o texto de cada
   aviso.
