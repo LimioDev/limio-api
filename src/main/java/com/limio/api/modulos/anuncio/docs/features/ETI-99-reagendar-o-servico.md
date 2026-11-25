@@ -58,6 +58,9 @@ pelo Prestador (ETI-96/97), qualquer mudança de cota, UI.
 - **O contador de aceitos é `COUNT(status = ACEITO)`**, não uma coluna no `Anuncio`: sem estado duplicado, e propostas
   recusadas, canceladas, expiradas ou sem efeito não contam no limite.
 - **`expira_em` é gravado na criação** (como `prazoValidacaoHoras`): mudar a propriedade não altera propostas em curso.
+  O valor é o menor entre `agora + prazo-resposta-horas` e a `dataProposta`: depois da nova data o aceite daria 422
+  `DATA_NO_PASSADO`, então a proposta não pode seguir pendente (bloqueando nova proposta e a conclusão por silêncio)
+  além desse instante.
 - **Combinado é `PUBLICADO` com a candidatura `ESCOLHIDA`**, a mesma regra do cancelamento (ETI-94): propor reaproveita
   `situacaoParaCancelarServico() == CANCELAVEL`. A proposta não muda o anúncio; só o aceite troca `dataHoraPretendida`
   (`Anuncio.reagendar`).
@@ -65,7 +68,8 @@ pelo Prestador (ETI-96/97), qualquer mudança de cota, UI.
   `proposta_apos_data_vigente`, e `existePropostaAposDataVigente` conta qualquer desfecho, inclusive cancelada pelo
   proponente (para não burlar a regra). É **por serviço**, não por data vigente: se um aceite trocar a data e ela
   passar de novo, não há segunda chance. A nova data precisa estar no futuro na criação e de novo no aceite.
-- **Ordem das validações.** Propor: parte do serviço (404), combinado (409), data futura (422), sem pendente (409),
+- **Ordem das validações.** Propor: parte do serviço (404), combinado (409), data futura (422), data diferente da vigente (422 `DATA_IGUAL_A_VIGENTE`: aceitar uma igual
+  gastaria um dos reagendamentos e abriria a carência sem mudar nada), sem pendente (409),
   limite (409), proposta única após a data vigente (409). Responder e cancelar: existe e é parte (404), papel (403),
   pendente (409 `PROPOSTA_ENCERRADA`), no prazo (409 `PROPOSTA_EXPIRADA`); no aceite ainda vêm o serviço combinado
   (409) e a data futura (422).
@@ -110,7 +114,7 @@ pelo Prestador (ETI-96/97), qualquer mudança de cota, UI.
 |---|---|
 | Empregador ou Prestador escolhido propõem | `ProporReagendamentoUseCase`; demais recebem 404. |
 | Serviço combinado | `PUBLICADO` com `ESCOLHIDA`; senão 409 `SERVICO_ESTADO_INVALIDO`. |
-| Data e justificativa obrigatórias | `@NotNull` e `@NotBlank` (400 `VALIDACAO_FALHOU`); data no passado, 422 `DATA_NO_PASSADO`. |
+| Data e justificativa obrigatórias, justificativa até 600 caracteres | `@NotNull`, `@NotBlank` e `@Size(max = 600)` (400 `VALIDACAO_FALHOU`); data no passado, 422 `DATA_NO_PASSADO`. |
 | Uma proposta pendente por serviço | 409 `PROPOSTA_PENDENTE_EXISTENTE`, e índice único parcial. |
 | Limite de reagendamentos aceitos | 409 `LIMITE_REAGENDAMENTOS`. |
 | Uma única proposta depois da data vigente | 409 `REAGENDAMENTO_NAO_PERMITIDO`. |
@@ -125,7 +129,7 @@ pelo Prestador (ETI-96/97), qualquer mudança de cota, UI.
 
 ## Contrato da API
 
-Erros novos em `CodigoErro`: `REAGENDAMENTO_NAO_ENCONTRADO` (404), `PROPOSTA_PENDENTE_EXISTENTE`,
+Erros novos em `CodigoErro`: `DATA_IGUAL_A_VIGENTE` (422), `REAGENDAMENTO_NAO_ENCONTRADO` (404), `PROPOSTA_PENDENTE_EXISTENTE`,
 `LIMITE_REAGENDAMENTOS`, `REAGENDAMENTO_NAO_PERMITIDO`, `PROPOSTA_EXPIRADA` e `PROPOSTA_ENCERRADA` (409). Reaproveitados:
 `DATA_NO_PASSADO` (422), `SERVICO_ESTADO_INVALIDO` (409), `SERVICO_NAO_ENCONTRADO` (404), `VALIDACAO_FALHOU` (400),
 `ACESSO_NEGADO` (403) e 401 sem token. Uma `decisao` ausente ou inválida é 400 `VALIDACAO_FALHOU`.

@@ -44,6 +44,7 @@ import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
 import com.limio.api.modulos.anuncio.enums.StatusReagendamento;
+import com.limio.api.modulos.anuncio.excecao.DataIgualAVigenteException;
 import com.limio.api.modulos.anuncio.excecao.DataNoPassadoException;
 import com.limio.api.modulos.anuncio.excecao.LimiteReagendamentosException;
 import com.limio.api.modulos.anuncio.excecao.PropostaPendenteExistenteException;
@@ -283,6 +284,34 @@ class ProporReagendamentoUseCaseTest {
         combinado(DATA_VIGENTE);
 
         assertThatThrownBy(() -> propor(CONTRATANTE_ID, AGORA)).isInstanceOf(DataNoPassadoException.class);
+
+        verificarNadaMudou();
+    }
+
+    @Test
+    void dadaNovaDataAntesDoPrazoDeResposta_quandoPropoe_entaoExpiraNaNovaData() {
+        combinado(DATA_VIGENTE);
+        Instant novaData = AGORA.plus(Duration.ofHours(2));
+
+        Reagendamento proposta = propor(CONTRATANTE_ID, novaData);
+
+        assertThat(proposta.getExpiraEm()).isEqualTo(novaData);
+    }
+
+    @Test
+    void dadaNovaDataIgualAoFimDoPrazo_quandoPropoe_entaoExpiraNoPrazo() {
+        combinado(DATA_VIGENTE);
+
+        Reagendamento proposta = propor(CONTRATANTE_ID, AGORA.plus(Duration.ofHours(24)));
+
+        assertThat(proposta.getExpiraEm()).isEqualTo(AGORA.plus(Duration.ofHours(24)));
+    }
+
+    @Test
+    void dadaNovaDataIgualAVigente_quandoPropoe_entao422SemEfeito() {
+        combinado(DATA_VIGENTE);
+
+        assertThatThrownBy(() -> propor(CONTRATANTE_ID, DATA_VIGENTE)).isInstanceOf(DataIgualAVigenteException.class);
 
         verificarNadaMudou();
     }

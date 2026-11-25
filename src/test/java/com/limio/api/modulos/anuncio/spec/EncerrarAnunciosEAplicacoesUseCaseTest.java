@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -30,6 +32,8 @@ import com.limio.api.comum.auditoria.LogAuditoriaService;
 import com.limio.api.comum.auditoria.enums.TipoAcaoAuditoria;
 import com.limio.api.comum.eventos.AvisoDeAnuncioEvent;
 import com.limio.api.comum.eventos.ContaEncerradaEvent;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.actions.usecase.EncerrarAnunciosEAplicacoesUseCase;
@@ -64,12 +68,15 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private TravaTransacional trava;
+
     private EncerrarAnunciosEAplicacoesUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
         useCase = new EncerrarAnunciosEAplicacoesUseCase(anuncioService, aplicacaoService, reagendamentoService,
-                logAuditoriaService, eventPublisher);
+                logAuditoriaService, eventPublisher, trava);
     }
 
     private Anuncio anuncio(StatusAnuncio status, Instant dataHoraPretendida) {
@@ -194,7 +201,9 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
 
         useCase.aoEncerrarConta(new ContaEncerradaEvent(CONTRATANTE_ID, Instant.now()));
 
-        verify(reagendamentoService).encerrarPendentesSemEfeito(eq(List.of(ANUNCIO_ID)), any(Instant.class));
+        InOrder ordem = inOrder(trava, reagendamentoService);
+        ordem.verify(trava).travar(EscopoTrava.ANUNCIO, ANUNCIO_ID.toString());
+        ordem.verify(reagendamentoService).encerrarPendentesSemEfeito(eq(List.of(ANUNCIO_ID)), any(Instant.class));
     }
 
     @Test
@@ -210,6 +219,23 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
         verify(aplicacaoService).salvar(enviada);
         verify(anuncioService, never()).salvar(any());
         verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void dadoCandidaturaEscolhida_quandoPrestadorEncerraConta_entaoTravaOAnuncioAntesDeEscreverEEncerrarPendentes() {
+        Aplicacao escolhida = aplicacao(ANUNCIO_ID, PRESTADOR_ID, StatusAplicacao.ESCOLHIDA);
+        Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO, Instant.now().plus(Duration.ofDays(5)));
+        when(anuncioService.buscarAbertosDoContratante(PRESTADOR_ID)).thenReturn(List.of());
+        when(aplicacaoService.buscarAbertasDoPrestador(PRESTADOR_ID)).thenReturn(List.of(escolhida));
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
+        when(aplicacaoService.buscarAbertasDoAnuncio(ANUNCIO_ID)).thenReturn(List.of());
+
+        useCase.aoEncerrarConta(new ContaEncerradaEvent(PRESTADOR_ID, Instant.now()));
+
+        InOrder ordem = inOrder(trava, aplicacaoService, reagendamentoService);
+        ordem.verify(trava).travar(EscopoTrava.ANUNCIO, ANUNCIO_ID.toString());
+        ordem.verify(aplicacaoService).salvar(escolhida);
+        ordem.verify(reagendamentoService).encerrarPendentesSemEfeito(eq(List.of(ANUNCIO_ID)), any(Instant.class));
     }
 
     @Test

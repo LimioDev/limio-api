@@ -22,6 +22,7 @@ import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
 import com.limio.api.modulos.anuncio.enums.SituacaoCancelamentoServico;
+import com.limio.api.modulos.anuncio.excecao.DataIgualAVigenteException;
 import com.limio.api.modulos.anuncio.excecao.DataNoPassadoException;
 import com.limio.api.modulos.anuncio.excecao.LimiteReagendamentosException;
 import com.limio.api.modulos.anuncio.excecao.PropostaPendenteExistenteException;
@@ -37,8 +38,10 @@ import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
  *
  * <p>"Combinado" é {@code PUBLICADO} com a candidatura {@code ESCOLHIDA}, a mesma regra do cancelamento (ETI-94). A
  * proposta não muda o anúncio: a data vigente ({@code dataHoraPretendida}) só troca no aceite. Ordem das validações:
- * serviço combinado, data futura, nenhuma proposta pendente, limite de reagendamentos ACEITOS (recusadas, canceladas e
- * expiradas não contam) e, se a data vigente já passou, a única proposta permitida nessa situação.
+ * serviço combinado, data futura, data diferente da vigente (aceitar uma igual gastaria um dos reagendamentos e
+ * abriria a carência sem mudar nada), nenhuma proposta pendente, limite de reagendamentos ACEITOS (recusadas, canceladas e
+ * expiradas não contam) e, se a data vigente já passou, a única proposta permitida nessa situação. A proposta expira no
+ * menor entre {@code agora + prazo de resposta} e a nova data: depois dela o aceite não seria mais possível.
  *
  * <p>Ordem de trava do agregado: advisory {@code ANUNCIO} (1ª instrução) e a linha da candidatura {@code FOR UPDATE}.
  * Quem não é parte do serviço recebe 404, igual a um serviço inexistente. O índice único parcial de proposta
@@ -93,26 +96,38 @@ public class ProporReagendamentoUseCase {
         if (!novaDataHora.isAfter(agora)) {
             throw new DataNoPassadoException();
         }
+        Instant dataVigente = anuncio.getDataHoraPretendida();
+        if (novaDataHora.equals(dataVigente)) {
+            throw new DataIgualAVigenteException();
+        }
         if (reagendamentoService.existePendente(anuncioId)) {
             throw new PropostaPendenteExistenteException();
         }
         if (reagendamentoService.contarAceitos(anuncioId) >= limiteReagendamentos) {
             throw new LimiteReagendamentosException();
         }
-        Instant dataVigente = anuncio.getDataHoraPretendida();
         boolean aposDataVigente = !agora.isBefore(dataVigente);
         if (aposDataVigente && reagendamentoService.existePropostaAposDataVigente(anuncioId)) {
             throw new ReagendamentoNaoPermitidoException();
         }
 
         Reagendamento proposta = reagendamentoService.salvar(Reagendamento.propor(anuncioId, usuarioId, dataVigente,
-                novaDataHora, justificativa.strip(), agora.plus(prazoResposta), aposDataVigente));
+                novaDataHora, justificativa.strip(), prazoDaProposta(agora, novaDataHora), aposDataVigente));
 
         registrarAuditoria(proposta, ip);
         eventos.publishEvent(new ReagendamentoPropostoEvent(proposta.getId(), anuncioId, anuncio.getTitulo(),
                 anuncio.getContratanteId(), escolhida.getPrestadorId(), usuarioId, dataVigente, novaDataHora,
                 proposta.getExpiraEm(), agora));
         return proposta;
+    }
+
+    /**
+     * O prazo de resposta da contraparte, limitado à nova data: depois dela o aceite daria 422, então a proposta não
+     * pode seguir pendente (bloqueando nova proposta e a conclusão por silêncio) além desse instante.
+     */
+    private Instant prazoDaProposta(Instant agora, Instant novaDataHora) {
+        Instant fimDoPrazo = agora.plus(prazoResposta);
+        return fimDoPrazo.isBefore(novaDataHora) ? fimDoPrazo : novaDataHora;
     }
 
     /**

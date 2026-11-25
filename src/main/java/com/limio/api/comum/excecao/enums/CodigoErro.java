@@ -56,6 +56,7 @@ public enum CodigoErro {
     PRAZO_CANCELAMENTO_ESGOTADO("O serviço só pode ser cancelado com pelo menos 24 horas de antecedência."),
     REAGENDAMENTO_NAO_ENCONTRADO("Proposta de reagendamento não encontrada."),
     PROPOSTA_PENDENTE_EXISTENTE("Já existe uma proposta de reagendamento aguardando resposta para este serviço."),
+    DATA_IGUAL_A_VIGENTE("A nova data e hora precisam ser diferentes da data e hora atuais do serviço."),
     LIMITE_REAGENDAMENTOS("Este serviço já atingiu o limite de reagendamentos aceitos."),
     REAGENDAMENTO_NAO_PERMITIDO("Com a data do serviço já passada, só é permitida uma proposta de reagendamento."),
     PROPOSTA_EXPIRADA("O prazo para responder a esta proposta de reagendamento terminou."),

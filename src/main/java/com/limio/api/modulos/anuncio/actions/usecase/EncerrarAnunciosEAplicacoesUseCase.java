@@ -22,6 +22,8 @@ import com.limio.api.comum.auditoria.LogAuditoriaService;
 import com.limio.api.comum.auditoria.enums.TipoAcaoAuditoria;
 import com.limio.api.comum.eventos.AvisoDeAnuncioEvent;
 import com.limio.api.comum.eventos.ContaEncerradaEvent;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
@@ -52,17 +54,20 @@ public class EncerrarAnunciosEAplicacoesUseCase {
     private final ReagendamentoService reagendamentoService;
     private final LogAuditoriaService logAuditoriaService;
     private final ApplicationEventPublisher eventPublisher;
+    private final TravaTransacional trava;
 
     public EncerrarAnunciosEAplicacoesUseCase(AnuncioService anuncioService,
             AplicacaoService aplicacaoService,
             ReagendamentoService reagendamentoService,
             LogAuditoriaService logAuditoriaService,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            TravaTransacional trava) {
         this.anuncioService = anuncioService;
         this.aplicacaoService = aplicacaoService;
         this.reagendamentoService = reagendamentoService;
         this.logAuditoriaService = logAuditoriaService;
         this.eventPublisher = eventPublisher;
+        this.trava = trava;
     }
 
     // REQUIRES_NEW: no AFTER_COMMIT já não há transação ativa pra participar (a de auth já comitou) —
@@ -81,9 +86,9 @@ public class EncerrarAnunciosEAplicacoesUseCase {
     }
 
     /**
-     * Anúncios abertos do contratante que saiu: busca candidaturas e
-     * reagendamentos pendentes em lote (1 query cada pra todos os anúncios,
-     * em vez de 2 por anúncio) e só então processa anúncio por anúncio.
+     * Anúncios abertos do contratante que saiu: busca as candidaturas em lote (1 query pra todos os
+     * anúncios, em vez de 1 por anúncio) e só então processa anúncio por anúncio. Os reagendamentos
+     * pendentes são lidos por anúncio, sob a trava dele (ver {@link #travarAnuncio}).
      */
     private void encerrarAnunciosDoContratante(UUID usuarioId, Instant agora) {
         List<Anuncio> anuncios = anuncioService.buscarAbertosDoContratante(usuarioId);
@@ -95,7 +100,6 @@ public class EncerrarAnunciosEAplicacoesUseCase {
         Map<UUID, List<Aplicacao>> candidaturasPorAnuncio = aplicacaoService.buscarAbertasDosAnuncios(anuncioIds)
                 .stream()
                 .collect(Collectors.groupingBy(Aplicacao::getAnuncioId));
-        reagendamentoService.encerrarPendentesSemEfeito(anuncioIds, agora);
 
         for (Anuncio anuncio : anuncios) {
             List<Aplicacao> candidaturasAbertas = candidaturasPorAnuncio.getOrDefault(anuncio.getId(), List.of());
@@ -106,10 +110,12 @@ public class EncerrarAnunciosEAplicacoesUseCase {
 
     /** Anúncio do contratante que saiu: encerra e encerra/avisa toda candidatura aberta (não só a escolhida). */
     private void encerrarAnuncioDoContratante(Anuncio anuncio, List<Aplicacao> candidaturasAbertas, Instant agora) {
+        travarAnuncio(anuncio.getId());
         boolean combinadoProximo = anuncio.estaAMenosDe(JANELA_COMBINADO_PROXIMO, agora);
 
         anuncio.encerrarPorExclusaoDeConta(agora);
         anuncioService.salvar(anuncio);
+        reagendamentoService.encerrarPendentesSemEfeito(List.of(anuncio.getId()), agora);
 
         for (Aplicacao aplicacao : candidaturasAbertas) {
             aplicacao.encerrar(agora, MOTIVO_SAIDA_DE_CONTA);
@@ -129,6 +135,10 @@ public class EncerrarAnunciosEAplicacoesUseCase {
      */
     private void encerrarAplicacaoDoPrestador(Aplicacao aplicacao, Instant agora) {
         boolean fechaAnuncio = fechaAnuncioLigado(aplicacao.getStatus());
+        if (fechaAnuncio) {
+            // antes de qualquer escrita: propor/responder tomam a trava e depois a linha da candidatura
+            travarAnuncio(aplicacao.getAnuncioId());
+        }
 
         aplicacao.encerrar(agora, MOTIVO_SAIDA_DE_CONTA);
         aplicacaoService.salvar(aplicacao);
@@ -164,6 +174,16 @@ public class EncerrarAnunciosEAplicacoesUseCase {
         }
 
         avisarEncerramento(anuncio.getContratanteId(), anuncio.getId(), combinadoProximo, agora, "Candidatura encerrada");
+    }
+
+    /**
+     * Mesma trava {@code ANUNCIO} que propor, responder, cancelar e os demais fluxos de reagendamento tomam como
+     * primeira instrução: sem ela, um aceite concorrente seria sobrescrito por {@code SEM_EFEITO} (não há
+     * {@code @Version}) e uma proposta nova poderia sobrar pendente num anúncio já encerrado. É tomada por item, antes
+     * de reler as pendentes, e solta no fim da transação do listener.
+     */
+    private void travarAnuncio(UUID anuncioId) {
+        trava.travar(EscopoTrava.ANUNCIO, anuncioId.toString());
     }
 
     private static boolean fechaAnuncioLigado(StatusAplicacao status) {

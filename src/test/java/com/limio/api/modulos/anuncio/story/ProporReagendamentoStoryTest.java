@@ -302,6 +302,18 @@ class ProporReagendamentoStoryTest {
     // ---------------------------------------------------------------- validação da proposta
 
     @Test
+    void dadaNovaDataIgualAVigente_quandoPropoe_entao422SemEfeito() throws Exception {
+        Anuncio anuncio = combinado(Duration.ofDays(3));
+        Instant dataVigente = recarregar(anuncio).getDataHoraPretendida();
+
+        propor(logar("maria@example.com"), anuncio.getId(), corpo(dataVigente, JUSTIFICATIVA))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.codigo", is("DATA_IGUAL_A_VIGENTE")));
+
+        verificarNadaMudou(anuncio, 0);
+    }
+
+    @Test
     void dadaNovaDataNoPassado_quandoPropoe_entao422SemEfeito() throws Exception {
         Anuncio anuncio = combinado(Duration.ofDays(3));
 
@@ -326,6 +338,21 @@ class ProporReagendamentoStoryTest {
                 .andExpect(jsonPath("$.codigo", is("VALIDACAO_FALHOU")));
 
         verificarNadaMudou(anuncio, 0);
+    }
+
+    @Test
+    void dadaJustificativaMaiorQue600Caracteres_quandoPropoe_entao400SemEfeito() throws Exception {
+        Anuncio anuncio = combinado(Duration.ofDays(3));
+        String token = logar("maria@example.com");
+        Instant novaData = agora.plus(Duration.ofDays(5));
+
+        propor(token, anuncio.getId(), corpo(novaData, "x".repeat(601)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo", is("VALIDACAO_FALHOU")));
+        verificarNadaMudou(anuncio, 0);
+
+        propor(token, anuncio.getId(), corpo(novaData, "x".repeat(600)))
+                .andExpect(status().isOk());
     }
 
     @Test
