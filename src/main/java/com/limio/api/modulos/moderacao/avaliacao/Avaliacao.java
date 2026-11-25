@@ -18,7 +18,8 @@ import lombok.NoArgsConstructor;
 /**
  * Nota (e comentário opcional) que uma das partes deu à outra num serviço concluído (ETI-107). {@code anuncioId},
  * {@code avaliadorId} e {@code avaliadoId} são UUID crus, nunca relação JPA para entidades de outros módulos
- * (ADR-0001 §1.6). Imutável depois de publicada: não há edição de avaliação.
+ * (ADR-0001 §1.6). Imutável depois de publicada: não há edição de avaliação. A moderação só pode ocultá-la
+ * (ETI-116).
  */
 @Entity
 @Table(name = "avaliacao")
@@ -53,6 +54,14 @@ public class Avaliacao extends BaseEntity {
     @Column(name = "publicada_em", nullable = false, updatable = false)
     private Instant publicadaEm;
 
+    /** Ocultada pela moderação (ETI-116): sai do perfil e da média, mas a linha fica. */
+    @Column(name = "oculta_em")
+    private Instant ocultaEm;
+
+    /** Administrador que ocultou. */
+    @Column(name = "oculta_por")
+    private UUID ocultaPor;
+
     private Avaliacao(UUID anuncioId, UUID avaliadorId, UUID avaliadoId, PapelUsuario papelAvaliado, int nota,
             String comentario, Instant publicadaEm) {
         this.anuncioId = anuncioId;
@@ -68,5 +77,15 @@ public class Avaliacao extends BaseEntity {
     public static Avaliacao publicar(UUID anuncioId, UUID avaliadorId, UUID avaliadoId, PapelUsuario papelAvaliado,
             int nota, String comentario, Instant agora) {
         return new Avaliacao(anuncioId, avaliadorId, avaliadoId, papelAvaliado, nota, comentario, agora);
+    }
+
+    public boolean isOculta() {
+        return ocultaEm != null;
+    }
+
+    /** Decisão de moderação (ETI-116). A nota e o comentário continuam como foram publicados. */
+    public void ocultar(Instant agora, UUID administradorId) {
+        this.ocultaEm = agora;
+        this.ocultaPor = administradorId;
     }
 }

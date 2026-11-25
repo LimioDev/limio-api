@@ -2,6 +2,7 @@ package com.limio.api.modulos.moderacao.avaliacao;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.hibernate.exception.ConstraintViolationException;
@@ -25,6 +26,10 @@ public class AvaliacaoService extends BaseService<Avaliacao, UUID, AvaliacaoRepo
     public AvaliacaoService(AvaliacaoRepository repository, TravaTransacional travaTransacional) {
         super(repository);
         this.travaTransacional = travaTransacional;
+    }
+
+    public Optional<Avaliacao> buscarPorId(UUID id) {
+        return repository.findById(id);
     }
 
     public boolean jaAvaliou(UUID anuncioId, UUID avaliadorId) {
@@ -57,7 +62,7 @@ public class AvaliacaoService extends BaseService<Avaliacao, UUID, AvaliacaoRepo
 
     /** Média com uma casa decimal (arredondamento comercial), do jeito que o perfil guarda. */
     public AvaliacoesRecebidas recalcular(UUID avaliadoId, PapelUsuario papel) {
-        int qtd = Math.toIntExact(repository.countByAvaliadoIdAndPapelAvaliado(avaliadoId, papel));
+        int qtd = Math.toIntExact(repository.countByAvaliadoIdAndPapelAvaliadoAndOcultaEmIsNull(avaliadoId, papel));
         Double media = repository.mediaDasNotas(avaliadoId, papel);
         return new AvaliacoesRecebidas(arredondar(media), qtd);
     }

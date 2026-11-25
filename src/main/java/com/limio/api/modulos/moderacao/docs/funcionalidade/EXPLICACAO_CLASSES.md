@@ -27,11 +27,31 @@ publica `AvaliacaoPublicadaEvent` → no `perfil`, `RegistrarMediaAvaliacoesUseC
 por `ImagemHelper`, vai pro storage, publica `EvidenciaDenunciaEnviadaEvent` e vira `Midia.evidenciaDenuncia`;
 `Denuncia.registrar` + `DenunciaService.salvarAgora`) → `DenunciaMapper.toResponse` → `DenunciaRegistradaResponse`.
 
+**`GET /admin/denuncias` (ETI-116, só administrador)**
+`ModeracaoAdminController.listarFila` → `ListarFilaDeDenunciasUseCase` (motivos do filtro, com `Severidade.motivos()`;
+`DenunciaService.buscarAbertas` ordenado por prazo; nomes por `ConsultaContasParaModeracao`) → `ItemDaFila` →
+`ModeracaoAdminMapper` → `PageResponse<FilaDenunciaItemResponse>`.
+
+**`GET /admin/denuncias/{id}` (ETI-116)**
+`ModeracaoAdminController.analisar` → `AnalisarDenunciaUseCase` (`ConsultaServico` para o título e o tipo do alvo;
+`ConsultaContasParaModeracao`; evidência e fotos do check-out por `MidiaService` + `ArmazenamentoService`; chat por
+`ConsultaChat.listarMensagensOriginais`/`listarMensagensOriginaisDoServico`; histórico por
+`DenunciaService.buscarOutrasContraODenunciado` e `DecisaoModeracaoService.buscarSancoesDoUsuario`) →
+`AnaliseDaDenuncia` → `ModeracaoAdminMapper` → `AnaliseDenunciaResponse`.
+
+**`POST /admin/denuncias/{id}/decisao` (ETI-116)**
+`ModeracaoAdminController.decidir` (`DecidirDenunciaRequest` validado; `ModeracaoAdminMapper.toPedido`) →
+`DecidirDenunciaUseCase` (trava a denúncia; 409 se já decidida; coerência do pedido; `DecisaoModeracao.registrar` +
+`Denuncia.resolver`; sanção: `ADVERTENCIA` só grava, `OCULTAR_AVALIACAO` oculta e publica `AvaliacaoOcultadaEvent`,
+`SUSPENSAO` publica `ContaSuspensaEvent`, `ENCERRAMENTO_DE_CONTA` publica `EncerramentoDeContaDecididoEvent`;
+`FotoPerfilRemovidaPelaModeracaoEvent` se pedido; `LogAuditoria` `DENUNCIA_DECIDIDA`) → `DenunciaDecidida` →
+`ModeracaoAdminMapper` → `DenunciaDecididaResponse`.
+
 ## Classes
 
 | Classe | Papel |
 |---|---|
-| `avaliacao/Avaliacao` | Entity da tabela `avaliacao`. Imutável depois de publicada; `publicar(...)` é a única forma de criar. |
+| `avaliacao/Avaliacao` | Entity da tabela `avaliacao`. Imutável depois de publicada; `publicar(...)` é a única forma de criar. A moderação só a oculta (`ocultar`, ETI-116). |
 | `avaliacao/AvaliacaoRepository` | Duplicata por anúncio e avaliador, contagem e média por avaliado e papel. |
 | `avaliacao/AvaliacaoService` | Persistência: `salvarNova` (índice único vira `AvaliacaoDuplicadaException`), `travarRecebidas` (advisory lock) e `recalcular`. |
 | `avaliacao/AvaliacoesRecebidas` | Total de um usuário num papel: média com uma casa e quantidade. |
@@ -41,12 +61,22 @@ por `ImagemHelper`, vai pro storage, publica `EvidenciaDenunciaEnviadaEvent` e v
 | `actions/usecase/AvaliarUseCase` | Regras do UC "Avaliar a outra parte" e publicação do evento com o total. |
 | `actions/controller/AvaliacaoController` | As duas rotas. Sem checagem de papel: o acesso é ser uma das partes. |
 | `actions/mapper/AvaliacaoMapper` | `AvaliacaoPendente` e `Avaliacao` para os records de resposta. |
-| `excecao/*` | Uma por cenário: `AlvoNaoAcessivel` (404, denúncia), `ServicoNaoEncontrado` (404), `ServicoNaoConcluido`, `JanelaAvaliacaoEncerrada` e `AvaliacaoDuplicada` (409), `ComentarioSemNota` e `NotaObrigatoria` (400). |
+| `excecao/*` | Uma por cenário: `DenunciaNaoEncontrada` (404), `DenunciaJaResolvida` (409) e `DecisaoInvalida` (400) da decisão; `AlvoNaoAcessivel` (404, denúncia), `ServicoNaoEncontrado` (404), `ServicoNaoConcluido`, `JanelaAvaliacaoEncerrada` e `AvaliacaoDuplicada` (409), `ComentarioSemNota` e `NotaObrigatoria` (400). |
 | `actions/service/ConsultaAvaliacoesService` | Implementa `comum/portas/ConsultaAvaliacoes` (ETI-105): resumo em lote e avaliações recentes, lidas direto de `Avaliacao`. |
 | `denuncia/Denuncia` | Entity da tabela `denuncia`. `registrar(...)` é a única forma de criar; `numero` vem do banco. |
 | `denuncia/AlvoDenuncia` | Denunciado e contexto (anúncio, candidatura, mensagem), como o cliente mandou ou já resolvido. |
 | `denuncia/DenunciaRepository`, `denuncia/DenunciaService` | Persistência; `salvarAgora` faz o flush pra o `numero` sair na resposta; `buscarEmAbertoIgual` acha a mesma denúncia ainda em aberto (`Denuncia.repete`). |
-| `enums/MotivoDenuncia`, `enums/StatusResolucao` | Os cinco motivos da tela 46 e o andamento da denúncia (só `ABERTA` por enquanto). |
+| `enums/MotivoDenuncia`, `enums/StatusResolucao` | Os cinco motivos da tela 46 e o andamento da denúncia (`ABERTA`, `PROCEDENTE`, `IMPROCEDENTE`). |
+| `denuncia/DecisaoModeracao`, `denuncia/Sancao` | Entities das tabelas `decisao_moderacao` e `sancao` (ETI-116). Imutáveis; `registrar` e `aplicar` são a única forma de criar. |
+| `denuncia/DecisaoModeracaoService` | Persistência da decisão e das sanções dela; histórico de sanções do usuário. |
+| `enums/VereditoModeracao`, `enums/TipoSancao` | Veredito do administrador e os quatro tipos de sanção. |
+| `enums/Severidade` | Severidade da fila, deduzida do motivo. |
+| `enums/TipoAlvoDenuncia` | O que foi denunciado, deduzido do contexto gravado. |
+| `ItemDaFila`, `AnaliseDaDenuncia`, `PedidoDeDecisao`, `DenunciaDecidida` | Tipos de domínio da fila, da análise e da decisão, antes do contrato HTTP. |
+| `actions/usecase/ListarFilaDeDenunciasUseCase`, `AnalisarDenunciaUseCase`, `DecidirDenunciaUseCase` | Fila, análise e decisão do administrador (ETI-116). |
+| `actions/controller/ModeracaoAdminController` | `/admin/denuncias/**`, só administrador (regra no `SecurityConfig`). |
+| `actions/mapper/ModeracaoAdminMapper` | Domínio ↔ records da fila, da análise e da decisão. |
+| `actions/service/ConsultaTotaisDeDenunciasService` | Implementa `ConsultaTotaisDeDenuncias` (dashboard, ETI-117). |
 | `actions/usecase/RegistrarDenunciaUseCase` | Regras do UC "Registrar denúncia": quem pode denunciar o quê, evidência e prazo de análise. |
 | `actions/controller/DenunciaController` | `POST /denuncias`, `multipart/form-data`. Sem checagem de papel: o acesso é decidido pelo alvo. |
 | `actions/mapper/DenunciaMapper` | Request para `AlvoDenuncia` e `Denuncia` para a resposta. |

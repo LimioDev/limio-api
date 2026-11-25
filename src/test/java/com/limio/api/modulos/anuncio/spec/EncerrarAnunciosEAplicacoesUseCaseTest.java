@@ -30,6 +30,7 @@ import com.limio.api.comum.auditoria.LogAuditoriaService;
 import com.limio.api.comum.auditoria.enums.TipoAcaoAuditoria;
 import com.limio.api.comum.eventos.AvisoDeAnuncioEvent;
 import com.limio.api.comum.eventos.ContaEncerradaEvent;
+import com.limio.api.comum.eventos.ContaSuspensaEvent;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.actions.usecase.EncerrarAnunciosEAplicacoesUseCase;
@@ -109,6 +110,22 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
         assertThat(anuncio.getEncerradoEm()).isNotNull();
         verify(anuncioService).salvar(anuncio);
         verifyNoInteractions(eventPublisher, logAuditoriaService);
+    }
+
+    @Test
+    void dadoAnuncioAberto_quandoContaDoContratanteESuspensa_entaoEncerraComOMotivoDaSuspensao() {
+        Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO, Instant.now().plus(Duration.ofDays(10)));
+        Aplicacao enviada = aplicacao(ANUNCIO_ID, UUID.randomUUID(), StatusAplicacao.ENVIADA);
+        when(anuncioService.buscarAbertosDoContratante(CONTRATANTE_ID)).thenReturn(List.of(anuncio));
+        when(aplicacaoService.buscarAbertasDoPrestador(CONTRATANTE_ID)).thenReturn(List.of());
+        when(aplicacaoService.buscarAbertasDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of(enviada));
+
+        useCase.aoSuspenderConta(new ContaSuspensaEvent(CONTRATANTE_ID, Instant.now().plus(Duration.ofDays(7)),
+                Instant.now()));
+
+        assertThat(anuncio.getStatus()).isEqualTo(StatusAnuncio.ENCERRADO);
+        assertThat(anuncio.getMotivoEncerramento()).isEqualTo("Cancelado por suspensão de conta");
+        assertThat(enviada.getMotivoEncerramento()).isEqualTo("Cancelado por suspensão de conta");
     }
 
     @Test

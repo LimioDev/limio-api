@@ -83,3 +83,9 @@ leitura. Ver `moderacao/docs/features/ETI-114-registrar-denuncia.md`.
 - `ChatController` deixou de ser "sem checagem de papel" só nesta rota: a lista segue o papel do token.
 - **Merge com a develop (ETI-136):** `outraParte.usuarioId` também na lista, pelo mesmo `OutraParte` de domínio do
   chat; conta encerrada mantém o id.
+
+## 2026-11-22 — ETI-116 (decisão de denúncia, em `moderacao`)
+
+`ConsultaChat` ganhou `listarMensagensOriginais(candidaturaId)` e `listarMensagensOriginaisDoServico(anuncioId,
+prestadorId)`, com o `texto` original (não o `textoExibido`), só para a análise de denúncia do administrador. Detalhe em
+`moderacao/docs/features/ETI-116-analisar-denuncia-e-aplicar-sancao.md`.

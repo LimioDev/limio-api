@@ -393,9 +393,23 @@ Prestador, só pro Empregador (regra do `gold`), pela `ConsultaAvaliacoes`: fech
 candidaturas e escolhas (`escolhida_em` preenchido, mesmo que a candidatura tenha sido encerrada depois) para o
 dashboard do administrador. Detalhe em `administracao/docs/features/ETI-117-dashboard-administrativo.md`.
 
+## 2026-11-22 — ETI-116 (decisão de denúncia, em `moderacao`)
+
+`EncerrarAnunciosEAplicacoesUseCase.aoSuspenderConta` escuta `ContaSuspensaEvent` depois do commit e encerra os
+compromissos abertos pelo mesmo fluxo da saída de conta (inclusive reagendamentos pendentes), com o motivo "Cancelado
+por suspensão de conta". Detalhe em `moderacao/docs/features/ETI-116-analisar-denuncia-e-aplicar-sancao.md`.
+
 ## 2026-11-25 — ETI-114 (review da PR #48): `ConsultaServico.buscarPartes`
 
 `ConsultaServicoService` ganhou `buscarPartes` (`PartesAnuncio` em `comum/portas`) para a denúncia de `moderacao`.
 Diferente de `buscarPorId`, que mostra o Prestador só enquanto o serviço está de pé, o escolhido vem de
 `escolhidaEm` (permanente) e por isso aparece também com o serviço cancelado ou o anúncio encerrado; `noMural` diz se
 o anúncio ainda está `PUBLICADO`.
+
+## 2026-11-25 — ETI-116 (review da PR #53): motivo da suspensão no anúncio
+
+`Anuncio.encerrarPorSuspensaoDeConta` grava "Cancelado por suspensão de conta" (antes, o anúncio encerrado pela
+suspensão ficava com "Cancelado por saída de conta", e só a candidatura tinha o motivo certo).
+`EncerrarAnunciosEAplicacoesUseCase` troca o `String motivo` por um enum interno `Saida`, que escolhe o motivo da
+candidatura e o método do anúncio. `ConsultaServicoService.buscarPartes` passou a trazer `escolhidoEm`, para a análise
+da denúncia saber o que era o anúncio na hora em que foi denunciado.

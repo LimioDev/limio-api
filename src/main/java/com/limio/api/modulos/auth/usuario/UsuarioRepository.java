@@ -1,5 +1,7 @@
 package com.limio.api.modulos.auth.usuario;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -8,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.limio.api.comum.base.BaseRepository;
+import com.limio.api.modulos.auth.usuario.enums.StatusConta;
 
 import jakarta.persistence.LockModeType;
 
@@ -24,6 +27,11 @@ public interface UsuarioRepository extends BaseRepository<Usuario, UUID> {
     boolean existsByCpf(String cpf);
 
     long countByAnonimizadoEmIsNull();
+
+    /** Só os ids: a rotina trava e relê cada conta na transação dela. A conta encerrada fica de fora. */
+    @Query("select u.id from Usuario u where u.statusConta = :status and u.suspensaAte <= :limite"
+            + " and u.anonimizadoEm is null")
+    List<UUID> findIdsComSuspensaoVencida(@Param("status") StatusConta status, @Param("limite") Instant limite);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from Usuario u where u.id = :id")

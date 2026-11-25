@@ -54,7 +54,8 @@ public class ConsultaAvaliacoesService implements ConsultaAvaliacoes {
     @Transactional(readOnly = true)
     public List<AvaliacaoRecente> listarRecentes(UUID avaliadoId, PapelUsuario papel, int limite) {
         List<Avaliacao> avaliacoes = avaliacaoRepository
-                .findByAvaliadoIdAndPapelAvaliadoOrderByPublicadaEmDesc(avaliadoId, papel, PageRequest.of(0, limite));
+                .findByAvaliadoIdAndPapelAvaliadoAndOcultaEmIsNullOrderByPublicadaEmDesc(avaliadoId, papel,
+                        PageRequest.of(0, limite));
         Map<UUID, DadosUsuario> avaliadores = consultaDadosUsuario
                 .buscarPorIds(avaliacoes.stream().map(Avaliacao::getAvaliadorId).toList());
         return avaliacoes.stream().map(avaliacao -> toRecente(avaliacao, avaliadores)).toList();

@@ -1,6 +1,7 @@
 package com.limio.api.comum.portas;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,4 +26,18 @@ public interface ConsultaChat {
      * @return o resumo, ou vazio se a mensagem não existe
      */
     Optional<ResumoMensagem> buscarMensagem(UUID mensagemId);
+
+    /**
+     * Todas as mensagens do chat de uma candidatura, da mais antiga para a mais recente, com o texto original (hoje a
+     * análise de denúncia do administrador, ETI-116).
+     *
+     * @return vazio se a candidatura não tem chat
+     */
+    List<MensagemOriginal> listarMensagensOriginais(UUID candidaturaId);
+
+    /**
+     * Mesmo que {@link #listarMensagensOriginais(UUID)}, para a denúncia de um serviço, que guarda o anúncio e não a
+     * candidatura: as conversas do Prestador nesse anúncio, da mais antiga para a mais recente.
+     */
+    List<MensagemOriginal> listarMensagensOriginaisDoServico(UUID anuncioId, UUID prestadorId);
 }

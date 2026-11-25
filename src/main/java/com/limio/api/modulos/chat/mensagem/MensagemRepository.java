@@ -15,6 +15,8 @@ public interface MensagemRepository extends BaseRepository<Mensagem, UUID> {
 
     Slice<Mensagem> findByChatIdOrderByDataEnvioDescIdDesc(UUID chatId, Pageable pagina);
 
+    List<Mensagem> findByChatIdOrderByDataEnvioAscIdAsc(UUID chatId);
+
     /**
      * Mensagens mais antigas que {@code antesDe}, pela posição dela ({@code dataEnvio}, {@code id}) e não por número de
      * página: mensagem nova chegando no meio da rolagem não repete nem pula nada. Referência de outro chat devolve

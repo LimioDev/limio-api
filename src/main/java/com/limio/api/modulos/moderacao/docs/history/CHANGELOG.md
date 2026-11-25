@@ -31,6 +31,14 @@ admin (US58). Não toca no serviço. Detalhe em `../features/ETI-114-registrar-d
 o mesmo número do título da fila, para o dashboard do administrador. Detalhe em
 `administracao/docs/features/ETI-117-dashboard-administrativo.md`.
 
+## 2026-11-22 — ETI-116: fila, análise e decisão do administrador
+
+`DecisaoModeracao` e `Sancao` entram na subentidade `denuncia/` (V43). A denúncia ganha `analisada_em` e sai da fila
+como `PROCEDENTE` ou `IMPROCEDENTE`, e a avaliação ganha `oculta_em`/`oculta_por`. Rotas em `/admin/denuncias`, só do
+administrador (token do ETI-117). As quatro sanções são aceitas, mesmo as que o painel v1 não mostra. Suspensão,
+encerramento de conta, remoção da foto e nova média saem por evento para `auth`, `anuncio` e `perfil`. Avaliação oculta
+deixou de contar em todas as consultas de avaliação. Detalhe em `../features/ETI-116-analisar-denuncia-e-aplicar-sancao.md`.
+
 ## 2026-11-25 — ETI-114 (review da PR #48): denúncia por anúncio encerrado e denúncia repetida
 
 - **Anúncio que já teve escolhido segue entre as partes.** Antes, "sem Prestador escolhido" vinha de
@@ -42,3 +50,14 @@ o mesmo número do título da fila, para o dashboard do administrador. Detalhe e
 - **Denúncia repetida não vira outra.** Mesmo denunciante, mesmo alvo (denunciado e contexto) e mesmo motivo com uma
   denúncia ainda em aberto devolvem a existente, sem gravar nem enviar foto. A trava `EscopoTrava.DENUNCIA` por
   denunciante cobre dois envios simultâneos (toque duplo). Limite de denúncias diferentes por par fica com o PO.
+
+## 2026-11-25 — ETI-116 (review da PR #53): início e ciclo de vida da suspensão
+
+- **A suspensão começa na decisão.** `DecidirDenunciaUseCase` recusa `inicioEm` no futuro (5 min de tolerância para o
+  relógio do navegador) e grava na `Sancao` o instante da decisão como início. Antes, uma suspensão marcada para a
+  semana seguinte bloqueava a conta na hora e a sanção registrava outro período. O usecase passou a usar o `Clock`.
+- **Tipo do alvo e chat da análise na hora da denúncia.** `AnalisarDenunciaUseCase` usa `ConsultaServico.buscarPartes`
+  (`PartesAnuncio` ganhou `escolhidoEm`): `SERVICO` só se a escolha já tinha acontecido quando a denúncia foi feita.
+- **`StatusResolucao.isEmAberto`** (do ETI-114) trata `PROCEDENTE` e `IMPROCEDENTE` como fechadas, e
+  `Denuncia.isAberta` usa a mesma regra.
+- Do lado de `auth` e `anuncio`: ver os CHANGELOGs desses módulos.

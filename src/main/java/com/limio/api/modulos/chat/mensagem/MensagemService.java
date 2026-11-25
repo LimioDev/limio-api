@@ -24,6 +24,11 @@ public class MensagemService extends BaseService<Mensagem, UUID, MensagemReposit
         return repository.findById(mensagemId);
     }
 
+    /** A conversa inteira, da mais antiga para a mais recente (análise de denúncia, ETI-116). */
+    public List<Mensagem> buscarTodasDoChat(UUID chatId) {
+        return repository.findByChatIdOrderByDataEnvioAscIdAsc(chatId);
+    }
+
     /**
      * Uma página do histórico, da mais nova para a mais antiga: as mais recentes sem {@code antesDe}, ou as anteriores
      * à mensagem {@code antesDe}.

@@ -22,6 +22,7 @@ import com.limio.api.comum.auditoria.LogAuditoriaService;
 import com.limio.api.comum.auditoria.enums.TipoAcaoAuditoria;
 import com.limio.api.comum.eventos.AvisoDeAnuncioEvent;
 import com.limio.api.comum.eventos.ContaEncerradaEvent;
+import com.limio.api.comum.eventos.ContaSuspensaEvent;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
@@ -46,7 +47,25 @@ public class EncerrarAnunciosEAplicacoesUseCase {
     private static final Logger log = LoggerFactory.getLogger(EncerrarAnunciosEAplicacoesUseCase.class);
 
     private static final Duration JANELA_COMBINADO_PROXIMO = Duration.ofHours(24);
-    private static final String MOTIVO_SAIDA_DE_CONTA = "Cancelado por saída de conta";
+
+    /** Por que a conta saiu: muda o motivo gravado no anúncio e nas candidaturas. */
+    private enum Saida {
+        ENCERRAMENTO("Cancelado por saída de conta"),
+        SUSPENSAO("Cancelado por suspensão de conta");
+
+        private final String motivo;
+
+        Saida(String motivo) {
+            this.motivo = motivo;
+        }
+
+        void encerrar(Anuncio anuncio, Instant agora) {
+            switch (this) {
+                case ENCERRAMENTO -> anuncio.encerrarPorExclusaoDeConta(agora);
+                case SUSPENSAO -> anuncio.encerrarPorSuspensaoDeConta(agora);
+            }
+        }
+    }
 
     private final AnuncioService anuncioService;
     private final AplicacaoService aplicacaoService;
@@ -71,14 +90,27 @@ public class EncerrarAnunciosEAplicacoesUseCase {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void aoEncerrarConta(ContaEncerradaEvent evento) {
-        Instant agora = Instant.now();
-        UUID usuarioId = evento.usuarioId();
+        encerrarCompromissos(evento.usuarioId(), Saida.ENCERRAMENTO);
+    }
 
-        encerrarAnunciosDoContratante(usuarioId, agora);
+    /**
+     * ETI-116: a moderação suspendeu a conta. Os compromissos abertos encerram como na saída de conta, inclusive as
+     * propostas de reagendamento pendentes; só o motivo gravado no anúncio e na candidatura muda.
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void aoSuspenderConta(ContaSuspensaEvent evento) {
+        encerrarCompromissos(evento.usuarioId(), Saida.SUSPENSAO);
+    }
+
+    private void encerrarCompromissos(UUID usuarioId, Saida saida) {
+        Instant agora = Instant.now();
+
+        encerrarAnunciosDoContratante(usuarioId, saida, agora);
 
         aplicacaoService.buscarAbertasDoPrestador(usuarioId)
                 .forEach(aplicacao -> processarComIsolamento("Aplicacao", aplicacao.getId(),
-                        () -> encerrarAplicacaoDoPrestador(aplicacao, agora)));
+                        () -> encerrarAplicacaoDoPrestador(aplicacao, saida, agora)));
     }
 
     /**
@@ -86,7 +118,7 @@ public class EncerrarAnunciosEAplicacoesUseCase {
      * reagendamentos pendentes em lote (1 query cada pra todos os anúncios,
      * em vez de 2 por anúncio) e só então processa anúncio por anúncio.
      */
-    private void encerrarAnunciosDoContratante(UUID usuarioId, Instant agora) {
+    private void encerrarAnunciosDoContratante(UUID usuarioId, Saida saida, Instant agora) {
         List<Anuncio> anuncios = anuncioService.buscarAbertosDoContratante(usuarioId);
         if (anuncios.isEmpty()) {
             return;
@@ -101,19 +133,20 @@ public class EncerrarAnunciosEAplicacoesUseCase {
         for (Anuncio anuncio : anuncios) {
             List<Aplicacao> candidaturasAbertas = candidaturasPorAnuncio.getOrDefault(anuncio.getId(), List.of());
             processarComIsolamento("Anuncio", anuncio.getId(),
-                    () -> encerrarAnuncioDoContratante(anuncio, candidaturasAbertas, agora));
+                    () -> encerrarAnuncioDoContratante(anuncio, candidaturasAbertas, saida, agora));
         }
     }
 
     /** Anúncio do contratante que saiu: encerra e encerra/avisa toda candidatura aberta (não só a escolhida). */
-    private void encerrarAnuncioDoContratante(Anuncio anuncio, List<Aplicacao> candidaturasAbertas, Instant agora) {
+    private void encerrarAnuncioDoContratante(Anuncio anuncio, List<Aplicacao> candidaturasAbertas, Saida saida,
+            Instant agora) {
         boolean combinadoProximo = anuncio.estaAMenosDe(JANELA_COMBINADO_PROXIMO, agora);
 
-        anuncio.encerrarPorExclusaoDeConta(agora);
+        saida.encerrar(anuncio, agora);
         anuncioService.salvar(anuncio);
 
         for (Aplicacao aplicacao : candidaturasAbertas) {
-            aplicacao.encerrar(agora, MOTIVO_SAIDA_DE_CONTA);
+            aplicacao.encerrar(agora, saida.motivo);
             aplicacaoService.salvar(aplicacao);
             avisarEncerramento(aplicacao.getPrestadorId(), anuncio.getId(), combinadoProximo, agora, "Anúncio encerrado");
         }
@@ -128,10 +161,10 @@ public class EncerrarAnunciosEAplicacoesUseCase {
      * "impossibilidade operacional" (auditoria + aviso específico); fora
      * dela é só "candidatura encerrada".
      */
-    private void encerrarAplicacaoDoPrestador(Aplicacao aplicacao, Instant agora) {
+    private void encerrarAplicacaoDoPrestador(Aplicacao aplicacao, Saida saida, Instant agora) {
         boolean fechaAnuncio = fechaAnuncioLigado(aplicacao.getStatus());
 
-        aplicacao.encerrar(agora, MOTIVO_SAIDA_DE_CONTA);
+        aplicacao.encerrar(agora, saida.motivo);
         aplicacaoService.salvar(aplicacao);
 
         if (!fechaAnuncio) {
@@ -151,7 +184,7 @@ public class EncerrarAnunciosEAplicacoesUseCase {
         }
         boolean combinadoProximo = anuncio.estaAMenosDe(JANELA_COMBINADO_PROXIMO, agora);
 
-        anuncio.encerrarPorExclusaoDeConta(agora);
+        saida.encerrar(anuncio, agora);
         anuncioService.salvar(anuncio);
         cancelarReagendamentosPendentes(List.of(anuncio.getId()), agora);
 
@@ -159,7 +192,7 @@ public class EncerrarAnunciosEAplicacoesUseCase {
             if (Objects.equals(outra.getId(), aplicacao.getId())) {
                 continue;
             }
-            outra.encerrar(agora, MOTIVO_SAIDA_DE_CONTA);
+            outra.encerrar(agora, saida.motivo);
             aplicacaoService.salvar(outra);
             avisarEncerramento(outra.getPrestadorId(), anuncio.getId(), combinadoProximo, agora, "Candidatura encerrada");
         }

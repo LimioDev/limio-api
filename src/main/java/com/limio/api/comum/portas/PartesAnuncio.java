@@ -1,17 +1,25 @@
 package com.limio.api.comum.portas;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /**
  * Quem está envolvido num anúncio, para decidir quem pode denunciar por ele (ETI-114). {@code escolhidoId} é o
  * Prestador que já foi escolhido alguma vez, mesmo que depois o serviço tenha sido cancelado ou o anúncio encerrado
- * ({@code escolhidaEm} é permanente), e {@code null} se ninguém nunca foi escolhido. {@code noMural} diz se o anúncio
- * ainda está {@code PUBLICADO}.
+ * ({@code escolhidaEm} é permanente), e {@code null} se ninguém nunca foi escolhido. {@code escolhidoEm} é quando a
+ * escolha aconteceu (análise da denúncia, ETI-116: o que era o anúncio na hora em que foi denunciado). {@code noMural}
+ * diz se o anúncio ainda está {@code PUBLICADO}.
  */
-public record PartesAnuncio(UUID anuncioId, UUID contratanteId, UUID escolhidoId, boolean noMural) {
+public record PartesAnuncio(UUID anuncioId, UUID contratanteId, UUID escolhidoId, Instant escolhidoEm,
+        boolean noMural) {
 
     public boolean teveEscolhido() {
         return escolhidoId != null;
+    }
+
+    /** Já tinha Prestador escolhido em {@code instante}: o anúncio era um serviço. */
+    public boolean eraServicoEm(Instant instante) {
+        return escolhidoEm != null && !escolhidoEm.isAfter(instante);
     }
 
     /** Empregador dono do anúncio ou Prestador que foi escolhido. */
