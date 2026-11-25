@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import com.limio.api.comum.base.BaseService;
 import com.limio.api.modulos.anuncio.enums.CausaEncerramento;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
+import com.limio.api.modulos.anuncio.enums.StatusHistorico;
 
 /** Camada técnica de persistência de {@link Anuncio} — CRUD genérico (herdado) + finder da entity. */
 @Component
@@ -77,47 +78,37 @@ public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository
         return repository.countByContratanteIdAndStatus(contratanteId, StatusAnuncio.CONCLUIDO);
     }
 
-    private static final List<StatusAnuncio> STATUS_FINAIS = List.of(StatusAnuncio.CONCLUIDO, StatusAnuncio.ENCERRADO);
-
-    private static final List<CausaEncerramento> TODAS_AS_CAUSAS = List.of(CausaEncerramento.values());
-
     public Page<Anuncio> buscarHistoricoDoContratante(UUID contratanteId, CriterioDoHistorico criterio, int pagina,
             int tamanho) {
-        Instant de = criterio.de() != null ? criterio.de() : Instant.EPOCH;
-        Instant ate = criterio.ate() != null ? criterio.ate() : Instant.EPOCH;
-        return repository.buscarHistoricoDoContratante(contratanteId, statusFinais(criterio),
-                causasAceitas(criterio), criterio.de() == null, de, criterio.ate() == null, ate,
-                PageRequest.of(pagina, tamanho));
+        return buscarHistorico(repository::buscarHistoricoDoContratante, contratanteId, criterio, pagina, tamanho);
     }
 
     public Page<Anuncio> buscarHistoricoDoPrestador(UUID prestadorId, CriterioDoHistorico criterio, int pagina,
             int tamanho) {
-        Instant de = criterio.de() != null ? criterio.de() : Instant.EPOCH;
-        Instant ate = criterio.ate() != null ? criterio.ate() : Instant.EPOCH;
-        return repository.buscarHistoricoDoPrestador(prestadorId, statusFinais(criterio),
-                causasAceitas(criterio), criterio.de() == null, de, criterio.ate() == null, ate,
+        return buscarHistorico(repository::buscarHistoricoDoPrestador, prestadorId, criterio, pagina, tamanho);
+    }
+
+    /**
+     * Traduz o {@code criterio} nos parâmetros da consulta. Ponta do período ausente vai como flag ligada mais um
+     * instante qualquer ({@link Instant#EPOCH}, ignorado pela query): evita parâmetro nulo tipado no Postgres.
+     */
+    private static Page<Anuncio> buscarHistorico(ConsultaDoHistorico consulta, UUID usuarioId,
+            CriterioDoHistorico criterio, int pagina, int tamanho) {
+        boolean semInicio = criterio.de() == null;
+        boolean semFim = criterio.ate() == null;
+        return consulta.buscar(usuarioId, StatusHistorico.statusAceitos(criterio.status()),
+                StatusHistorico.causasAceitas(criterio.status()),
+                semInicio, semInicio ? Instant.EPOCH : criterio.de(),
+                semFim, semFim ? Instant.EPOCH : criterio.ate(),
                 PageRequest.of(pagina, tamanho));
     }
 
-    private static List<StatusAnuncio> statusFinais(CriterioDoHistorico criterio) {
-        if (criterio.status() == null) {
-            return STATUS_FINAIS;
-        }
-        return switch (criterio.status()) {
-            case CONCLUIDO -> List.of(StatusAnuncio.CONCLUIDO);
-            case CANCELADO, EXPIRADO -> List.of(StatusAnuncio.ENCERRADO);
-        };
-    }
+    /** Assinatura comum das duas consultas de histórico do {@link AnuncioRepository}. */
+    @FunctionalInterface
+    private interface ConsultaDoHistorico {
 
-    private static List<CausaEncerramento> causasAceitas(CriterioDoHistorico criterio) {
-        if (criterio.status() == null) {
-            return TODAS_AS_CAUSAS;
-        }
-        return switch (criterio.status()) {
-            case CONCLUIDO -> TODAS_AS_CAUSAS;
-            case CANCELADO -> List.of(CausaEncerramento.CANCELAMENTO);
-            case EXPIRADO -> List.of(CausaEncerramento.EXPIRACAO);
-        };
+        Page<Anuncio> buscar(UUID usuarioId, Collection<StatusAnuncio> status, Collection<CausaEncerramento> causas,
+                boolean semInicio, Instant de, boolean semFim, Instant ate, Pageable pageable);
     }
 
     public List<UUID> buscarIdsParaExpirar(Instant agora, int lote) {

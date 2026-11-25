@@ -99,7 +99,10 @@ public class ListarHistoricoUseCase {
     private Page<ItemHistorico> doPrestador(UUID prestadorId, CriterioDoHistorico criterio, int pagina,
             int tamanho) {
         Page<Anuncio> anuncios = anuncioService.buscarHistoricoDoPrestador(prestadorId, criterio, pagina, tamanho);
-        Set<UUID> anunciosEmQueFoiEscolhido = anunciosEmQueFoiEscolhido(prestadorId, anuncios.getContent());
+        Set<UUID> anunciosEmQueFoiEscolhido = prestadorEscolhidoPorAnuncio(anuncios.getContent()).entrySet().stream()
+                .filter(escolha -> escolha.getValue().equals(prestadorId))
+                .map(Map.Entry::getKey)
+                .collect(toSet());
         Map<UUID, DadosUsuario> empregadores = consultaDadosUsuario.buscarPorIds(
                 anuncios.stream().map(Anuncio::getContratanteId).collect(toSet()));
         Map<UUID, SituacaoAvaliacao> avaliacoes = situacoes(prestadorId, anuncios.getContent(),
@@ -114,6 +117,7 @@ public class ListarHistoricoUseCase {
         }, avaliacoes);
     }
 
+    /** Regra única das duas visões: com mais de um escolhido no mesmo anúncio, vale o mais recente. */
     private Map<UUID, UUID> prestadorEscolhidoPorAnuncio(Collection<Anuncio> anuncios) {
         List<Aplicacao> escolhidas = aplicacaoService
                 .buscarEscolhidasDosAnuncios(anuncios.stream().map(Anuncio::getId).toList());
@@ -121,14 +125,6 @@ public class ListarHistoricoUseCase {
         escolhidas.stream().sorted(Comparator.comparing(Aplicacao::getEscolhidaEm))
                 .forEach(aplicacao -> prestadorPorAnuncio.put(aplicacao.getAnuncioId(), aplicacao.getPrestadorId()));
         return prestadorPorAnuncio;
-    }
-
-    private Set<UUID> anunciosEmQueFoiEscolhido(UUID prestadorId, Collection<Anuncio> anuncios) {
-        return aplicacaoService.buscarDoPrestadorNosAnuncios(prestadorId, anuncios.stream().map(Anuncio::getId).toList())
-                .stream()
-                .filter(aplicacao -> aplicacao.getEscolhidaEm() != null)
-                .map(Aplicacao::getAnuncioId)
-                .collect(toSet());
     }
 
     private Map<UUID, SituacaoAvaliacao> situacoes(UUID usuarioId, Collection<Anuncio> anuncios,

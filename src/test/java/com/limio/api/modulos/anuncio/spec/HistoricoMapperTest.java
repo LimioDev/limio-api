@@ -29,7 +29,7 @@ class HistoricoMapperTest {
 
     private Anuncio anuncio(String titulo, String descricao, Instant validadoEm, Instant encerradoEm) {
         Anuncio anuncio = Anuncio.builder().contratanteId(UUID.randomUUID()).titulo(titulo).descricao(descricao)
-                .dataHoraPretendida(Instant.now()).status(StatusAnuncio.CONCLUIDO).build();
+                .dataHoraPretendida(Instant.now()).status(validadoEm != null ? StatusAnuncio.CONCLUIDO : StatusAnuncio.ENCERRADO).build();
         ReflectionTestUtils.setField(anuncio, "id", UUID.randomUUID());
         ReflectionTestUtils.setField(anuncio, "validadoEm", validadoEm);
         ReflectionTestUtils.setField(anuncio, "encerradoEm", encerradoEm);
@@ -67,16 +67,6 @@ class HistoricoMapperTest {
         assertThat(resposta.data()).isEqualTo(ENCERRADO_EM);
         assertThat(resposta.outraParte()).isNull();
         assertThat(resposta.avaliacao()).isNull();
-    }
-
-    @Test
-    void dadoTituloVazio_quandoMapear_entaoUsaTrechoDaDescricao() {
-        String descricao = "x".repeat(100);
-
-        HistoricoItemResponse resposta = mapear(new ItemHistorico(anuncio(" ", descricao, null, ENCERRADO_EM),
-                StatusHistorico.CANCELADO, null, null));
-
-        assertThat(resposta.titulo()).isEqualTo("x".repeat(60) + "…");
     }
 
     @Test

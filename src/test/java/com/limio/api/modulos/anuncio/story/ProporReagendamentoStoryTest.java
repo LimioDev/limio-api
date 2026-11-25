@@ -45,6 +45,7 @@ import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioRepository;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoRepository;
+import com.limio.api.modulos.anuncio.enums.CausaEncerramento;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
 import com.limio.api.modulos.anuncio.enums.StatusReagendamento;
@@ -172,6 +173,7 @@ class ProporReagendamentoStoryTest {
                 .bairroRegiaoSnapshot("Pinheiros")
                 .enderecoCompletoSnapshot("Rua dos Pinheiros, 100, Pinheiros, São Paulo - SP")
                 .status(status)
+                .causaEncerramento(status == StatusAnuncio.ENCERRADO ? CausaEncerramento.CANCELAMENTO : null)
                 .build());
     }
 

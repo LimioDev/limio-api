@@ -214,14 +214,6 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     }
 
     /**
-     * Candidaturas do Prestador a esses anúncios (qualquer estado), em lote — um anúncio pode ter várias dele, pois só
-     * as ativas são únicas por par (ETI-71, histórico). Anúncio sem candidatura dele fica de fora.
-     */
-    public List<Aplicacao> buscarDoPrestadorNosAnuncios(UUID prestadorId, Collection<UUID> anuncioIds) {
-        return anuncioIds.isEmpty() ? List.of() : repository.findByAnuncioIdInAndPrestadorId(anuncioIds, prestadorId);
-    }
-
-    /**
      * A candidatura escolhida de cada um desses anúncios, mesmo depois de concluídos ou cancelados ({@code escolhidaEm}
      * nunca é limpo — ETI-86), em lote. Anúncio em que ninguém foi escolhido fica de fora (ETI-71, histórico).
      */

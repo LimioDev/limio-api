@@ -41,13 +41,16 @@ public interface AnuncioRepository extends BaseRepository<Anuncio, UUID> {
 
     /**
      * Filtros comuns do histórico (ETI-71). {@code status}: os status de anúncio em estado final aceitos;
-     * {@code causas}: dentre os {@code ENCERRADO}, quais causas (anúncio não encerrado tem causa nula, então passa).
-     * Os dois nunca vão vazios. Período sobre a data do desfecho, {@code coalesce(validadoEm, encerradoEm)}; os
-     * booleanos ligam/desligam cada ponta (como no mural, evita parâmetro nulo tipado no Postgres).
+     * {@code causas}: dentre os {@code ENCERRADO}, quais causas ({@code CONCLUIDO} não tem causa e não é filtrado
+     * por ela; o banco garante que todo {@code ENCERRADO} tem uma).
+     * Os dois nunca vão vazios. Período sobre a data do desfecho ({@link Anuncio#desfechoEm()}, aqui como
+     * {@code coalesce(validadoEm, encerradoEm)}); os booleanos ligam/desligam
+     * cada ponta (como no mural, evita parâmetro nulo tipado no Postgres).
      */
     String HISTORICO_FILTROS = """
             a.status in :status
-            and (a.causaEncerramento is null or a.causaEncerramento in :causas)
+            and (a.status = com.limio.api.modulos.anuncio.enums.StatusAnuncio.CONCLUIDO
+                 or a.causaEncerramento in :causas)
             and (:semInicio = true or coalesce(a.validadoEm, a.encerradoEm) >= :de)
             and (:semFim = true or coalesce(a.validadoEm, a.encerradoEm) < :ate)
             """;

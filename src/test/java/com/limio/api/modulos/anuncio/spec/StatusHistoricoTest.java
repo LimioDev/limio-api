@@ -42,4 +42,23 @@ class StatusHistoricoTest {
     void dadoAnuncioAindaAberto_quandoClassifica_entaoNaoEHistorico(StatusAnuncio status) {
         assertThat(StatusHistorico.de(status, null)).isEmpty();
     }
+
+    @Test
+    void dadoSemFiltro_quandoTraduzParaConsulta_entaoTodosOsStatusFinaisECausas() {
+        assertThat(StatusHistorico.statusAceitos(null))
+                .containsExactly(StatusAnuncio.CONCLUIDO, StatusAnuncio.ENCERRADO);
+        assertThat(StatusHistorico.causasAceitas(null)).containsExactly(CausaEncerramento.values());
+    }
+
+    @ParameterizedTest
+    @EnumSource(StatusHistorico.class)
+    void dadoFiltro_quandoTraduzParaConsulta_entaoSoAceitaOQueClassificaDeVoltaNele(StatusHistorico filtro) {
+        assertThat(StatusHistorico.statusAceitos(filtro)).isNotEmpty();
+        assertThat(StatusHistorico.causasAceitas(filtro)).isNotEmpty();
+        for (StatusAnuncio status : StatusHistorico.statusAceitos(filtro)) {
+            for (CausaEncerramento causa : StatusHistorico.causasAceitas(filtro)) {
+                assertThat(StatusHistorico.de(status, causa)).contains(filtro);
+            }
+        }
+    }
 }

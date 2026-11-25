@@ -46,6 +46,7 @@ import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioRepository;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoRepository;
+import com.limio.api.modulos.anuncio.enums.CausaEncerramento;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
 import com.limio.api.modulos.auth.usuario.Usuario;
@@ -282,6 +283,7 @@ class ConsultarDetalheDoMuralStoryTest {
                 .status(StatusAnuncio.PUBLICADO).build());
         Anuncio encerrado = anuncio("encerrado", "Elétrica", 1);
         encerrado.setStatus(StatusAnuncio.ENCERRADO);
+        encerrado.setCausaEncerramento(CausaEncerramento.CANCELAMENTO);
         anuncioRepository.save(encerrado);
         Anuncio comEscolhido = anuncio("escolhido", "Elétrica", 1);
         candidatura(comEscolhido, usuario("Joana Lima", "joana@example.com", "10433218100", PapelUsuario.PRESTADOR, true, true),

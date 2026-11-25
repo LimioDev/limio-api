@@ -213,9 +213,8 @@ class ListarHistoricoUseCaseTest {
         Anuncio concluido = anuncio(StatusAnuncio.CONCLUIDO, null);
         when(anuncioService.buscarHistoricoDoPrestador(eq(PRESTADOR_ID), any(), anyInt(), anyInt()))
                 .thenReturn(pagina(concluido));
-        when(aplicacaoService.buscarDoPrestadorNosAnuncios(eq(PRESTADOR_ID), any())).thenReturn(List.of(
-                aplicacao(concluido.getId(), PRESTADOR_ID, null),
-                aplicacao(concluido.getId(), PRESTADOR_ID, VALIDADO_EM)));
+        when(aplicacaoService.buscarEscolhidasDosAnuncios(any()))
+                .thenReturn(List.of(aplicacao(concluido.getId(), PRESTADOR_ID, VALIDADO_EM)));
         when(consultaDadosUsuario.buscarPorIds(any())).thenReturn(Map.of(EMPREGADOR_ID, dados("Ana Paula Ramos")));
         when(consultaAvaliacoes.situacaoPorServico(eq(PRESTADOR_ID), anyMap()))
                 .thenReturn(Map.of(concluido.getId(), new SituacaoAvaliacao(null, true)));
@@ -231,8 +230,24 @@ class ListarHistoricoUseCaseTest {
         Anuncio concluido = anuncio(StatusAnuncio.CONCLUIDO, null);
         when(anuncioService.buscarHistoricoDoPrestador(eq(PRESTADOR_ID), any(), anyInt(), anyInt()))
                 .thenReturn(pagina(concluido));
-        when(aplicacaoService.buscarDoPrestadorNosAnuncios(eq(PRESTADOR_ID), any()))
-                .thenReturn(List.of(aplicacao(concluido.getId(), PRESTADOR_ID, null)));
+        when(aplicacaoService.buscarEscolhidasDosAnuncios(any())).thenReturn(List.of());
+        when(consultaDadosUsuario.buscarPorIds(any())).thenReturn(Map.of(EMPREGADOR_ID, dados("Ana Paula Ramos")));
+
+        ItemHistorico item = comoPrestador(null).getContent().get(0);
+
+        assertThat(item.outraParte()).isEqualTo("Ana R.");
+        assertThat(item.avaliacao()).isNull();
+        verifyNoInteractions(consultaAvaliacoes);
+    }
+
+    @Test
+    void dadoDoisEscolhidosNoMesmoAnuncio_quandoPrestadorAnteriorListar_entaoNomeAbreviadoESemAvaliacao() {
+        Anuncio concluido = anuncio(StatusAnuncio.CONCLUIDO, null);
+        when(anuncioService.buscarHistoricoDoPrestador(eq(PRESTADOR_ID), any(), anyInt(), anyInt()))
+                .thenReturn(pagina(concluido));
+        when(aplicacaoService.buscarEscolhidasDosAnuncios(any())).thenReturn(List.of(
+                aplicacao(concluido.getId(), UUID.randomUUID(), VALIDADO_EM),
+                aplicacao(concluido.getId(), PRESTADOR_ID, VALIDADO_EM.minusSeconds(3600))));
         when(consultaDadosUsuario.buscarPorIds(any())).thenReturn(Map.of(EMPREGADOR_ID, dados("Ana Paula Ramos")));
 
         ItemHistorico item = comoPrestador(null).getContent().get(0);
@@ -247,7 +262,7 @@ class ListarHistoricoUseCaseTest {
         Anuncio cancelado = anuncio(StatusAnuncio.ENCERRADO, CausaEncerramento.CANCELAMENTO);
         when(anuncioService.buscarHistoricoDoPrestador(eq(PRESTADOR_ID), any(), anyInt(), anyInt()))
                 .thenReturn(pagina(cancelado));
-        when(aplicacaoService.buscarDoPrestadorNosAnuncios(eq(PRESTADOR_ID), any()))
+        when(aplicacaoService.buscarEscolhidasDosAnuncios(any()))
                 .thenReturn(List.of(aplicacao(cancelado.getId(), PRESTADOR_ID, VALIDADO_EM)));
         when(consultaDadosUsuario.buscarPorIds(any())).thenReturn(Map.of());
 

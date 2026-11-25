@@ -57,7 +57,7 @@ Saída: `PageResponse<HistoricoItemResponse>`.
 | Empregador | `AnuncioRepository.buscarHistoricoDoContratante`: `contratanteId` do token. |
 | Prestador | `buscarHistoricoDoPrestador`: `EXISTS` de candidatura dele no anúncio (não join: ele pode ter várias, e o anúncio aparece uma vez). |
 | Período | `PeriodoHistoricoHelper`: `[dataInicio 00:00, dataFim+1 00:00)` em `America/Sao_Paulo`, sobre `coalesce(validadoEm, encerradoEm)`. |
-| Contraparte | Escolhido vê o nome completo do outro; Prestador não escolhido vê o Empregador abreviado ("Maria S."); conta encerrada = "Conta encerrada". Com dois escolhidos no mesmo anúncio (um desistiu), vale o mais recente. |
+| Contraparte | Escolhido vê o nome completo do outro; Prestador não escolhido vê o Empregador abreviado ("Maria S."); conta encerrada = "Conta encerrada". Com dois escolhidos no mesmo anúncio (um desistiu), vale o mais recente, nas duas visões: o anterior conta como não escolhido (nome abreviado, sem avaliação). |
 | Nota e janela de 7 dias | Porta `ConsultaAvaliacoes.situacaoPorServico` (`comum/portas`, `SituacaoAvaliacao`); a regra segue só em `moderacao` (`JanelaAvaliacaoHelper`). |
 | Sem N+1 | Por página: anúncios (+ count), candidaturas, nomes e duas consultas de avaliação, todas em lote. |
 
@@ -72,7 +72,8 @@ papéis, uma linha por anúncio.
 ## Migration
 
 `V41__adicionar_causa_encerramento_ao_anuncio.sql`: coluna `causa_encerramento VARCHAR(20)`, backfill
-(`'Expirado sem candidatos'` → `EXPIRACAO`, demais `ENCERRADO` → `CANCELAMENTO`) e CHECK `ck_anuncio_causa_encerramento`.
+(`'Expirado sem candidatos'` → `EXPIRACAO`, demais `ENCERRADO` → `CANCELAMENTO`), CHECK `ck_anuncio_causa_encerramento` (valores) e CHECK
+`ck_anuncio_causa_so_no_encerrado` (só `ENCERRADO` tem causa, e todo `ENCERRADO` tem).
 
 ## Dúvidas em aberto
 

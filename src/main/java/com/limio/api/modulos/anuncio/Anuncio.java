@@ -191,6 +191,19 @@ public class Anuncio extends BaseEntity {
     }
 
     /**
+     * ETI-71: data do desfecho, a que o histórico mostra, filtra e ordena; {@code null} enquanto o anúncio não chegou a
+     * um estado final. A consulta do histórico repete a regra em JPQL, como {@code coalesce(validadoEm, encerradoEm)}
+     * ({@code AnuncioRepository.HISTORICO_FILTROS}): mudou aqui, muda lá.
+     */
+    public Instant desfechoEm() {
+        return switch (status) {
+            case CONCLUIDO -> validadoEm;
+            case ENCERRADO -> encerradoEm;
+            case PUBLICADO, EM_ANDAMENTO, AGUARDANDO_VALIDACAO -> null;
+        };
+    }
+
+    /**
      * ETI-88: o serviço só começa a partir de {@code PUBLICADO}. Quem chama já confirmou que existe candidatura
      * escolhida. Passo opcional: validação presencial e check-out também partem de {@code PUBLICADO}.
      */
@@ -282,7 +295,7 @@ public class Anuncio extends BaseEntity {
     }
 
     public void cancelarServicoPeloPrestador(Instant agora) {
-        encerrar(agora, MOTIVO_SERVICO_CANCELADO_PELO_PRESTADOR);
+        encerrar(agora, MOTIVO_SERVICO_CANCELADO_PELO_PRESTADOR, CausaEncerramento.CANCELAMENTO);
     }
 
     public boolean temAntecedenciaDe(Duration antecedencia, Instant agora) {

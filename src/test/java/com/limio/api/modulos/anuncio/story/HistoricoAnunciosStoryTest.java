@@ -151,6 +151,7 @@ class HistoricoAnunciosStoryTest {
                 .bairroRegiaoSnapshot("Pinheiros")
                 .enderecoCompletoSnapshot("Rua dos Pinheiros, 1000, apto 42")
                 .status(status)
+                .causaEncerramento(status == StatusAnuncio.ENCERRADO ? CausaEncerramento.CANCELAMENTO : null)
                 .build());
     }
 

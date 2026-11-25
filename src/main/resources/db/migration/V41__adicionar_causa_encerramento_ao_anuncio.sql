@@ -18,3 +18,9 @@ UPDATE anuncio
 ALTER TABLE anuncio
     ADD CONSTRAINT ck_anuncio_causa_encerramento
         CHECK (causa_encerramento IS NULL OR causa_encerramento IN ('CANCELAMENTO', 'EXPIRACAO'));
+
+-- Só ENCERRADO tem causa, e todo ENCERRADO tem causa. Sem isso, um ENCERRADO sem causa entraria na contagem do
+-- histórico e sumiria da página.
+ALTER TABLE anuncio
+    ADD CONSTRAINT ck_anuncio_causa_so_no_encerrado
+        CHECK ((status = 'ENCERRADO') = (causa_encerramento IS NOT NULL));

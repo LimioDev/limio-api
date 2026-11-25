@@ -1,6 +1,7 @@
 package com.limio.api.modulos.anuncio.story;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -10,6 +11,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -268,24 +270,24 @@ class ConsultasDoHistoricoStoryTest {
                 new CriterioDoHistorico(StatusHistorico.EXPIRADO, null, null), 0, 20).getContent()).isEmpty();
     }
 
-    // ---- candidaturas em lote
+    // ---- invariante status x causa
 
     @Test
-    void dadoVariasCandidaturas_quandoBuscaDoPrestadorNosAnuncios_entaoSoAsDeleNosAnunciosPedidos() {
-        Anuncio a1 = concluido(empregador, "a1", BASE);
-        Anuncio a2 = concluido(empregador, "a2", BASE);
-        Anuncio a3 = concluido(empregador, "a3", BASE);
-        aplicacao(a1, prestador, StatusAplicacao.RECUSADA, false);
-        aplicacao(a1, prestador, StatusAplicacao.CONCLUIDA, true);
-        aplicacao(a2, outroPrestador, StatusAplicacao.CONCLUIDA, true);
-        aplicacao(a3, prestador, StatusAplicacao.CONCLUIDA, true);
-
-        List<Aplicacao> doPrestador = aplicacaoService.buscarDoPrestadorNosAnuncios(prestador,
-                List.of(a1.getId(), a2.getId()));
-
-        assertThat(doPrestador).hasSize(2).allMatch(a -> a.getPrestadorId().equals(prestador))
-                .allMatch(a -> a.getAnuncioId().equals(a1.getId()));
+    void dadoEncerradoSemCausa_quandoSalvar_entaoBancoRecusa() {
+        assertThatThrownBy(() -> anuncio(empregador, "sem causa", StatusAnuncio.ENCERRADO, null, null, BASE))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("ck_anuncio_causa_so_no_encerrado");
     }
+
+    @Test
+    void dadoConcluidoComCausa_quandoSalvar_entaoBancoRecusa() {
+        assertThatThrownBy(() -> anuncio(empregador, "com causa", StatusAnuncio.CONCLUIDO,
+                CausaEncerramento.CANCELAMENTO, BASE, null))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("ck_anuncio_causa_so_no_encerrado");
+    }
+
+    // ---- candidaturas em lote
 
     @Test
     void dadoCandidaturasEscolhidasECandidatos_quandoBuscaEscolhidasDosAnuncios_entaoSoAsQueForamEscolhidas() {
@@ -306,7 +308,6 @@ class ConsultasDoHistoricoStoryTest {
 
     @Test
     void dadoListaVazia_quandoBuscaEmLote_entaoListaVaziaSemConsulta() {
-        assertThat(aplicacaoService.buscarDoPrestadorNosAnuncios(prestador, List.of())).isEmpty();
         assertThat(aplicacaoService.buscarEscolhidasDosAnuncios(List.of())).isEmpty();
     }
 }
