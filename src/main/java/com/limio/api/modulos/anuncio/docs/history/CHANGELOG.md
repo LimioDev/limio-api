@@ -401,3 +401,10 @@ Evento próprio, `ServicoCanceladoPeloPrestadorEvent` em `comum/eventos/`, porqu
 é do Empregador (tipo, estorno e data vigente). O chat vira somente leitura em `AFTER_COMMIT` com o mesmo motivo
 `SERVICO_CANCELADO`. A autorização usa `escolhidaEm` (permanente), então o escolhido que repete o pedido recebe 409 e
 quem não foi escolhido, 404. Pendência: aviso ao Empregador (US56/ETI-112).
+
+## 2026-11-25 — ETI-114 (review da PR #48): `ConsultaServico.buscarPartes`
+
+`ConsultaServicoService` ganhou `buscarPartes` (`PartesAnuncio` em `comum/portas`) para a denúncia de `moderacao`.
+Diferente de `buscarPorId`, que mostra o Prestador só enquanto o serviço está de pé, o escolhido vem de
+`escolhidaEm` (permanente) e por isso aparece também com o serviço cancelado ou o anúncio encerrado; `noMural` diz se
+o anúncio ainda está `PUBLICADO`.
