@@ -392,3 +392,10 @@ Prestador, só pro Empregador (regra do `gold`), pela `ConsultaAvaliacoes`: fech
 `actions/service/ConsultaTotaisDeAnunciosService` implementa a porta `ConsultaTotaisDeAnuncios`, com os totais de anúncios,
 candidaturas e escolhas (`escolhida_em` preenchido, mesmo que a candidatura tenha sido encerrada depois) para o
 dashboard do administrador. Detalhe em `administracao/docs/features/ETI-117-dashboard-administrativo.md`.
+
+## 2026-11-25 — ETI-114 (review da PR #48): `ConsultaServico.buscarPartes`
+
+`ConsultaServicoService` ganhou `buscarPartes` (`PartesAnuncio` em `comum/portas`) para a denúncia de `moderacao`.
+Diferente de `buscarPorId`, que mostra o Prestador só enquanto o serviço está de pé, o escolhido vem de
+`escolhidaEm` (permanente) e por isso aparece também com o serviço cancelado ou o anúncio encerrado; `noMural` diz se
+o anúncio ainda está `PUBLICADO`.

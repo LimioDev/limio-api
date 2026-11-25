@@ -35,14 +35,16 @@ import com.limio.api.comum.midia.Midia;
 import com.limio.api.comum.midia.MidiaService;
 import com.limio.api.comum.midia.enums.TipoMidia;
 import com.limio.api.comum.midia.excecao.FotoInvalidaException;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.comum.portas.ConsultaCandidatura;
 import com.limio.api.comum.portas.ConsultaChat;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.ConsultaServico;
 import com.limio.api.comum.portas.DadosUsuario;
+import com.limio.api.comum.portas.PartesAnuncio;
 import com.limio.api.comum.portas.ResumoCandidatura;
 import com.limio.api.comum.portas.ResumoMensagem;
-import com.limio.api.comum.portas.ResumoServico;
 import com.limio.api.modulos.moderacao.actions.usecase.RegistrarDenunciaUseCase;
 import com.limio.api.modulos.moderacao.denuncia.AlvoDenuncia;
 import com.limio.api.modulos.moderacao.denuncia.Denuncia;
@@ -87,6 +89,9 @@ class RegistrarDenunciaUseCaseTest {
     private ArmazenamentoService armazenamentoService;
 
     @Mock
+    private TravaTransacional travaTransacional;
+
+    @Mock
     private ApplicationEventPublisher eventos;
 
     private RegistrarDenunciaUseCase useCase;
@@ -94,7 +99,7 @@ class RegistrarDenunciaUseCaseTest {
     @BeforeEach
     void montarUseCase() {
         useCase = new RegistrarDenunciaUseCase(consultaDadosUsuario, consultaServico, consultaCandidatura, consultaChat,
-                denunciaService, midiaService, armazenamentoService, eventos, Clock.fixed(AGORA, ZoneOffset.UTC), 72,
+                denunciaService, midiaService, armazenamentoService, travaTransacional, eventos, Clock.fixed(AGORA, ZoneOffset.UTC), 72,
                 DataSize.ofKilobytes(100));
     }
 
@@ -156,8 +161,7 @@ class RegistrarDenunciaUseCaseTest {
 
     @Test
     void anuncioSemEscolhidoQualquerUmDenunciaODonoMenosEleProprio() {
-        when(consultaServico.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(
-                new ResumoServico(ANUNCIO_ID, "Instalar 3 tomadas", MARIA, null, null)));
+        anuncio(null, true);
         devolverOQueSalvar();
 
         assertThat(registrar(JOANA, contexto(null, ANUNCIO_ID, null, null), null).getDenunciadoId()).isEqualTo(MARIA);
@@ -166,8 +170,44 @@ class RegistrarDenunciaUseCaseTest {
     }
 
     @Test
+    void anuncioCanceladoDepoisDaEscolhaSegueEntreAsPartes() {
+        anuncio(CARLOS, false);
+        devolverOQueSalvar();
+
+        assertThat(registrar(MARIA, contexto(null, ANUNCIO_ID, null, null), null).getDenunciadoId()).isEqualTo(CARLOS);
+        assertThat(registrar(CARLOS, contexto(null, ANUNCIO_ID, null, null), null).getDenunciadoId()).isEqualTo(MARIA);
+        assertThatThrownBy(() -> registrar(JOANA, contexto(null, ANUNCIO_ID, null, null), null))
+                .isInstanceOf(AlvoNaoAcessivelException.class);
+    }
+
+    @Test
+    void anuncioForaDoMuralSemNuncaTerEscolhidoNaoEAcessivel() {
+        anuncio(null, false);
+
+        assertThatThrownBy(() -> registrar(JOANA, contexto(null, ANUNCIO_ID, null, null), null))
+                .isInstanceOf(AlvoNaoAcessivelException.class);
+        verify(denunciaService, never()).salvarAgora(any());
+    }
+
+    @Test
+    void mesmaDenunciaEmAbertoEDevolvidaSemGravarNemEnviarFoto() {
+        when(consultaDadosUsuario.buscarPorId(CARLOS)).thenReturn(Optional.of(dados()));
+        Denuncia existente = Denuncia.registrar(MARIA, AlvoDenuncia.perfil(CARLOS),
+                MotivoDenuncia.COMPORTAMENTO_INADEQUADO, DESCRICAO, null, AGORA);
+        when(denunciaService.buscarEmAbertoIgual(MARIA, AlvoDenuncia.perfil(CARLOS),
+                MotivoDenuncia.COMPORTAMENTO_INADEQUADO)).thenReturn(Optional.of(existente));
+
+        Denuncia denuncia = registrar(MARIA, AlvoDenuncia.perfil(CARLOS), ImagensDeTeste.png(20, 20));
+
+        assertThat(denuncia).isSameAs(existente);
+        verify(travaTransacional).travar(EscopoTrava.DENUNCIA, MARIA.toString());
+        verify(denunciaService, never()).salvarAgora(any());
+        verifyNoInteractions(armazenamentoService, midiaService, eventos);
+    }
+
+    @Test
     void anuncioInexistenteNaoEAcessivel() {
-        when(consultaServico.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.empty());
+        when(consultaServico.buscarPartes(ANUNCIO_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> registrar(MARIA, contexto(null, ANUNCIO_ID, null, null), null))
                 .isInstanceOf(AlvoNaoAcessivelException.class);
@@ -267,8 +307,12 @@ class RegistrarDenunciaUseCaseTest {
     }
 
     private void servicoDeMariaComCarlos() {
-        when(consultaServico.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(
-                new ResumoServico(ANUNCIO_ID, "Instalar 3 tomadas", MARIA, CARLOS, AGORA.minus(Duration.ofDays(1)))));
+        anuncio(CARLOS, false);
+    }
+
+    private void anuncio(UUID escolhidoId, boolean noMural) {
+        when(consultaServico.buscarPartes(ANUNCIO_ID))
+                .thenReturn(Optional.of(new PartesAnuncio(ANUNCIO_ID, MARIA, escolhidoId, noMural)));
     }
 
     private void mensagemDeCarlos() {

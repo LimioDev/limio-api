@@ -269,6 +269,48 @@ class RegistrarDenunciaStoryTest {
     }
 
     @Test
+    void anuncioCanceladoDepoisDaEscolhaSegueEntreAsPartes() throws Exception {
+        Anuncio anuncio = anuncio(StatusAnuncio.ENCERRADO);
+        candidatura(anuncio, StatusAplicacao.ENCERRADA);
+
+        denunciar(maria, Map.of("anuncioId", anuncio.getId(), "motivo", "SERVICO_NAO_REALIZADO",
+                "descricao", "Sumiu depois de escolhido."))
+                .andExpect(status().isCreated());
+        denunciar(joana, Map.of("anuncioId", anuncio.getId(), "motivo", "SUSPEITA_DE_FRAUDE",
+                "descricao", "Teste."))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.codigo", is("ALVO_NAO_ACESSIVEL")));
+
+        assertThat(jdbc.queryForObject("select denunciado_id from denuncia", UUID.class)).isEqualTo(carlos.getId());
+    }
+
+    @Test
+    void anuncioEncerradoSemNuncaTerEscolhidoNaoEAcessivel() throws Exception {
+        Anuncio anuncio = anuncio(StatusAnuncio.ENCERRADO);
+
+        denunciar(joana, Map.of("anuncioId", anuncio.getId(), "motivo", "SUSPEITA_DE_FRAUDE",
+                "descricao", "Anúncio pedia pagamento adiantado."))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.codigo", is("ALVO_NAO_ACESSIVEL")));
+    }
+
+    @Test
+    void mesmaDenunciaMandadaDeNovoDevolveAPrimeira() throws Exception {
+        long primeiro = numero(denunciar(maria, perfil(carlos)));
+        long repetido = numero(denunciar(maria, perfil(carlos), png()));
+
+        assertThat(repetido).isEqualTo(primeiro);
+        assertThat(jdbc.queryForObject("select count(*) from denuncia", Long.class)).isOne();
+        assertThat(jdbc.queryForObject("select count(*) from midia", Long.class)).isZero();
+        verify(armazenamentoService, never()).enviar(anyString(), any(), anyString());
+
+        denunciar(maria, Map.of("denunciadoId", carlos.getId(), "motivo", "SUSPEITA_DE_FRAUDE",
+                "descricao", "Outro motivo."))
+                .andExpect(status().isCreated());
+        assertThat(jdbc.queryForObject("select count(*) from denuncia", Long.class)).isEqualTo(2L);
+    }
+
+    @Test
     void naoDenunciaASiMesmoNemPerfilInexistente() throws Exception {
         denunciar(maria, perfil(maria))
                 .andExpect(status().isNotFound())
@@ -347,7 +389,7 @@ class RegistrarDenunciaStoryTest {
 
     /** Candidatura de Carlos no anúncio. */
     private UUID candidatura(Anuncio anuncio, StatusAplicacao status) {
-        boolean escolhida = status != StatusAplicacao.ENVIADA;
+        boolean escolhida = status != StatusAplicacao.ENVIADA && status != StatusAplicacao.RECUSADA;
         return aplicacaoRepository.save(Aplicacao.builder()
                 .anuncioId(anuncio.getId())
                 .prestadorId(carlos.getId())

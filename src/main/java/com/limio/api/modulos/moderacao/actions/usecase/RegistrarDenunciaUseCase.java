@@ -3,6 +3,7 @@ package com.limio.api.modulos.moderacao.actions.usecase;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -17,13 +18,15 @@ import com.limio.api.comum.midia.ImagemHelper.ImagemProcessada;
 import com.limio.api.comum.midia.Midia;
 import com.limio.api.comum.midia.MidiaService;
 import com.limio.api.comum.midia.excecao.FotoInvalidaException;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.comum.portas.ConsultaCandidatura;
 import com.limio.api.comum.portas.ConsultaChat;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.ConsultaServico;
+import com.limio.api.comum.portas.PartesAnuncio;
 import com.limio.api.comum.portas.ResumoCandidatura;
 import com.limio.api.comum.portas.ResumoMensagem;
-import com.limio.api.comum.portas.ResumoServico;
 import com.limio.api.modulos.moderacao.denuncia.AlvoDenuncia;
 import com.limio.api.modulos.moderacao.denuncia.Denuncia;
 import com.limio.api.modulos.moderacao.denuncia.DenunciaService;
@@ -42,14 +45,21 @@ import com.limio.api.modulos.moderacao.excecao.AlvoNaoAcessivelException;
  * <ul>
  *   <li><b>mensagem:</b> quem participa do chat dela. O denunciado é o remetente.</li>
  *   <li><b>candidatura (chat):</b> uma das partes. O denunciado é a outra.</li>
- *   <li><b>anúncio com Prestador escolhido (serviço):</b> uma das partes. O denunciado é a outra.</li>
- *   <li><b>anúncio ainda sem escolhido:</b> qualquer usuário, menos o dono. O denunciado é o Empregador dono.</li>
+ *   <li><b>anúncio que já teve Prestador escolhido (serviço):</b> uma das partes, mesmo com o serviço cancelado ou o
+ *       anúncio encerrado depois da escolha. O denunciado é a outra.</li>
+ *   <li><b>anúncio no mural ({@code PUBLICADO}) que nunca teve escolhido:</b> qualquer usuário, menos o dono. O
+ *       denunciado é o Empregador dono. Encerrado sem nunca ter tido escolhido já saiu do mural e não é acessível
+ *       por aqui (quem se candidatou denuncia pela candidatura).</li>
  *   <li><b>perfil (só o denunciado):</b> qualquer usuário, contra uma conta ativa. Ter visto o perfil não fica
  *       registrado em lugar nenhum.</li>
  * </ul>
  * Ninguém denuncia a si mesmo. Se o cliente mandar {@code denunciadoId} junto com um contexto, ele precisa bater com o
  * denunciado resolvido. Todas as recusas respondem {@code ALVO_NAO_ACESSIVEL} (404), igual a um id inexistente, e vêm
  * antes da conferência da foto, pra não revelar nada a terceiros.
+ *
+ * <p>A mesma denúncia mandada de novo (toque duplo, retry do app) não vira outra: se o denunciante já tem uma em aberto
+ * com o mesmo alvo e o mesmo motivo, ela é devolvida como está, sem gravar nem enviar foto. A trava
+ * {@link EscopoTrava#DENUNCIA} por denunciante serializa dois envios simultâneos.
  */
 @Service
 public class RegistrarDenunciaUseCase {
@@ -63,6 +73,7 @@ public class RegistrarDenunciaUseCase {
     private final DenunciaService denunciaService;
     private final MidiaService midiaService;
     private final ArmazenamentoService armazenamentoService;
+    private final TravaTransacional travaTransacional;
     private final ApplicationEventPublisher eventos;
     private final Clock relogio;
     private final Duration prazoAnalise;
@@ -75,6 +86,7 @@ public class RegistrarDenunciaUseCase {
             DenunciaService denunciaService,
             MidiaService midiaService,
             ArmazenamentoService armazenamentoService,
+            TravaTransacional travaTransacional,
             ApplicationEventPublisher eventos,
             Clock relogio,
             @Value("${moderacao.denuncia.prazo-analise-horas}") long prazoAnaliseHoras,
@@ -86,6 +98,7 @@ public class RegistrarDenunciaUseCase {
         this.denunciaService = denunciaService;
         this.midiaService = midiaService;
         this.armazenamentoService = armazenamentoService;
+        this.travaTransacional = travaTransacional;
         this.eventos = eventos;
         this.relogio = relogio;
         this.prazoAnalise = Duration.ofHours(prazoAnaliseHoras);
@@ -100,7 +113,12 @@ public class RegistrarDenunciaUseCase {
     @Transactional
     public Denuncia executar(UUID denuncianteId, AlvoDenuncia informado, MotivoDenuncia motivo, String descricao,
             byte[] foto) {
+        travaTransacional.travar(EscopoTrava.DENUNCIA, denuncianteId.toString());
         AlvoDenuncia alvo = resolverAlvo(denuncianteId, informado);
+        Optional<Denuncia> repetida = denunciaService.buscarEmAbertoIgual(denuncianteId, alvo, motivo);
+        if (repetida.isPresent()) {
+            return repetida.get();
+        }
         UUID evidenciaId = foto == null ? null : guardarEvidencia(denuncianteId, processar(foto));
         Instant agora = Instant.now(relogio);
         return denunciaService.salvarAgora(
@@ -145,15 +163,17 @@ public class RegistrarDenunciaUseCase {
     }
 
     private AlvoDenuncia alvoDoAnuncio(UUID denuncianteId, UUID anuncioId) {
-        ResumoServico servico = consultaServico.buscarPorId(anuncioId)
-                .orElseThrow(AlvoNaoAcessivelException::new);
-        if (servico.prestadorId() == null) {
-            return new AlvoDenuncia(servico.contratanteId(), anuncioId, null, null);
+        PartesAnuncio partes = consultaServico.buscarPartes(anuncioId).orElseThrow(AlvoNaoAcessivelException::new);
+        if (partes.teveEscolhido()) {
+            if (!partes.participa(denuncianteId)) {
+                throw new AlvoNaoAcessivelException();
+            }
+            return new AlvoDenuncia(partes.outraParte(denuncianteId), anuncioId, null, null);
         }
-        if (!servico.participa(denuncianteId)) {
+        if (!partes.noMural()) {
             throw new AlvoNaoAcessivelException();
         }
-        return new AlvoDenuncia(servico.outraParte(denuncianteId), anuncioId, null, null);
+        return new AlvoDenuncia(partes.contratanteId(), anuncioId, null, null);
     }
 
     private AlvoDenuncia alvoDoPerfil(UUID denunciadoId) {
