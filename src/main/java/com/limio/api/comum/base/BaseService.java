@@ -36,6 +36,11 @@ public abstract class BaseService<E extends BaseEntity, ID extends Serializable,
         return repository.findById(id).orElseThrow(EntidadeNaoEncontradaException::new);
     }
 
+    /** Total de linhas da tabela, sem filtro. */
+    public long contar() {
+        return repository.count();
+    }
+
     public boolean existePorId(ID id) {
         return repository.existsById(id);
     }

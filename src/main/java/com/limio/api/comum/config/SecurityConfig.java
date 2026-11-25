@@ -52,7 +52,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/financeiro/gold/webhook/asaas").permitAll()
                         // handshake do canal em tempo real: o token é conferido no CONNECT (WebSocketAuthInterceptor)
                         .requestMatchers(WebSocketConfig.ROTA_WEBSOCKET).permitAll()
-                        .anyRequest().authenticated())
+                        // painel web (ETI-117): só o administrador; usuário do app recebe 403 ACESSO_NEGADO
+                        .requestMatchers("/admin/**").hasRole(JwtAuthFilter.ROLE_ADMINISTRADOR)
+                        // o resto é do app: o administrador não é Usuario e também recebe 403
+                        .anyRequest().hasRole(JwtAuthFilter.ROLE_USUARIO))
                 .addFilterBefore(new JwtAuthFilter(leitorTokenAcesso), UsernamePasswordAuthenticationFilter.class)
                 // 401/403 saem pelo GlobalExceptionHandler como qualquer outro erro (ErroResponse + NAO_AUTENTICADO/ACESSO_NEGADO)
                 .exceptionHandling(erro -> erro

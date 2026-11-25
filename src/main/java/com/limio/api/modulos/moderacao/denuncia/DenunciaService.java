@@ -28,6 +28,10 @@ public class DenunciaService extends BaseService<Denuncia, UUID, DenunciaReposit
         return repository.saveAndFlush(denuncia);
     }
 
+    public long contarPorStatus(StatusResolucao status) {
+        return repository.countByStatusResolucao(status);
+    }
+
     /**
      * A denúncia ainda em aberto de {@code denuncianteId} com o mesmo alvo (denunciado e contexto) e o mesmo motivo,
      * se houver. São poucas por par denunciante/denunciado, por isso o contexto é comparado aqui e não na consulta

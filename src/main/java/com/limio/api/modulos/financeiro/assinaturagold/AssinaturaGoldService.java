@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 import com.limio.api.comum.base.BaseService;
+import com.limio.api.modulos.financeiro.assinaturagold.enums.StatusAssinatura;
 
 /** Camada técnica de persistência de {@link AssinaturaGold} — CRUD genérico (herdado) + finder da entity. */
 @Component
@@ -17,5 +18,9 @@ public class AssinaturaGoldService extends BaseService<AssinaturaGold, UUID, Ass
 
     public Optional<AssinaturaGold> buscarPorUsuario(UUID usuarioId) {
         return repository.findByUsuarioId(usuarioId);
+    }
+
+    public long contarPorStatus(StatusAssinatura status) {
+        return repository.countByStatus(status);
     }
 }

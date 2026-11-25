@@ -9,6 +9,8 @@ import com.limio.api.modulos.moderacao.enums.StatusResolucao;
 
 public interface DenunciaRepository extends BaseRepository<Denuncia, UUID> {
 
+    long countByStatusResolucao(StatusResolucao statusResolucao);
+
     List<Denuncia> findByDenuncianteIdAndDenunciadoIdAndStatusResolucaoIn(UUID denuncianteId, UUID denunciadoId,
             Collection<StatusResolucao> status);
 }

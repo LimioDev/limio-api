@@ -387,6 +387,12 @@ Prestador, só pro Empregador (regra do `gold`), pela `ConsultaAvaliacoes`: fech
 `canceladoEm` fica pra depois da #38, que grava o `tipoCancelamento`. Sem migration. Detalhe em
 `../features/ETI-138-candidatura-id-no-servico-combinado.md`.
 
+## 2026-11-22 — ETI-117 (dashboard do administrador, em `administracao`): porta de totais
+
+`actions/service/ConsultaTotaisDeAnunciosService` implementa a porta `ConsultaTotaisDeAnuncios`, com os totais de anúncios,
+candidaturas e escolhas (`escolhida_em` preenchido, mesmo que a candidatura tenha sido encerrada depois) para o
+dashboard do administrador. Detalhe em `administracao/docs/features/ETI-117-dashboard-administrativo.md`.
+
 ## 2026-11-25 — ETI-114 (review da PR #48): `ConsultaServico.buscarPartes`
 
 `ConsultaServicoService` ganhou `buscarPartes` (`PartesAnuncio` em `comum/portas`) para a denúncia de `moderacao`.

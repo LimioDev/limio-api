@@ -23,6 +23,8 @@ public interface UsuarioRepository extends BaseRepository<Usuario, UUID> {
 
     boolean existsByCpf(String cpf);
 
+    long countByAnonimizadoEmIsNull();
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from Usuario u where u.id = :id")
     Optional<Usuario> findByIdParaAtualizar(@Param("id") UUID id);

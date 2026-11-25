@@ -25,6 +25,12 @@ mensagem. O acesso é conferido pelas portas `ConsultaDadosUsuario`, `ConsultaSe
 denúncia aponta pra ela em `evidencia_id`. Nasce `ABERTA` com prazo de análise (72h provisórias) e entra na fila do
 admin (US58). Não toca no serviço. Detalhe em `../features/ETI-114-registrar-denuncia.md`.
 
+## 2026-11-22 — ETI-117 (dashboard do administrador, em `administracao`): porta de totais
+
+`actions/service/ConsultaTotaisDeDenunciasService` implementa a porta `ConsultaTotaisDeDenuncias`: conta as denúncias `ABERTA`,
+o mesmo número do título da fila, para o dashboard do administrador. Detalhe em
+`administracao/docs/features/ETI-117-dashboard-administrativo.md`.
+
 ## 2026-11-25 — ETI-114 (review da PR #48): denúncia por anúncio encerrado e denúncia repetida
 
 - **Anúncio que já teve escolhido segue entre as partes.** Antes, "sem Prestador escolhido" vinha de
