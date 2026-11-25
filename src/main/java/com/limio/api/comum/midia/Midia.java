@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
  * pública. Imutável depois de criada, exceto o expurgo.
  *
  * Fica em {@code comum/} porque dois módulos gravam mídia: {@code perfil} (foto de perfil, TICKET-0056) e
- * {@code anuncio} (fotos do anúncio, ETI-59).
+ * {@code anuncio} (fotos do anúncio, ETI-59), e também {@code moderacao} (evidência da denúncia, ETI-114).
  */
 @Entity
 @Table(name = "midia")
@@ -73,6 +73,12 @@ public class Midia extends BaseEntity {
     public static Midia evidenciaCheckout(UUID usuarioId, UUID anuncioId, String urlS3, String mime, int largura,
             int altura, long bytes) {
         return foto(TipoMidia.EVIDENCIA_CHECKOUT, usuarioId, anuncioId, urlS3, mime, largura, altura, bytes);
+    }
+
+    /** Evidência de uma denúncia (ETI-114); {@code usuarioId} é o denunciante. A {@code denuncia} guarda o id da mídia. */
+    public static Midia evidenciaDenuncia(UUID usuarioId, String urlS3, String mime, int largura, int altura,
+            long bytes) {
+        return foto(TipoMidia.EVIDENCIA_DENUNCIA, usuarioId, null, urlS3, mime, largura, altura, bytes);
     }
 
     private static Midia foto(TipoMidia tipo, UUID usuarioId, UUID anuncioId, String urlS3, String mime, int largura,
