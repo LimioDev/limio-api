@@ -45,7 +45,7 @@ por `ImagemHelper`, vai pro storage, publica `EvidenciaDenunciaEnviadaEvent` e v
 | `actions/service/ConsultaAvaliacoesService` | Implementa `comum/portas/ConsultaAvaliacoes` (ETI-105): resumo em lote e avaliações recentes, lidas direto de `Avaliacao`. |
 | `denuncia/Denuncia` | Entity da tabela `denuncia`. `registrar(...)` é a única forma de criar; `numero` vem do banco. |
 | `denuncia/AlvoDenuncia` | Denunciado e contexto (anúncio, candidatura, mensagem), como o cliente mandou ou já resolvido. |
-| `denuncia/DenunciaRepository`, `denuncia/DenunciaService` | Persistência; `salvarAgora` faz o flush pra o `numero` sair na resposta. |
+| `denuncia/DenunciaRepository`, `denuncia/DenunciaService` | Persistência; `salvarAgora` faz o flush pra o `numero` sair na resposta; `buscarEmAbertoIgual` acha a mesma denúncia ainda em aberto (`Denuncia.repete`). |
 | `enums/MotivoDenuncia`, `enums/StatusResolucao` | Os cinco motivos da tela 46 e o andamento da denúncia (só `ABERTA` por enquanto). |
 | `actions/usecase/RegistrarDenunciaUseCase` | Regras do UC "Registrar denúncia": quem pode denunciar o quê, evidência e prazo de análise. |
 | `actions/controller/DenunciaController` | `POST /denuncias`, `multipart/form-data`. Sem checagem de papel: o acesso é decidido pelo alvo. |

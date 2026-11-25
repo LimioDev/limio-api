@@ -14,8 +14,9 @@ Tela "Abrir denúncia" (tela 46).
   |---|---|---|
   | `mensagemId` | quem participa do chat da mensagem | o remetente |
   | `candidaturaId` | o Empregador dono do anúncio ou o Prestador da candidatura | a outra parte |
-  | `anuncioId` com Prestador escolhido (serviço) | o Empregador dono ou o Prestador escolhido | a outra parte |
-  | `anuncioId` sem escolhido | qualquer usuário, menos o dono | o Empregador dono |
+  | `anuncioId` que já teve Prestador escolhido (serviço), mesmo cancelado ou encerrado depois | o Empregador dono ou o Prestador que foi escolhido | a outra parte |
+  | `anuncioId` no mural (`PUBLICADO`) que nunca teve escolhido | qualquer usuário, menos o dono | o Empregador dono |
+  | `anuncioId` fora do mural que nunca teve escolhido | ninguém (quem se candidatou usa a candidatura) | — |
   | só `denunciadoId` (perfil) | qualquer usuário | a conta, que precisa estar ativa |
 
   Ninguém denuncia a si mesmo, e isso inclui a própria mensagem e o próprio anúncio. Se `denunciadoId` vier junto com um
@@ -27,6 +28,9 @@ Tela "Abrir denúncia" (tela 46).
 - **Evidência:** uma foto opcional, JPG ou PNG, até 5 MB. Ela é regravada sem EXIF, como as outras fotos, e vira
   `Midia` `EVIDENCIA_DENUNCIA`.
 - **Registro:** a denúncia nasce `ABERTA`, com `prazoAnalise` = registro + 72h, e entra na fila do admin (US58).
+- **Repetida:** se o denunciante já tem uma denúncia em aberto com o mesmo alvo (denunciado e contexto) e o mesmo
+  motivo, a resposta é essa denúncia (mesmo `numero`), sem gravar outra nem guardar a foto nova. Cobre o toque duplo e
+  o retry do app.
 - **Não muda nada no serviço:** não reabre, não muda o status do anúncio nem da candidatura e não move dinheiro.
   Denúncia de não pagamento depois de `CONCLUIDO` ou em `AGUARDANDO_VALIDACAO` é registrada igual às outras, e o admin
   não marca "pago" nem "não pago".
@@ -56,8 +60,8 @@ Tela "Abrir denúncia" (tela 46).
 - **Subentidade `moderacao/denuncia/`:** o módulo já existia por causa da avaliação (ETI-107), então não precisei de
   módulo novo. Tabela `denuncia` na V39, com ids crus para os outros módulos (ADR-0001 §1.6) e FK só para `midia`, que
   é de `comum/`.
-- **Acesso pelas portas de leitura (ADR-0003):** `ConsultaDadosUsuario` (perfil), `ConsultaServico` (anúncio ou
-  serviço), `ConsultaCandidatura` (candidatura) e `ConsultaChat.buscarMensagem` (mensagem, método novo e
+- **Acesso pelas portas de leitura (ADR-0003):** `ConsultaDadosUsuario` (perfil), `ConsultaServico.buscarPartes`
+  (anúncio ou serviço: o escolhido por `escolhidaEm`, que fica mesmo com o serviço cancelado, e se está no mural), `ConsultaCandidatura` (candidatura) e `ConsultaChat.buscarMensagem` (mensagem, método novo e
   `ResumoMensagem` novo, implementados no `chat`).
 - **O contexto completo é gravado:** a denúncia de mensagem guarda também a candidatura e o anúncio, e a de candidatura
   guarda o anúncio. Assim o admin vê de onde veio sem precisar consultar o `chat`.
@@ -69,6 +73,9 @@ Tela "Abrir denúncia" (tela 46).
 - **Storage:** chave `evidencias-denuncia/{denuncianteId}/{uuid}.{ext}`. Se a transação desfizer depois do upload,
   `EvidenciaDenunciaEnviadaEvent` (interno) leva `EvidenciaDenunciaEventosService` a apagar o objeto em
   `AFTER_ROLLBACK`, com a mesma limpeza das fotos do anúncio.
+- **Repetida, sob concorrência:** `TravaTransacional` no escopo `DENUNCIA` (chave = denunciante) é a primeira
+  instrução da transação. A comparação do contexto é feita em memória sobre as denúncias em aberto do par
+  denunciante/denunciado (poucas), para não comparar no SQL colunas que podem ser nulas.
 - **Ordem das recusas:** primeiro a validação dos campos (400), depois o alvo (404) e por último a foto (422). Assim um
   terceiro não descobre nada pelo erro da foto.
 - **Campos de formulário (`@ModelAttribute`), não uma parte JSON:** o `FormData` do app não define o `Content-Type` de
@@ -80,9 +87,10 @@ Tela "Abrir denúncia" (tela 46).
   `moderacao.denuncia.prazo-analise-horas` e precisa da confirmação do PO.
 - **"Ter visto o perfil" não é conferido:** nada registra quem viu qual perfil, então qualquer usuário logado denuncia
   um perfil ativo. Se o PO quiser restringir (por exemplo, só quem já teve contato), o lugar é `alvoDoPerfil`.
-- **Anúncio sem escolhido não confere o status:** a porta `ConsultaServico` não traz o status, então um anúncio que
-  ainda não está no mural também pode ser denunciado por quem tem o id.
-- **Sem limite de denúncias repetidas:** o card não pede. A mesma pessoa pode denunciar o mesmo alvo mais de uma vez.
+- **Limite de denúncias por par (PO):** a mesma denúncia repetida não grava de novo (ver Regra de negócio), mas nada
+  limita denúncias com motivos diferentes contra a mesma pessoa. Um limite (por par, por dia) é regra a definir.
+- **Conta do denunciado nos caminhos com contexto (PO):** o perfil exige conta ativa; mensagem, candidatura e anúncio
+  não conferem. Hoje dá pra denunciar, pelo contexto, quem já encerrou a conta. Fica para o PO decidir.
 - **Fila, análise e decisão:** ficam para o card do admin (US58). Os outros status de `StatusResolucao` entram com ele.
 - **Conta encerrada:** a evidência e a denúncia ficam guardadas. A retenção e a anonimização ficam para o card de
   moderação ou de privacidade que tratar disso.

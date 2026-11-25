@@ -15,4 +15,13 @@ public interface ConsultaServico {
      * @return o resumo, ou vazio se o anúncio não existe
      */
     Optional<ResumoServico> buscarPorId(UUID anuncioId);
+
+    /**
+     * As partes do anúncio para a denúncia (ETI-114). Diferente de {@link #buscarPorId}, o escolhido vem mesmo depois
+     * do serviço cancelado ou do anúncio encerrado.
+     *
+     * @param anuncioId id do anúncio
+     * @return as partes, ou vazio se o anúncio não existe
+     */
+    Optional<PartesAnuncio> buscarPartes(UUID anuncioId);
 }

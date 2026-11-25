@@ -1,6 +1,7 @@
 package com.limio.api.modulos.moderacao.denuncia;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.hibernate.annotations.Generated;
@@ -89,5 +90,14 @@ public class Denuncia extends BaseEntity {
         denuncia.statusResolucao = StatusResolucao.ABERTA;
         denuncia.prazoAnalise = prazoAnalise;
         return denuncia;
+    }
+
+    /** Mesmo alvo (denunciado e contexto) e mesmo motivo: é a mesma denúncia mandada de novo. */
+    public boolean repete(AlvoDenuncia alvo, MotivoDenuncia motivo) {
+        return denunciadoId.equals(alvo.denunciadoId())
+                && Objects.equals(anuncioId, alvo.anuncioId())
+                && Objects.equals(candidaturaId, alvo.candidaturaId())
+                && Objects.equals(mensagemId, alvo.mensagemId())
+                && this.motivo == motivo;
     }
 }
