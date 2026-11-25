@@ -1,6 +1,8 @@
 package com.limio.api.comum.config;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.Objects;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -8,9 +10,13 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwtClaimNames;
+import org.springframework.security.oauth2.jwt.JwtClaimValidator;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
@@ -18,6 +24,9 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
  * Par encoder/decoder do token de acesso (JWT HS256), com a mesma chave
  * simétrica. O decoder é usado pelo {@code LeitorTokenAcesso}; o encoder, por
  * quem emite token ({@code modulos.auth}).
+ *
+ * O decoder exige o {@code exp}: o validador padrão só confere a validade quando o claim existe, e um token sem ele
+ * (por exemplo, um token de administrador gerado à mão antes da US60) valeria para sempre.
  */
 @Configuration
 public class JwtConfig {
@@ -42,6 +51,9 @@ public class JwtConfig {
 
     @Bean
     public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withSecretKey(chave).macAlgorithm(MacAlgorithm.HS256).build();
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(chave).macAlgorithm(MacAlgorithm.HS256).build();
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(JwtValidators.createDefault(),
+                new JwtClaimValidator<Instant>(JwtClaimNames.EXP, Objects::nonNull)));
+        return decoder;
     }
 }

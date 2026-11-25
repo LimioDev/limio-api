@@ -1,6 +1,5 @@
 package com.limio.api.comum.seguranca;
 
-import java.security.Principal;
 import java.util.UUID;
 
 /**
@@ -12,7 +11,7 @@ import java.util.UUID;
  * <p>Controller recebe via {@code @AuthenticationPrincipal}, como o {@link UsuarioAutenticado}. O {@code id} é o da
  * tabela {@code administrador} ({@code modulos.administracao}).
  */
-public record AdministradorAutenticado(UUID id) implements Principal {
+public record AdministradorAutenticado(UUID id) implements DonoTokenAcesso {
 
     @Override
     public String getName() {

@@ -1,6 +1,7 @@
 package com.limio.api.modulos.administracao.actions.usecase;
 
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.portas.ConsultaTotaisDeAnuncios;
@@ -33,8 +34,12 @@ public class ConsultarDashboardUseCase {
         this.totaisDeDenuncias = totaisDeDenuncias;
     }
 
-    /** Uma transação só leitura: as contagens saem do mesmo retrato da base. */
-    @Transactional(readOnly = true)
+    /**
+     * Uma transação só leitura em {@code REPEATABLE READ}: no Postgres o retrato é tirado na primeira consulta e vale
+     * para as seguintes, então as contagens saem do mesmo instante. Em {@code READ COMMITTED} (o padrão) cada
+     * {@code count} veria o próprio retrato.
+     */
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public NumerosDaOperacao executar() {
         TotaisDeAnuncios anuncios = totaisDeAnuncios.contar();
         return new NumerosDaOperacao(

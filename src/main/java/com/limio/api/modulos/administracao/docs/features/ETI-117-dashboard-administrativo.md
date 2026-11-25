@@ -42,8 +42,14 @@ Card: [ETI-117](https://kaueamaral96.atlassian.net/browse/ETI-117) · Backlog US
   (decisão do tech lead de 2026-10-26, V15), então ganhou a tabela `administrador` (V42) e um principal próprio,
   `comum/seguranca/AdministradorAutenticado`. O token dele é um JWT com a mesma chave do app, `sub` = id do
   administrador, a claim `tipo` = `ADMINISTRADOR` e nenhum `papel`.
-  - `LeitorTokenAcesso.ler` (usuário) recusa o token de administrador, e `lerAdministrador` recusa o de usuário. O canal
-    em tempo real só usa `ler`, então o administrador não conecta no chat.
+  - `LeitorTokenAcesso.lerDono` decodifica o token uma vez e a claim `tipo` decide se o dono é usuário ou
+    administrador (`DonoTokenAcesso`, interface selada). `LeitorTokenAcesso.ler` (usuário) recusa o token de
+    administrador. O canal em tempo real só usa `ler`, então o administrador não conecta no chat.
+  - **Token sem `exp` é recusado** (validador do `JwtConfig`), para o administrador e para o usuário: o validador
+    padrão só confere a validade quando o claim existe. Quem gerar o token do administrador à mão até a US60 precisa
+    pôr `exp` curto.
+  - **O administrador precisa existir:** o `sub` é conferido pela porta `ConsultaAdministrador` a cada requisição.
+    Apagar a linha da tabela revoga o token na hora.
   - `JwtAuthFilter` dá a role `USUARIO` ou `ADMINISTRADOR`. No `SecurityConfig`, `/admin/**` exige `ADMINISTRADOR`, e o
     resto (antes só `authenticated()`) exige `USUARIO`. Assim, o token do administrador também não entra nas rotas do
     app, onde o controller espera um `UsuarioAutenticado`.
@@ -53,7 +59,8 @@ Card: [ETI-117](https://kaueamaral96.atlassian.net/browse/ETI-117) · Backlog US
   `ConsultaTotaisDeUsuarios` (`auth`), `ConsultaTotaisDeAnuncios` + `TotaisDeAnuncios` (`anuncio`, os três números numa
   chamada só), `ConsultaTotaisDeAssinaturas` (`financeiro`) e `ConsultaTotaisDeDenuncias` (`moderacao`). Cada uma é um
   `count` simples no repository do dono.
-- **Uma transação só leitura no usecase:** as seis contagens saem do mesmo retrato da base.
+- **Uma transação só leitura em `REPEATABLE READ` no usecase:** as seis contagens saem do mesmo retrato da base (em
+  `READ COMMITTED`, o padrão do Postgres, cada `count` veria o próprio retrato).
 - **`BaseService.contar()`:** `count()` sem filtro, para os totais de anúncio e candidatura.
 - **CORS:** não precisou de código. A origem do painel web entra em `CORS_ORIGENS_PERMITIDAS` (separada por vírgula) no
   ambiente.

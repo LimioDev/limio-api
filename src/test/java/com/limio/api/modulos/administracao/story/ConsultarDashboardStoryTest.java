@@ -192,6 +192,16 @@ class ConsultarDashboardStoryTest {
     }
 
     @Test
+    void tokenDeAdministradorRemovidoRecebe401() throws Exception {
+        String token = bearerAdmin();
+        administradorRepository.delete(admin);
+
+        mockMvc.perform(get("/admin/dashboard").header(HttpHeaders.AUTHORIZATION, token))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.codigo", is("NAO_AUTENTICADO")));
+    }
+
+    @Test
     void administradorNaoUsaAsRotasDoApp() throws Exception {
         mockMvc.perform(get("/notificacoes").header(HttpHeaders.AUTHORIZATION, bearerAdmin()))
                 .andExpect(status().isForbidden())
