@@ -38,3 +38,15 @@ como `PROCEDENTE` ou `IMPROCEDENTE`, e a avaliação ganha `oculta_em`/`oculta_p
 administrador (token do ETI-117). As quatro sanções são aceitas, mesmo as que o painel v1 não mostra. Suspensão,
 encerramento de conta, remoção da foto e nova média saem por evento para `auth`, `anuncio` e `perfil`. Avaliação oculta
 deixou de contar em todas as consultas de avaliação. Detalhe em `../features/ETI-116-analisar-denuncia-e-aplicar-sancao.md`.
+
+## 2026-11-25 — ETI-114 (review da PR #48): denúncia por anúncio encerrado e denúncia repetida
+
+- **Anúncio que já teve escolhido segue entre as partes.** Antes, "sem Prestador escolhido" vinha de
+  `ResumoServico.prestadorId == null`, que só enxerga a candidatura em `ESCOLHIDA`/`AGUARDANDO_VALIDACAO`/`CONCLUIDA`.
+  Com o serviço cancelado depois da escolha, o dono não conseguia denunciar o ex-escolhido pelo anúncio e qualquer
+  terceiro conseguia denunciar o dono. A denúncia agora usa `ConsultaServico.buscarPartes` (novo, `PartesAnuncio`),
+  que traz o escolhido por `escolhidaEm` (permanente) e se o anúncio ainda está no mural. Anúncio fora do mural que
+  nunca teve escolhido responde `ALVO_NAO_ACESSIVEL`.
+- **Denúncia repetida não vira outra.** Mesmo denunciante, mesmo alvo (denunciado e contexto) e mesmo motivo com uma
+  denúncia ainda em aberto devolvem a existente, sem gravar nem enviar foto. A trava `EscopoTrava.DENUNCIA` por
+  denunciante cobre dois envios simultâneos (toque duplo). Limite de denúncias diferentes por par fica com o PO.

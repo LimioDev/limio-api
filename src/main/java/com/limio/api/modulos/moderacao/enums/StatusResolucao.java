@@ -15,4 +15,15 @@ public enum StatusResolucao {
             case IMPROCEDENTE -> IMPROCEDENTE;
         };
     }
+
+    /**
+     * A denúncia ainda espera uma decisão. Uma igual (mesmo denunciante, alvo e motivo) nesse estado não é gravada de
+     * novo. {@code switch} sem {@code default}: status novo obriga a decidir aqui.
+     */
+    public boolean isEmAberto() {
+        return switch (this) {
+            case ABERTA -> true;
+            case PROCEDENTE, IMPROCEDENTE -> false;
+        };
+    }
 }

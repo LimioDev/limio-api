@@ -65,7 +65,7 @@ por `ImagemHelper`, vai pro storage, publica `EvidenciaDenunciaEnviadaEvent` e v
 | `actions/service/ConsultaAvaliacoesService` | Implementa `comum/portas/ConsultaAvaliacoes` (ETI-105): resumo em lote e avaliações recentes, lidas direto de `Avaliacao`. |
 | `denuncia/Denuncia` | Entity da tabela `denuncia`. `registrar(...)` é a única forma de criar; `numero` vem do banco. |
 | `denuncia/AlvoDenuncia` | Denunciado e contexto (anúncio, candidatura, mensagem), como o cliente mandou ou já resolvido. |
-| `denuncia/DenunciaRepository`, `denuncia/DenunciaService` | Persistência; `salvarAgora` faz o flush pra o `numero` sair na resposta. |
+| `denuncia/DenunciaRepository`, `denuncia/DenunciaService` | Persistência; `salvarAgora` faz o flush pra o `numero` sair na resposta; `buscarEmAbertoIgual` acha a mesma denúncia ainda em aberto (`Denuncia.repete`). |
 | `enums/MotivoDenuncia`, `enums/StatusResolucao` | Os cinco motivos da tela 46 e o andamento da denúncia (`ABERTA`, `PROCEDENTE`, `IMPROCEDENTE`). |
 | `denuncia/DecisaoModeracao`, `denuncia/Sancao` | Entities das tabelas `decisao_moderacao` e `sancao` (ETI-116). Imutáveis; `registrar` e `aplicar` são a única forma de criar. |
 | `denuncia/DecisaoModeracaoService` | Persistência da decisão e das sanções dela; histórico de sanções do usuário. |

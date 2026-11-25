@@ -1,9 +1,7 @@
 package com.limio.api.comum.seguranca;
 
 import java.io.IOException;
-import java.security.Principal;
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -64,19 +62,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     private void autenticar(String token) {
-        Optional<UsernamePasswordAuthenticationToken> autenticacao = leitorTokenAcesso.ler(token)
-                .map(acesso -> autenticado(acesso.usuario(), ROLE_USUARIO))
-                .or(() -> leitorTokenAcesso.lerAdministrador(token)
-                        .map(administrador -> autenticado(administrador, ROLE_ADMINISTRADOR)));
-        autenticacao.ifPresent(autenticado -> {
+        leitorTokenAcesso.lerDono(token).ifPresent(dono -> {
             SecurityContext contexto = SecurityContextHolder.createEmptyContext();
-            contexto.setAuthentication(autenticado);
+            contexto.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(dono, null,
+                    List.of(new SimpleGrantedAuthority("ROLE_" + role(dono)))));
             SecurityContextHolder.setContext(contexto);
         });
     }
 
-    private static UsernamePasswordAuthenticationToken autenticado(Principal principal, String role) {
-        return UsernamePasswordAuthenticationToken.authenticated(principal, null,
-                List.of(new SimpleGrantedAuthority("ROLE_" + role)));
+    private static String role(DonoTokenAcesso dono) {
+        return switch (dono) {
+            case UsuarioAutenticado usuario -> ROLE_USUARIO;
+            case AdministradorAutenticado administrador -> ROLE_ADMINISTRADOR;
+        };
     }
 }

@@ -32,4 +32,7 @@ public interface DenunciaRepository extends BaseRepository<Denuncia, UUID> {
 
     /** Outras denúncias contra o mesmo usuário, da mais recente para a mais antiga. */
     List<Denuncia> findByDenunciadoIdAndIdNotOrderByCriadoEmDesc(UUID denunciadoId, UUID id);
+
+    List<Denuncia> findByDenuncianteIdAndDenunciadoIdAndStatusResolucaoIn(UUID denuncianteId, UUID denunciadoId,
+            Collection<StatusResolucao> status);
 }

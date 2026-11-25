@@ -36,7 +36,7 @@ class WebSocketAuthInterceptorTest {
     private final MessageChannel canal = mock(MessageChannel.class);
     private final ExpiracaoSessaoWebSocket expiracao = new ExpiracaoSessaoWebSocket();
     private final WebSocketAuthInterceptor interceptor =
-            new WebSocketAuthInterceptor(new LeitorTokenAcesso(jwtDecoder), expiracao);
+            new WebSocketAuthInterceptor(new LeitorTokenAcesso(jwtDecoder, administradorId -> true), expiracao);
 
     private static Message<byte[]> frame(StompHeaderAccessor stomp) {
         stomp.setSessionId(SESSAO);
@@ -93,6 +93,16 @@ class WebSocketAuthInterceptorTest {
         assertThatThrownBy(() -> interceptor.preSend(connect(null), canal))
                 .isInstanceOf(MessageDeliveryException.class);
         assertThatThrownBy(() -> interceptor.preSend(connect("Bearer ruim"), canal))
+                .isInstanceOf(MessageDeliveryException.class);
+    }
+
+    @Test
+    void dadoTokenDeAdministrador_quandoConecta_entaoRecusa() {
+        when(jwtDecoder.decode("admin")).thenReturn(Jwt.withTokenValue("admin").header("alg", "HS256")
+                .subject(UUID.randomUUID().toString()).claim(JwtAuthFilter.CLAIM_TIPO, JwtAuthFilter.TIPO_ADMINISTRADOR)
+                .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(60)).build());
+
+        assertThatThrownBy(() -> interceptor.preSend(connect("Bearer admin"), canal))
                 .isInstanceOf(MessageDeliveryException.class);
     }
 

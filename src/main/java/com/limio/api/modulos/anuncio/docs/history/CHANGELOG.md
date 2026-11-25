@@ -398,3 +398,10 @@ dashboard do administrador. Detalhe em `administracao/docs/features/ETI-117-dash
 `EncerrarAnunciosEAplicacoesUseCase.aoSuspenderConta` escuta `ContaSuspensaEvent` depois do commit e encerra os
 compromissos abertos pelo mesmo fluxo da saída de conta (inclusive reagendamentos pendentes), com o motivo "Cancelado
 por suspensão de conta". Detalhe em `moderacao/docs/features/ETI-116-analisar-denuncia-e-aplicar-sancao.md`.
+
+## 2026-11-25 — ETI-114 (review da PR #48): `ConsultaServico.buscarPartes`
+
+`ConsultaServicoService` ganhou `buscarPartes` (`PartesAnuncio` em `comum/portas`) para a denúncia de `moderacao`.
+Diferente de `buscarPorId`, que mostra o Prestador só enquanto o serviço está de pé, o escolhido vem de
+`escolhidaEm` (permanente) e por isso aparece também com o serviço cancelado ou o anúncio encerrado; `noMural` diz se
+o anúncio ainda está `PUBLICADO`.
