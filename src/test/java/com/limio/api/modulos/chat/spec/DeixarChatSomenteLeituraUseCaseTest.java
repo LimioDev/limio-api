@@ -21,6 +21,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.limio.api.comum.eventos.PrestadorEscolhidoEvent;
 import com.limio.api.comum.eventos.ServicoCanceladoEvent;
+import com.limio.api.comum.eventos.ServicoCanceladoPeloPrestadorEvent;
 import com.limio.api.comum.eventos.enums.TipoCancelamento;
 import com.limio.api.modulos.chat.Chat;
 import com.limio.api.modulos.chat.ChatService;
@@ -148,6 +149,36 @@ class DeixarChatSomenteLeituraUseCaseTest {
         when(chatService.buscarDaCandidatura(semChat)).thenReturn(Optional.empty());
 
         useCase.aoCancelarServico(servicoCancelado(semChat, TipoCancelamento.NORMAL));
+
+        verify(chatService, never()).salvar(any());
+    }
+
+    private static ServicoCanceladoPeloPrestadorEvent servicoCanceladoPeloPrestador(UUID candidaturaEscolhida) {
+        return new ServicoCanceladoPeloPrestadorEvent(ANUNCIO_ID, "Instalar 3 tomadas", candidaturaEscolhida,
+                UUID.randomUUID(), UUID.randomUUID(), AGORA);
+    }
+
+    @Test
+    void dadoServicoCanceladoPeloPrestador_quandoReage_entaoSoOChatDaEscolhidaFicaSomenteLeitura() {
+        UUID escolhida = UUID.randomUUID();
+        Chat chat = chatAberto(escolhida);
+        when(chatService.buscarDaCandidatura(escolhida)).thenReturn(Optional.of(chat));
+
+        useCase.aoCancelarServicoPeloPrestador(servicoCanceladoPeloPrestador(escolhida));
+
+        assertThat(chat.isSomenteLeitura()).isTrue();
+        assertThat(chat.getMotivoSomenteLeitura()).isEqualTo(MotivoSomenteLeitura.SERVICO_CANCELADO);
+        assertThat(chat.getSomenteLeituraEm()).isEqualTo(AGORA);
+        verify(chatService).salvar(chat);
+        verify(chatService, never()).buscarAbertosDoAnuncio(any());
+    }
+
+    @Test
+    void dadoEscolhidaSemChat_quandoPrestadorCancelaOServico_entaoIgnoraSemFalhar() {
+        UUID semChat = UUID.randomUUID();
+        when(chatService.buscarDaCandidatura(semChat)).thenReturn(Optional.empty());
+
+        useCase.aoCancelarServicoPeloPrestador(servicoCanceladoPeloPrestador(semChat));
 
         verify(chatService, never()).salvar(any());
     }

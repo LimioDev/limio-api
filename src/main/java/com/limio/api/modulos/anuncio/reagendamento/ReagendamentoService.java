@@ -1,5 +1,6 @@
 package com.limio.api.modulos.anuncio.reagendamento;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,6 +23,18 @@ public class ReagendamentoService extends BaseService<Reagendamento, UUID, Reage
             return List.of();
         }
         return repository.findByAnuncioIdInAndStatus(anuncioIds, StatusReagendamento.PENDENTE);
+    }
+
+    /**
+     * O serviço deixou de estar combinado: toda proposta pendente dos anúncios perde o efeito. A data vigente não muda.
+     * Mesma assinatura do ponto único que o ETI-99 (#49) introduz; aqui ainda usa o {@code cancelarSemEfeito} da
+     * develop, e o #49 troca a implementação pelo estado {@code SEM_EFEITO}.
+     */
+    public void encerrarPendentesSemEfeito(List<UUID> anuncioIds, Instant agora) {
+        for (Reagendamento pendente : buscarPendentesDosAnuncios(anuncioIds)) {
+            pendente.cancelarSemEfeito(agora);
+            salvar(pendente);
+        }
     }
 
     public Optional<Reagendamento> buscarUltimoAceito(UUID anuncioId) {

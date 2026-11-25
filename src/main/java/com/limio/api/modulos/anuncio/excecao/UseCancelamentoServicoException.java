@@ -6,8 +6,8 @@ import com.limio.api.comum.excecao.NegocioException;
 import com.limio.api.comum.excecao.enums.CodigoErro;
 
 /**
- * Prestador já escolhido não desiste da candidatura: cancela o serviço combinado (ETI-96/ETI-97), conforme o
- * UC (ETI-77).
+ * Prestador já escolhido não desiste da candidatura: cancela o serviço combinado (ETI-96, {@code
+ * POST /anuncios/{anuncioId}/servico/cancelar-prestador}), conforme o UC (ETI-77).
  */
 public class UseCancelamentoServicoException extends NegocioException {
 
