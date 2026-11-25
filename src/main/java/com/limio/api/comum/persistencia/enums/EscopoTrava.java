@@ -45,5 +45,11 @@ public enum EscopoTrava {
     COTA_PRESTADOR,
 
     /** Assinar o plano GOLD por usuário (ETI-81): clique duplo não chama o gateway duas vezes. */
-    ASSINATURA_GOLD
+    ASSINATURA_GOLD,
+
+    /**
+     * Denúncias registradas por um denunciante, chave = id do denunciante (ETI-114): o toque duplo ou o retry do app
+     * não gravam a mesma denúncia duas vezes.
+     */
+    DENUNCIA
 }

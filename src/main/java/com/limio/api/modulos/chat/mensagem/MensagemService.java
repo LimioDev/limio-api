@@ -2,6 +2,7 @@ package com.limio.api.modulos.chat.mensagem;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.domain.PageRequest;
@@ -17,6 +18,10 @@ public class MensagemService extends BaseService<Mensagem, UUID, MensagemReposit
 
     public MensagemService(MensagemRepository repository) {
         super(repository);
+    }
+
+    public Optional<Mensagem> buscarPorId(UUID mensagemId) {
+        return repository.findById(mensagemId);
     }
 
     /**

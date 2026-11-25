@@ -245,6 +245,8 @@ class CancelarServicoCombinadoStoryTest {
                 .dataProposta(agora.plus(Duration.ofDays(5)))
                 .status(status)
                 .respondidoEm(respondidoEm)
+                .proponenteId(UUID.randomUUID())
+                .expiraEm(agora.plus(Duration.ofDays(1)))
                 .build());
     }
 
@@ -511,7 +513,7 @@ class CancelarServicoCombinadoStoryTest {
         cancelar(logar("maria@example.com"), anuncio.getId()).andExpect(status().isOk());
 
         Reagendamento depois = reagendamentoRepository.findById(pendente.getId()).orElseThrow();
-        assertThat(depois.getStatus()).isEqualTo(StatusReagendamento.CANCELADO);
+        assertThat(depois.getStatus()).isEqualTo(StatusReagendamento.SEM_EFEITO);
         assertThat(depois.getRespondidoEm()).isEqualTo(agora);
     }
 

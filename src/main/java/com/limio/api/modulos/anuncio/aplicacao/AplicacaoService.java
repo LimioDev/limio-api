@@ -102,6 +102,11 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
         return repository.findByPrestadorIdAndStatusIn(usuarioId, STATUS_ABERTOS);
     }
 
+    /** Só os ids das candidaturas abertas do prestador — escalar pelo mesmo motivo de {@link #buscarAnuncioId}. */
+    public List<UUID> buscarIdsAbertasDoPrestador(UUID usuarioId) {
+        return repository.findIdsByPrestadorIdAndStatusIn(usuarioId, STATUS_ABERTOS);
+    }
+
     /**
      * Candidaturas de {@code prestadorId} escolhidas no período ({@code escolhidaEm} entre {@code inicio}, incluso, e
      * {@code fimExclusivo}), qualquer que seja o status atual, da escolha mais recente pra mais antiga. As que já
@@ -249,6 +254,10 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
      */
     public Optional<Aplicacao> buscarEscolhidaDoAnuncioParaAtualizar(UUID anuncioId) {
         return repository.findEscolhidaDoAnuncioParaAtualizar(anuncioId);
+    }
+
+    public Optional<UUID> buscarPrestadorEscolhido(UUID anuncioId) {
+        return buscarEscolhidaDoAnuncio(anuncioId).map(Aplicacao::getPrestadorId);
     }
 
     /**

@@ -67,6 +67,16 @@ class CancelamentoServicoDominioTest {
     }
 
     @Test
+    void soOAnuncioPublicadoPermiteReagendar() {
+        assertThat(anuncioComStatus(StatusAnuncio.PUBLICADO).permiteReagendar()).isTrue();
+        for (StatusAnuncio status : StatusAnuncio.values()) {
+            if (status != StatusAnuncio.PUBLICADO) {
+                assertThat(anuncioComStatus(status).permiteReagendar()).as(status.name()).isFalse();
+            }
+        }
+    }
+
+    @Test
     void cancelarServicoNormalEncerraORegistraOTipoEOMotivo() {
         Anuncio anuncio = anuncioParaDaquiA(Duration.ofDays(3));
 

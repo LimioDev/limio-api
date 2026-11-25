@@ -27,12 +27,14 @@ import com.limio.api.modulos.anuncio.eventos.FotoAnuncioEnviadaEvent;
 import com.limio.api.modulos.anuncio.excecao.FotoObrigatoriaException;
 import com.limio.api.modulos.anuncio.excecao.ServicoEstadoInvalidoException;
 import com.limio.api.modulos.anuncio.excecao.ServicoNaoEncontradoException;
+import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
 
 /**
  * UC — Prestador escolhido faz o check-out com fotos do serviço pronto (ETI-90): as fotos viram {@code Midia}
  * {@code EVIDENCIA_CHECKOUT}, o anúncio e a candidatura vão pra {@code AGUARDANDO_VALIDACAO}, {@code checkoutEm}
  * é gravado e {@link CheckoutEnviadoEvent} é publicado (o aviso ao Empregador é a ETI-112). Nunca conclui o
- * serviço: isso é do Empregador (ETI-92/93) ou do silêncio (ETI-98).
+ * serviço: isso é do Empregador (ETI-92/93) ou do silêncio (ETI-98). Uma proposta de reagendamento pendente
+ * perde o efeito ({@code SEM_EFEITO}) no mesmo instante: com o check-out o serviço deixa de estar combinado (ETI-99).
  *
  * Ordem das recusas: serviço inexistente e quem não é o escolhido têm a mesma resposta (404), antes de qualquer
  * conferência de foto, pra não revelar nada a terceiros. Depois o estado (409), depois as fotos (422).
@@ -50,6 +52,7 @@ public class RealizarCheckoutUseCase {
 
     private final AnuncioService anuncioService;
     private final AplicacaoService aplicacaoService;
+    private final ReagendamentoService reagendamentoService;
     private final MidiaService midiaService;
     private final ArmazenamentoService armazenamentoService;
     private final ApplicationEventPublisher eventos;
@@ -59,6 +62,7 @@ public class RealizarCheckoutUseCase {
 
     public RealizarCheckoutUseCase(AnuncioService anuncioService,
             AplicacaoService aplicacaoService,
+            ReagendamentoService reagendamentoService,
             MidiaService midiaService,
             ArmazenamentoService armazenamentoService,
             ApplicationEventPublisher eventos,
@@ -67,6 +71,7 @@ public class RealizarCheckoutUseCase {
             @Value("${anuncio.foto.quantidade-maxima}") int quantidadeMaxima) {
         this.anuncioService = anuncioService;
         this.aplicacaoService = aplicacaoService;
+        this.reagendamentoService = reagendamentoService;
         this.midiaService = midiaService;
         this.armazenamentoService = armazenamentoService;
         this.eventos = eventos;
@@ -108,6 +113,8 @@ public class RealizarCheckoutUseCase {
         }
 
         Instant agora = Instant.now();
+        // O serviço deixa de estar "combinado": proposta de reagendamento pendente perde o efeito (ETI-99).
+        reagendamentoService.encerrarPendentesSemEfeito(List.of(anuncioId), agora);
         anuncio.registrarCheckout(agora, observacao);
         escolhida.registrarCheckout();
         aplicacaoService.salvar(escolhida);

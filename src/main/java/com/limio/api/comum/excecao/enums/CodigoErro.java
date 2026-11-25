@@ -54,6 +54,13 @@ public enum CodigoErro {
     CANDIDATURA_ESTADO_INVALIDO("Esta candidatura já foi encerrada."),
     USE_CANCELAMENTO_SERVICO("Você já foi escolhido para este serviço. Para desistir, cancele o serviço combinado."),
     PRAZO_CANCELAMENTO_ESGOTADO("O serviço só pode ser cancelado com pelo menos 24 horas de antecedência."),
+    REAGENDAMENTO_NAO_ENCONTRADO("Proposta de reagendamento não encontrada."),
+    PROPOSTA_PENDENTE_EXISTENTE("Já existe uma proposta de reagendamento aguardando resposta para este serviço."),
+    DATA_IGUAL_A_VIGENTE("A nova data e hora precisam ser diferentes da data e hora atuais do serviço."),
+    LIMITE_REAGENDAMENTOS("Este serviço já atingiu o limite de reagendamentos aceitos."),
+    REAGENDAMENTO_NAO_PERMITIDO("Com a data do serviço já passada, só é permitida uma proposta de reagendamento."),
+    PROPOSTA_EXPIRADA("O prazo para responder a esta proposta de reagendamento terminou."),
+    PROPOSTA_ENCERRADA("Esta proposta de reagendamento já foi encerrada."),
     USE_DENUNCIA("O serviço já está em andamento ou aguardando validação. Para relatar um problema, abra uma denúncia."),
     CHAT_NAO_ENCONTRADO("Conversa não encontrada."),
     CHAT_SOMENTE_LEITURA("Esta conversa está encerrada e não recebe novas mensagens."),
@@ -69,6 +76,7 @@ public enum CodigoErro {
     GATEWAY_INDISPONIVEL("Não foi possível processar o pagamento agora. Tente novamente em instantes."),
     CARTAO_INVALIDO("Dados do cartão inválidos. Confira número, validade e CVV."),
     NOTIFICACAO_NAO_ENCONTRADA("Notificação não encontrada."),
+    ALVO_NAO_ACESSIVEL("Não é possível denunciar este conteúdo."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");
 
     private final String mensagemPadrao;

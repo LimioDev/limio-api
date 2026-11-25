@@ -39,8 +39,9 @@ public class ServicoCombinadoMapper {
                 servico.prazoCancelamentoEm(),
                 servico.reagendamentosAceitos(),
                 servico.limiteReagendamentos(),
-                proposta == null ? null : new PropostaReagendamentoResponse(proposta.getDataProposta(),
-                        proposta.getJustificativa()),
+                proposta == null ? null : new PropostaReagendamentoResponse(proposta.getId(),
+                        proposta.getProponenteId(), proposta.getDataProposta(), proposta.getJustificativa(),
+                        proposta.getExpiraEm()),
                 chat == null ? null : chat.chatId(),
                 chat == null ? 0 : chat.mensagensNaoLidas());
     }

@@ -17,6 +17,7 @@ import com.limio.api.comum.eventos.CandidaturaEncerradaEvent;
 import com.limio.api.comum.eventos.ContaEncerradaEvent;
 import com.limio.api.comum.eventos.PrestadorEscolhidoEvent;
 import com.limio.api.comum.eventos.ServicoCanceladoEvent;
+import com.limio.api.comum.eventos.ServicoCanceladoPeloPrestadorEvent;
 import com.limio.api.modulos.chat.Chat;
 import com.limio.api.modulos.chat.ChatService;
 import com.limio.api.modulos.chat.enums.MotivoSomenteLeitura;
@@ -27,9 +28,9 @@ import com.limio.api.modulos.chat.enums.MotivoSomenteLeitura;
  *
  * Hoje escuta {@code AnuncioCanceladoEvent}, {@code ContaEncerradaEvent}, {@code CandidaturaEncerradaEvent}
  * (desistência, ETI-77), {@code CandidaturaRecusadaEvent} (ETI-67), {@code PrestadorEscolhidoEvent} (ETI-69) e
- * {@code ServicoCanceladoEvent} (cancelamento do serviço combinado pelo Empregador, ETI-94). O cancelamento pelo
- * Prestador (ETI-96) ligará aqui o seu, chamando {@link #executarDaCandidatura} com o {@link MotivoSomenteLeitura} do
- * cenário.
+ * {@code ServicoCanceladoEvent} (cancelamento do serviço combinado pelo Empregador, ETI-94) e
+ * {@code ServicoCanceladoPeloPrestadorEvent} (cancelamento pelo Prestador escolhido, ETI-96). Os dois usam o mesmo
+ * {@link MotivoSomenteLeitura#SERVICO_CANCELADO}: quem cancelou não muda a faixa do chat.
  */
 @Service
 public class DeixarChatSomenteLeituraUseCase {
@@ -63,6 +64,13 @@ public class DeixarChatSomenteLeituraUseCase {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void aoCancelarServico(ServicoCanceladoEvent evento) {
+        executarDaCandidatura(evento.candidaturaEscolhidaId(), MotivoSomenteLeitura.SERVICO_CANCELADO,
+                evento.ocorridoEm());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void aoCancelarServicoPeloPrestador(ServicoCanceladoPeloPrestadorEvent evento) {
         executarDaCandidatura(evento.candidaturaEscolhidaId(), MotivoSomenteLeitura.SERVICO_CANCELADO,
                 evento.ocorridoEm());
     }

@@ -11,7 +11,7 @@
  *
  * <ul>
  *   <li>{@code avaliacao} — nota/comentário entre avaliador e avaliado de um anúncio (implementada no ETI-107)</li>
- *   <li>{@code denuncia} — denunciante vs. denunciado</li>
+ *   <li>{@code denuncia} — denunciante vs. denunciado (registro implementado no ETI-114)</li>
  *   <li>{@code sancao}, {@code decisao_moderacao}, {@code recurso} — subentidades de {@code denuncia}</li>
  *   <li>{@code bloqueio_usuario} — usuário bloqueia usuário (bloqueador_id/bloqueado_id), não é suspensão de conta</li>
  * </ul>
