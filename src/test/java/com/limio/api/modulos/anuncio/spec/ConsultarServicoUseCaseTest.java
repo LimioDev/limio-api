@@ -89,7 +89,7 @@ class ConsultarServicoUseCaseTest {
     void montarUseCase() {
         useCase = new ConsultarServicoUseCase(anuncioService, aplicacaoService, reagendamentoService,
                 consultaCategoria, consultaDadosUsuario, consultaFotoPerfil, consultaPlanoPrestador,
-                consultaChatDoServico, consultaAvaliacoes);
+                consultaChatDoServico, consultaAvaliacoes, 2);
     }
 
     private Anuncio anuncio(StatusAnuncio status) {

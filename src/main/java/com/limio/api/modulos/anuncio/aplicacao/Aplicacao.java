@@ -72,6 +72,10 @@ public class Aplicacao extends BaseEntity {
         return status.isEscolhida();
     }
 
+    public boolean isAberta() {
+        return status.isAberto();
+    }
+
     public boolean pertenceA(UUID usuarioId) {
         return prestadorId.equals(usuarioId);
     }

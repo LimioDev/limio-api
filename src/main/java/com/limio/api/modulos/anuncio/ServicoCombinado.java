@@ -11,9 +11,9 @@ import com.limio.api.modulos.anuncio.reagendamento.Reagendamento;
  * O serviço combinado visto por uma das duas partes (ETI-86): o {@code Anuncio} depois da escolha, com os
  * contatos liberados. {@code escolhidaEm} vem da candidatura escolhida, não do anúncio.
  *
- * <p>{@code reagendamentosAceitos}/{@code limiteReagendamentos} e {@code propostaPendente} dependem da tabela
- * {@code reagendamento} (já existe, TICKET-0049) mas de nenhum usecase que a preencha ainda (ETI-99/ETI-100) —
- * nesta sprint sempre voltam zero/vazio, como o próprio card prevê.
+ * <p>{@code reagendamentosAceitos}/{@code limiteReagendamentos} e {@code propostaPendente} vêm da tabela
+ * {@code reagendamento}, preenchida pelos usecases de reagendamento (ETI-99): o limite é a propriedade {@code
+ * anuncio.reagendamento.limite} e a proposta pendente é a que aguarda a resposta da contraparte.
  *
  * @param candidaturaId id da candidatura escolhida: abre o chat do serviço ({@code GET /candidaturas/{id}/chat}),
  *                      o mesmo pros dois lados (ETI-138)

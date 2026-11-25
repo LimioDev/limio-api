@@ -18,6 +18,18 @@ public class ReagendamentoService extends BaseService<Reagendamento, UUID, Reage
         super(repository);
     }
 
+    public Optional<UUID> buscarAnuncioId(UUID id) {
+        return repository.findAnuncioIdById(id);
+    }
+
+    public Optional<Reagendamento> buscarPorId(UUID id) {
+        return repository.findById(id);
+    }
+
+    public List<UUID> buscarIdsParaExpirar(Instant agora, int lote) {
+        return repository.buscarIdsParaExpirar(agora, lote);
+    }
+
     public List<Reagendamento> buscarPendentesDosAnuncios(List<UUID> anuncioIds) {
         if (anuncioIds.isEmpty()) {
             return List.of();
@@ -26,13 +38,14 @@ public class ReagendamentoService extends BaseService<Reagendamento, UUID, Reage
     }
 
     /**
-     * O serviço deixou de estar combinado: toda proposta pendente dos anúncios perde o efeito. A data vigente não muda.
-     * Mesma assinatura do ponto único que o ETI-99 (#49) introduz; aqui ainda usa o {@code cancelarSemEfeito} da
-     * develop, e o #49 troca a implementação pelo estado {@code SEM_EFEITO}.
+     * O serviço deixou de estar combinado (cancelado pelo Empregador ou pelo Prestador, iniciado, com check-out,
+     * validado ou com conta encerrada): toda proposta pendente dos
+     * anúncios perde o efeito. A data vigente não muda. Ponto único dessa regra; quem tira o serviço de "combinado"
+     * chama aqui em vez de repetir o laço.
      */
     public void encerrarPendentesSemEfeito(List<UUID> anuncioIds, Instant agora) {
         for (Reagendamento pendente : buscarPendentesDosAnuncios(anuncioIds)) {
-            pendente.cancelarSemEfeito(agora);
+            pendente.encerrarSemEfeito(agora);
             salvar(pendente);
         }
     }
@@ -41,8 +54,18 @@ public class ReagendamentoService extends BaseService<Reagendamento, UUID, Reage
         return repository.findFirstByAnuncioIdAndStatusOrderByRespondidoEmDesc(anuncioId, StatusReagendamento.ACEITO);
     }
 
-    /** Quantos reagendamentos já foram aceitos pro anúncio (ETI-86); conta contra o limite de 2 (ETI-99/ETI-100). */
+    /** Quantos reagendamentos já foram aceitos pro anúncio (ETI-86); conta contra {@code anuncio.reagendamento.limite}. */
     public int contarAceitos(UUID anuncioId) {
-        return repository.findByAnuncioIdInAndStatus(List.of(anuncioId), StatusReagendamento.ACEITO).size();
+        return (int) repository.countByAnuncioIdAndStatus(anuncioId, StatusReagendamento.ACEITO);
+    }
+
+    /** Há proposta aguardando resposta; enquanto houver, a conclusão por silêncio não pode concluir o serviço. */
+    public boolean existePendente(UUID anuncioId) {
+        return repository.existsByAnuncioIdAndStatus(anuncioId, StatusReagendamento.PENDENTE);
+    }
+
+    /** Já houve proposta feita com a data vigente passada, qualquer que tenha sido o desfecho. */
+    public boolean existePropostaAposDataVigente(UUID anuncioId) {
+        return repository.existsByAnuncioIdAndPropostaAposDataVigenteTrue(anuncioId);
     }
 }

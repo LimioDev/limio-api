@@ -301,6 +301,26 @@ public class Anuncio extends BaseEntity {
         return temAntecedenciaDe(PRAZO_CANCELAMENTO_SERVICO, agora);
     }
 
+    /**
+     * ETI-99: o status permite reagendar (propor, aceitar). Regra própria do reagendamento, não derivada de {@link
+     * #situacaoParaCancelarServico}: mudar o que o cancelamento aceita não muda isto sem ninguém decidir. {@code switch}
+     * sem {@code default}: um status novo obriga a decidir aqui. Falta ainda a candidatura {@code ESCOLHIDA}, que é de
+     * outro agregado — quem chama confere.
+     */
+    public boolean permiteReagendar() {
+        return switch (status) {
+            case PUBLICADO -> true;
+            case EM_ANDAMENTO, AGUARDANDO_VALIDACAO, CONCLUIDO, ENCERRADO -> false;
+        };
+    }
+
+    public void reagendar(Instant novaDataHora) {
+        if (!permiteReagendar()) {
+            throw new IllegalStateException("Só um serviço combinado (PUBLICADO) pode ser reagendado, mas está " + status);
+        }
+        this.dataHoraPretendida = novaDataHora;
+    }
+
     /** ETI-86: "até quando o Empregador pode cancelar" — o último instante em que {@link #permiteCancelarServico} vale. */
     public Instant prazoCancelamentoServicoEm() {
         return dataHoraPretendida.minus(PRAZO_CANCELAMENTO_SERVICO);

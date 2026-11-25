@@ -3,31 +3,30 @@ package com.limio.api.modulos.anuncio.actions.usecase;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.limio.api.comum.auditoria.LogAuditoriaService;
 import com.limio.api.comum.auditoria.enums.TipoAcaoAuditoria;
 import com.limio.api.comum.eventos.AvisoDeAnuncioEvent;
 import com.limio.api.comum.eventos.ContaEncerradaEvent;
+import com.limio.api.comum.persistencia.TravaTransacional;
+import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
-import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
-import com.limio.api.modulos.anuncio.reagendamento.Reagendamento;
 import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
 
 /**
@@ -53,66 +52,64 @@ public class EncerrarAnunciosEAplicacoesUseCase {
     private final ReagendamentoService reagendamentoService;
     private final LogAuditoriaService logAuditoriaService;
     private final ApplicationEventPublisher eventPublisher;
+    private final TravaTransacional trava;
+    private final TransactionTemplate transacao;
 
     public EncerrarAnunciosEAplicacoesUseCase(AnuncioService anuncioService,
             AplicacaoService aplicacaoService,
             ReagendamentoService reagendamentoService,
             LogAuditoriaService logAuditoriaService,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            TravaTransacional trava,
+            PlatformTransactionManager gerenteTransacao) {
         this.anuncioService = anuncioService;
         this.aplicacaoService = aplicacaoService;
         this.reagendamentoService = reagendamentoService;
         this.logAuditoriaService = logAuditoriaService;
         this.eventPublisher = eventPublisher;
+        this.trava = trava;
+        // REQUIRES_NEW: no AFTER_COMMIT a transação de auth já comitou mas ainda está vinculada à thread; participar
+        // dela (REQUIRED) gravaria sem nunca commitar.
+        this.transacao = new TransactionTemplate(gerenteTransacao);
+        this.transacao.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
-    // REQUIRES_NEW: no AFTER_COMMIT já não há transação ativa pra participar (a de auth já comitou) —
-    // REQUIRED (padrão) falha a subida do contexto exatamente por causa disso.
+    // Sem @Transactional no método: cada anúncio/candidatura roda na própria transação (ver processarComIsolamento).
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void aoEncerrarConta(ContaEncerradaEvent evento) {
         Instant agora = Instant.now();
         UUID usuarioId = evento.usuarioId();
 
-        encerrarAnunciosDoContratante(usuarioId, agora);
+        // Só ids aqui (fora de qualquer transação de item): cada item é carregado depois da trava do anúncio, pra não
+        // trabalhar numa cópia velha (sem @Version, gravar a cópia velha sobrescreveria o que outra transação commitou).
+        anuncioService.buscarIdsAbertosDoContratante(usuarioId)
+                .forEach(anuncioId -> processarComIsolamento("Anuncio", anuncioId,
+                        () -> encerrarAnuncioDoContratante(anuncioId, agora)));
 
-        aplicacaoService.buscarAbertasDoPrestador(usuarioId)
-                .forEach(aplicacao -> processarComIsolamento("Aplicacao", aplicacao.getId(),
-                        () -> encerrarAplicacaoDoPrestador(aplicacao, agora)));
+        aplicacaoService.buscarIdsAbertasDoPrestador(usuarioId)
+                .forEach(aplicacaoId -> processarComIsolamento("Aplicacao", aplicacaoId,
+                        () -> encerrarAplicacaoDoPrestador(aplicacaoId, agora)));
     }
 
     /**
-     * Anúncios abertos do contratante que saiu: busca candidaturas e
-     * reagendamentos pendentes em lote (1 query cada pra todos os anúncios,
-     * em vez de 2 por anúncio) e só então processa anúncio por anúncio.
+     * Anúncio do contratante que saiu: toma a trava e só então lê o anúncio e as candidaturas abertas, encerra e
+     * encerra/avisa toda candidatura aberta (não só a escolhida). Se o anúncio já fechou enquanto isso, pula.
      */
-    private void encerrarAnunciosDoContratante(UUID usuarioId, Instant agora) {
-        List<Anuncio> anuncios = anuncioService.buscarAbertosDoContratante(usuarioId);
-        if (anuncios.isEmpty()) {
+    private void encerrarAnuncioDoContratante(UUID anuncioId, Instant agora) {
+        travarAnuncio(anuncioId);
+
+        Optional<Anuncio> anuncioEncontrado = anuncioService.buscarPorId(anuncioId);
+        if (anuncioEncontrado.isEmpty() || !anuncioEncontrado.get().isAberto()) {
             return;
         }
-
-        List<UUID> anuncioIds = anuncios.stream().map(Anuncio::getId).toList();
-        Map<UUID, List<Aplicacao>> candidaturasPorAnuncio = aplicacaoService.buscarAbertasDosAnuncios(anuncioIds)
-                .stream()
-                .collect(Collectors.groupingBy(Aplicacao::getAnuncioId));
-        cancelarReagendamentosPendentes(anuncioIds, agora);
-
-        for (Anuncio anuncio : anuncios) {
-            List<Aplicacao> candidaturasAbertas = candidaturasPorAnuncio.getOrDefault(anuncio.getId(), List.of());
-            processarComIsolamento("Anuncio", anuncio.getId(),
-                    () -> encerrarAnuncioDoContratante(anuncio, candidaturasAbertas, agora));
-        }
-    }
-
-    /** Anúncio do contratante que saiu: encerra e encerra/avisa toda candidatura aberta (não só a escolhida). */
-    private void encerrarAnuncioDoContratante(Anuncio anuncio, List<Aplicacao> candidaturasAbertas, Instant agora) {
+        Anuncio anuncio = anuncioEncontrado.get();
         boolean combinadoProximo = anuncio.estaAMenosDe(JANELA_COMBINADO_PROXIMO, agora);
 
         anuncio.encerrarPorExclusaoDeConta(agora);
         anuncioService.salvar(anuncio);
+        reagendamentoService.encerrarPendentesSemEfeito(List.of(anuncio.getId()), agora);
 
-        for (Aplicacao aplicacao : candidaturasAbertas) {
+        for (Aplicacao aplicacao : aplicacaoService.buscarAbertasDoAnuncio(anuncioId)) {
             aplicacao.encerrar(agora, MOTIVO_SAIDA_DE_CONTA);
             aplicacaoService.salvar(aplicacao);
             avisarEncerramento(aplicacao.getPrestadorId(), anuncio.getId(), combinadoProximo, agora, "Anúncio encerrado");
@@ -127,9 +124,23 @@ public class EncerrarAnunciosEAplicacoesUseCase {
      * cumpra o serviço combinado. Só a janela de 24h muda: dentro dela é
      * "impossibilidade operacional" (auditoria + aviso específico); fora
      * dela é só "candidatura encerrada".
+     *
+     * O status só é lido depois da trava do anúncio (que é tomada sempre: o status lido antes dela poderia estar
+     * velho). A trava vem antes de qualquer escrita: propor/responder tomam a trava e depois a linha da candidatura.
      */
-    private void encerrarAplicacaoDoPrestador(Aplicacao aplicacao, Instant agora) {
-        boolean fechaAnuncio = fechaAnuncioLigado(aplicacao.getStatus());
+    private void encerrarAplicacaoDoPrestador(UUID aplicacaoId, Instant agora) {
+        Optional<UUID> anuncioId = aplicacaoService.buscarAnuncioId(aplicacaoId);
+        if (anuncioId.isEmpty()) {
+            return;
+        }
+        travarAnuncio(anuncioId.get());
+
+        Optional<Aplicacao> encontrada = aplicacaoService.buscarPorId(aplicacaoId).filter(Aplicacao::isAberta);
+        if (encontrada.isEmpty()) {
+            return;
+        }
+        Aplicacao aplicacao = encontrada.get();
+        boolean fechaAnuncio = aplicacao.isEscolhida();
 
         aplicacao.encerrar(agora, MOTIVO_SAIDA_DE_CONTA);
         aplicacaoService.salvar(aplicacao);
@@ -153,7 +164,7 @@ public class EncerrarAnunciosEAplicacoesUseCase {
 
         anuncio.encerrarPorExclusaoDeConta(agora);
         anuncioService.salvar(anuncio);
-        cancelarReagendamentosPendentes(List.of(anuncio.getId()), agora);
+        reagendamentoService.encerrarPendentesSemEfeito(List.of(anuncio.getId()), agora);
 
         for (Aplicacao outra : aplicacaoService.buscarAbertasDoAnuncio(anuncio.getId())) {
             if (Objects.equals(outra.getId(), aplicacao.getId())) {
@@ -167,8 +178,15 @@ public class EncerrarAnunciosEAplicacoesUseCase {
         avisarEncerramento(anuncio.getContratanteId(), anuncio.getId(), combinadoProximo, agora, "Candidatura encerrada");
     }
 
-    private static boolean fechaAnuncioLigado(StatusAplicacao status) {
-        return status == StatusAplicacao.ESCOLHIDA || status == StatusAplicacao.AGUARDANDO_VALIDACAO;
+    /**
+     * Mesma trava {@code ANUNCIO} que propor, responder, cancelar e os demais fluxos de reagendamento tomam como
+     * primeira instrução: sem ela, um aceite concorrente seria sobrescrito por {@code SEM_EFEITO} (não há
+     * {@code @Version}) e uma proposta nova poderia sobrar pendente num anúncio já encerrado. Cada item roda em
+     * transação própria (ver {@link #processarComIsolamento}), então a trava é tomada antes de reler o item e solta no
+     * commit (ou rollback) dele — nunca fica presa até o fim do encerramento da conta.
+     */
+    private void travarAnuncio(UUID anuncioId) {
+        trava.travar(EscopoTrava.ANUNCIO, anuncioId.toString());
     }
 
     /** Combinado <24h: auditoria + aviso de impossibilidade operacional. Fora da janela: só o aviso padrão. */
@@ -179,13 +197,6 @@ public class EncerrarAnunciosEAplicacoesUseCase {
             avisar(destinatarioId, anuncioId, "Combinado cancelado por impossibilidade operacional", agora);
         } else {
             avisar(destinatarioId, anuncioId, assuntoPadrao, agora);
-        }
-    }
-
-    private void cancelarReagendamentosPendentes(List<UUID> anuncioIds, Instant agora) {
-        for (Reagendamento reagendamento : reagendamentoService.buscarPendentesDosAnuncios(anuncioIds)) {
-            reagendamento.cancelarSemEfeito(agora);
-            reagendamentoService.salvar(reagendamento);
         }
     }
 
@@ -200,14 +211,13 @@ public class EncerrarAnunciosEAplicacoesUseCase {
     }
 
     /**
-     * Roda {@code acao} isolada: uma exceção aqui (ex.: FK crua quebrada,
-     * violação de índice) é logada e pulada, sem propagar — a transação
-     * REQUIRES_NEW do listener continua válida pros demais itens em vez de
-     * ser marcada rollback-only por um item ruim.
+     * Roda {@code acao} numa transação própria ({@code REQUIRES_NEW}): o commit de um item solta a trava dele, e um erro
+     * de banco (FK crua quebrada, violação de índice, deadlock com outra conta encerrada ao mesmo tempo) desfaz só
+     * esse item — é logado e pulado, sem abortar a transação dos demais.
      */
     private void processarComIsolamento(String tipoEntidade, UUID entidadeId, Runnable acao) {
         try {
-            acao.run();
+            transacao.executeWithoutResult(status -> acao.run());
         } catch (RuntimeException ex) {
             log.error("Falha ao processar {} {} no encerramento de conta; item pulado, demais continuam",
                     tipoEntidade, entidadeId, ex);

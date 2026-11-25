@@ -19,6 +19,10 @@ import jakarta.persistence.LockModeType;
 
 public interface AplicacaoRepository extends BaseRepository<Aplicacao, UUID> {
 
+    @Query("select a.id from Aplicacao a where a.prestadorId = :prestadorId and a.status in :status")
+    List<UUID> findIdsByPrestadorIdAndStatusIn(@Param("prestadorId") UUID prestadorId,
+            @Param("status") List<StatusAplicacao> status);
+
     List<Aplicacao> findByPrestadorIdAndStatusIn(UUID prestadorId, List<StatusAplicacao> status);
 
     /** Usa {@code idx_aplicacao_prestador_status} — histórico resumido do perfil público (ETI-105). */

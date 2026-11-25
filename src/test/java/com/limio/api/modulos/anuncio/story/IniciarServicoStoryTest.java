@@ -169,6 +169,8 @@ class IniciarServicoStoryTest {
                 .dataAnterior(Instant.now().plus(Duration.ofDays(5)))
                 .dataProposta(Instant.now().plus(Duration.ofDays(6)))
                 .status(status)
+                .proponenteId(UUID.randomUUID())
+                .expiraEm(Instant.now().plus(Duration.ofDays(1)))
                 .build());
     }
 
@@ -251,7 +253,7 @@ class IniciarServicoStoryTest {
                 .andExpect(status().isOk());
 
         Reagendamento encerrada = reagendamentoRepository.findById(pendente.getId()).orElseThrow();
-        assertThat(encerrada.getStatus()).isEqualTo(StatusReagendamento.CANCELADO);
+        assertThat(encerrada.getStatus()).isEqualTo(StatusReagendamento.SEM_EFEITO);
         assertThat(encerrada.getRespondidoEm()).isNotNull();
         assertThat(reagendamentoRepository.findById(recusada.getId()).orElseThrow().getStatus())
                 .isEqualTo(StatusReagendamento.RECUSADO);

@@ -1,11 +1,13 @@
 package com.limio.api.modulos.anuncio.records;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
- * Proposta de reagendamento ainda pendente de resposta (ETI-86). Sem {@code quemPropos} e {@code prazo}: a
- * tabela {@code reagendamento} (TICKET-0049) não guarda quem propôs nem o prazo de resposta — fica pro ETI-99,
- * que cria a proposta e decide o schema.
+ * Proposta de reagendamento ainda pendente de resposta, resumida dentro do serviço combinado (ETI-86). É o único lugar
+ * onde o app enxerga a proposta pendente: o {@code id} abre {@code GET /reagendamentos/{id}} (ETI-99) e o
+ * {@code proponenteId} diz se quem vê é a contraparte (responder) ou o proponente (cancelar a proposta).
  */
-public record PropostaReagendamentoResponse(Instant dataProposta, String justificativa) {
+public record PropostaReagendamentoResponse(UUID id, UUID proponenteId, Instant dataProposta, String justificativa,
+        Instant expiraEm) {
 }

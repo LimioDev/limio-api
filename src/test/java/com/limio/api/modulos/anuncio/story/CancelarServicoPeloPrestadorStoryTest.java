@@ -228,6 +228,8 @@ class CancelarServicoPeloPrestadorStoryTest {
     private Reagendamento reagendamento(UUID anuncioId, StatusReagendamento status, Instant respondidoEm) {
         return reagendamentoRepository.save(Reagendamento.builder()
                 .anuncioId(anuncioId)
+                .proponenteId(UUID.randomUUID())
+                .expiraEm(agora.plus(Duration.ofDays(1)))
                 .dataAnterior(agora.plus(Duration.ofDays(3)))
                 .dataProposta(agora.plus(Duration.ofDays(5)))
                 .status(status)
@@ -358,7 +360,7 @@ class CancelarServicoPeloPrestadorStoryTest {
         cancelar(logar("rafael@example.com"), anuncio.getId()).andExpect(status().isOk());
 
         Reagendamento encerrada = reagendamentoRepository.findById(proposta.getId()).orElseThrow();
-        assertThat(encerrada.getStatus()).isEqualTo(StatusReagendamento.CANCELADO);
+        assertThat(encerrada.getStatus()).isEqualTo(StatusReagendamento.SEM_EFEITO);
         assertThat(encerrada.getRespondidoEm()).isEqualTo(agora);
         assertThat(recarregar(anuncio).getDataHoraPretendida()).as("a proposta não vira a data vigente")
                 .isEqualTo(dataVigente);

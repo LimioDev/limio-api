@@ -25,6 +25,11 @@ public interface AnuncioRepository extends BaseRepository<Anuncio, UUID> {
             """, nativeQuery = true)
     List<UUID> buscarIdsParaExpirar(@Param("agora") Instant agora, @Param("lote") int lote);
 
+    /** Só os ids, de propósito: nada fica gerenciado antes da trava do anúncio (ver {@code AnuncioService}). */
+    @Query("select a.id from Anuncio a where a.contratanteId = :contratanteId and a.status in :status")
+    List<UUID> findIdsByContratanteIdAndStatusIn(@Param("contratanteId") UUID contratanteId,
+            @Param("status") List<StatusAnuncio> status);
+
     List<Anuncio> findByContratanteIdAndStatusIn(UUID contratanteId, List<StatusAnuncio> status);
 
     /** Usa {@code idx_anuncio_contratante_status} — histórico resumido do perfil público (ETI-105). */

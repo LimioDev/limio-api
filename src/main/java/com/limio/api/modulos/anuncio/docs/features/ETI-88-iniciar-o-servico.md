@@ -55,7 +55,7 @@ aqui), criação de proposta de reagendamento (`ETI-99`/`100`), cancelamento do 
 | Proposta pendente encerrada sem efeito | `ReagendamentoService.buscarPendentesDosAnuncios` + `Reagendamento.cancelarSemEfeito`. |
 | Publica `ServicoIniciado` | `ServicoIniciadoEvent`. Ninguém escuta até o ETI-112. |
 | Empregador não cancela depois de iniciar | `CancelarAnuncioUseCase` já recusa com 409 fora de `PUBLICADO`. O ETI-94/95 precisa manter a regra. |
-| Ninguém propõe reagendamento depois de iniciar | A cargo do ETI-99/100: ainda não existe usecase de proposta. |
+| Ninguém propõe reagendamento depois de iniciar | ETI-99: propor exige serviço `PUBLICADO` (409 depois de iniciar) e iniciar encerra a proposta pendente (`SEM_EFEITO`). |
 | Não é automático | Nenhum job muda o status; só o endpoint. |
 | Passo opcional | Nada aqui bloqueia a validação presencial ou o check-out a partir de `PUBLICADO` (ETI-90 a 93). |
 
