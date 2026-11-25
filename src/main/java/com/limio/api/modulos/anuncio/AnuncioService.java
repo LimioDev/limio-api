@@ -39,6 +39,15 @@ public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository
         return repository.findByContratanteIdAndStatusIn(usuarioId, STATUS_ABERTOS);
     }
 
+    /**
+     * Só os ids dos anúncios abertos do contratante. Escalar de propósito: carregar a entidade antes da trava do
+     * anúncio a deixaria gerenciada, e a releitura sob a trava devolveria essa cópia velha em vez do estado já
+     * commitado por outra transação (ver {@code AplicacaoService.buscarAnuncioId}).
+     */
+    public List<UUID> buscarIdsAbertosDoContratante(UUID usuarioId) {
+        return repository.findIdsByContratanteIdAndStatusIn(usuarioId, STATUS_ABERTOS);
+    }
+
     /** Mesma busca que {@link #buscarAbertosDoContratante}, da data pretendida mais próxima pra mais distante. */
     public List<Anuncio> buscarAbertosDoContratantePorData(UUID usuarioId) {
         return repository.findByContratanteIdAndStatusInOrderByDataHoraPretendidaAsc(usuarioId, STATUS_ABERTOS);

@@ -11,15 +11,10 @@ import com.limio.api.modulos.anuncio.reagendamento.Reagendamento;
 @Component
 public class ReagendamentoMapper {
 
-    public ReagendamentoResponse toResponse(Reagendamento reagendamento) {
-        return toResponse(reagendamento, reagendamento.getDataAnterior());
-    }
-
+    /** A data vigente vem do usecase (lida do anúncio sob a trava): o mapper só traduz, não deduz regra. */
     public ReagendamentoResponse toResponse(ReagendamentoConsultado consultado) {
-        return toResponse(consultado.reagendamento(), consultado.dataVigente());
-    }
-
-    private ReagendamentoResponse toResponse(Reagendamento reagendamento, Instant dataVigente) {
+        Reagendamento reagendamento = consultado.reagendamento();
+        Instant dataVigente = consultado.dataVigente();
         return new ReagendamentoResponse(
                 reagendamento.getId(),
                 reagendamento.getAnuncioId(),

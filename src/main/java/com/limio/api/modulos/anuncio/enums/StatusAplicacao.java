@@ -14,6 +14,14 @@ public enum StatusAplicacao {
     CONCLUIDA,
     ENCERRADA;
 
+    /** Ainda sem desfecho (não recusada, concluída nem encerrada). */
+    public boolean isAberto() {
+        return switch (this) {
+            case ENVIADA, ESCOLHIDA, AGUARDANDO_VALIDACAO -> true;
+            case RECUSADA, CONCLUIDA, ENCERRADA -> false;
+        };
+    }
+
     /** Prestador já escolhido pelo contratante. Fonte única pra {@code Aplicacao.isEscolhida()} e pros finders. */
     public boolean isEscolhida() {
         return switch (this) {

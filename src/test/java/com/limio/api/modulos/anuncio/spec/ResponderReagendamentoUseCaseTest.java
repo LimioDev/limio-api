@@ -40,6 +40,7 @@ import com.limio.api.comum.eventos.ReagendamentoRecusadoEvent;
 import com.limio.api.comum.persistencia.TravaTransacional;
 import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
+import com.limio.api.modulos.anuncio.actions.helper.PropostaSobTravaHelper;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.actions.usecase.ResponderReagendamentoUseCase;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
@@ -97,7 +98,9 @@ class ResponderReagendamentoUseCaseTest {
     @BeforeEach
     void montarUseCase() {
         useCase = new ResponderReagendamentoUseCase(anuncioService, aplicacaoService, reagendamentoService,
-                logAuditoriaService, eventos, trava, Clock.fixed(AGORA, ZoneOffset.UTC));
+                logAuditoriaService, eventos,
+                new PropostaSobTravaHelper(anuncioService, aplicacaoService, reagendamentoService, trava),
+                Clock.fixed(AGORA, ZoneOffset.UTC));
         anuncio = anuncio(StatusAnuncio.PUBLICADO);
         when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
         when(anuncioService.salvar(any(Anuncio.class))).thenAnswer(i -> i.getArgument(0));

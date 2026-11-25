@@ -61,8 +61,8 @@ pelo Prestador (ETI-96/97), qualquer mudança de cota, UI.
   O valor é o menor entre `agora + prazo-resposta-horas` e a `dataProposta`: depois da nova data o aceite daria 422
   `DATA_NO_PASSADO`, então a proposta não pode seguir pendente (bloqueando nova proposta e a conclusão por silêncio)
   além desse instante.
-- **Combinado é `PUBLICADO` com a candidatura `ESCOLHIDA`**, a mesma regra do cancelamento (ETI-94): propor reaproveita
-  `situacaoParaCancelarServico() == CANCELAVEL`. A proposta não muda o anúncio; só o aceite troca `dataHoraPretendida`
+- **Combinado é `PUBLICADO` com a candidatura `ESCOLHIDA`**: propor e aceitar usam `Anuncio.permiteReagendar()` (regra
+  própria do reagendamento, hoje coincidente com o cancelamento de ETI-94 mas sem depender dele). A proposta não muda o anúncio; só o aceite troca `dataHoraPretendida`
   (`Anuncio.reagendar`).
 - **Proposta depois da data vigente.** A primeira é permitida; depois dela, nenhuma outra. A marca fica em
   `proposta_apos_data_vigente`, e `existePropostaAposDataVigente` conta qualquer desfecho, inclusive cancelada pelo

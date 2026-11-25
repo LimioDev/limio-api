@@ -135,7 +135,7 @@ class ProporReagendamentoUseCaseTest {
     }
 
     private Reagendamento propor(UUID usuarioId, Instant novaData) {
-        return useCase.executar(usuarioId, ANUNCIO_ID, novaData, JUSTIFICATIVA, IP);
+        return useCase.executar(usuarioId, ANUNCIO_ID, novaData, JUSTIFICATIVA, IP).reagendamento();
     }
 
     private void verificarNadaMudou() {
@@ -149,8 +149,10 @@ class ProporReagendamentoUseCaseTest {
     void dadoEmpregador_quandoPropoe_entaoGravaPendenteComPrazoDe24hEMantemOAnuncio() {
         Anuncio anuncio = combinado(DATA_VIGENTE);
 
-        Reagendamento proposta = propor(CONTRATANTE_ID, NOVA_DATA);
+        var consultado = useCase.executar(CONTRATANTE_ID, ANUNCIO_ID, NOVA_DATA, JUSTIFICATIVA, IP);
+        Reagendamento proposta = consultado.reagendamento();
 
+        assertThat(consultado.dataVigente()).isEqualTo(DATA_VIGENTE);
         assertThat(proposta.getStatus()).isEqualTo(StatusReagendamento.PENDENTE);
         assertThat(proposta.getAnuncioId()).isEqualTo(ANUNCIO_ID);
         assertThat(proposta.getProponenteId()).isEqualTo(CONTRATANTE_ID);
@@ -179,7 +181,8 @@ class ProporReagendamentoUseCaseTest {
     void dadaJustificativaComEspacosNasPontas_quandoPropoe_entaoGravaSemOsEspacos() {
         combinado(DATA_VIGENTE);
 
-        Reagendamento proposta = useCase.executar(CONTRATANTE_ID, ANUNCIO_ID, NOVA_DATA, "  Imprevisto  ", IP);
+        Reagendamento proposta = useCase.executar(CONTRATANTE_ID, ANUNCIO_ID, NOVA_DATA, "  Imprevisto  ", IP)
+                .reagendamento();
 
         assertThat(proposta.getJustificativa()).isEqualTo("Imprevisto");
     }

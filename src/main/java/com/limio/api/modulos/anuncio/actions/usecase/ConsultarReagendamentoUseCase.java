@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.ReagendamentoConsultado;
+import com.limio.api.modulos.anuncio.actions.helper.PropostaSobTravaHelper;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
 import com.limio.api.modulos.anuncio.excecao.ReagendamentoNaoEncontradoException;
 import com.limio.api.modulos.anuncio.reagendamento.Reagendamento;
@@ -39,8 +40,8 @@ public class ConsultarReagendamentoUseCase {
         Anuncio anuncio = anuncioService.buscarPorId(proposta.getAnuncioId())
                 .orElseThrow(ReagendamentoNaoEncontradoException::new);
 
-        boolean parte = proposta.foiProposta(usuarioId) || anuncio.pertenceA(usuarioId)
-                || aplicacaoService.buscarPrestadorEscolhido(anuncio.getId()).filter(usuarioId::equals).isPresent();
+        boolean parte = proposta.foiProposta(usuarioId) || PropostaSobTravaHelper.ehParteDoServico(anuncio,
+                aplicacaoService.buscarPrestadorEscolhido(anuncio.getId()).orElse(null), usuarioId);
         if (!parte) {
             throw new ReagendamentoNaoEncontradoException();
         }

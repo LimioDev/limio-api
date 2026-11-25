@@ -39,6 +39,7 @@ import com.limio.api.comum.eventos.ReagendamentoCanceladoEvent;
 import com.limio.api.comum.persistencia.TravaTransacional;
 import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
+import com.limio.api.modulos.anuncio.actions.helper.PropostaSobTravaHelper;
 import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.actions.usecase.CancelarReagendamentoUseCase;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
@@ -87,8 +88,9 @@ class CancelarReagendamentoUseCaseTest {
 
     @BeforeEach
     void montarUseCase() {
-        useCase = new CancelarReagendamentoUseCase(anuncioService, aplicacaoService, reagendamentoService,
-                logAuditoriaService, eventos, trava, Clock.fixed(AGORA, ZoneOffset.UTC));
+        useCase = new CancelarReagendamentoUseCase(reagendamentoService, logAuditoriaService, eventos,
+                new PropostaSobTravaHelper(anuncioService, aplicacaoService, reagendamentoService, trava),
+                Clock.fixed(AGORA, ZoneOffset.UTC));
         Anuncio anuncio = Anuncio.builder()
                 .contratanteId(CONTRATANTE_ID)
                 .titulo("Instalar 3 tomadas")
@@ -124,8 +126,10 @@ class CancelarReagendamentoUseCaseTest {
     void dadaPropostaPendenteDoEmpregador_quandoEleCancela_entaoFicaCanceladaComOInstanteDaResposta() {
         Reagendamento proposta = pendenteDe(CONTRATANTE_ID);
 
-        Reagendamento cancelada = useCase.executar(CONTRATANTE_ID, REAGENDAMENTO_ID, IP);
+        var consultado = useCase.executar(CONTRATANTE_ID, REAGENDAMENTO_ID, IP);
+        Reagendamento cancelada = consultado.reagendamento();
 
+        assertThat(consultado.dataVigente()).isEqualTo(DATA_VIGENTE);
         assertThat(cancelada).isSameAs(proposta);
         assertThat(cancelada.getStatus()).isEqualTo(StatusReagendamento.CANCELADO);
         assertThat(cancelada.getRespondidoEm()).isEqualTo(AGORA);
@@ -138,7 +142,7 @@ class CancelarReagendamentoUseCaseTest {
     void dadaPropostaPendenteDoPrestador_quandoEleCancela_entaoFicaCancelada() {
         pendenteDe(PRESTADOR_ID);
 
-        Reagendamento cancelada = useCase.executar(PRESTADOR_ID, REAGENDAMENTO_ID, IP);
+        Reagendamento cancelada = useCase.executar(PRESTADOR_ID, REAGENDAMENTO_ID, IP).reagendamento();
 
         assertThat(cancelada.getStatus()).isEqualTo(StatusReagendamento.CANCELADO);
     }
@@ -256,7 +260,7 @@ class CancelarReagendamentoUseCaseTest {
         Reagendamento proposta = pendenteDe(CONTRATANTE_ID);
         ReflectionTestUtils.setField(proposta, "expiraEm", AGORA.plusMillis(1));
 
-        Reagendamento cancelada = useCase.executar(CONTRATANTE_ID, REAGENDAMENTO_ID, IP);
+        Reagendamento cancelada = useCase.executar(CONTRATANTE_ID, REAGENDAMENTO_ID, IP).reagendamento();
 
         assertThat(cancelada.getStatus()).isEqualTo(StatusReagendamento.CANCELADO);
     }

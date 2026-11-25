@@ -19,9 +19,10 @@ import com.limio.api.comum.persistencia.TravaTransacional;
 import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
+import com.limio.api.modulos.anuncio.ReagendamentoConsultado;
+import com.limio.api.modulos.anuncio.actions.helper.PropostaSobTravaHelper;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
-import com.limio.api.modulos.anuncio.enums.SituacaoCancelamentoServico;
 import com.limio.api.modulos.anuncio.excecao.DataIgualAVigenteException;
 import com.limio.api.modulos.anuncio.excecao.DataNoPassadoException;
 import com.limio.api.modulos.anuncio.excecao.LimiteReagendamentosException;
@@ -79,14 +80,14 @@ public class ProporReagendamentoUseCase {
     }
 
     @Transactional
-    public Reagendamento executar(UUID usuarioId, UUID anuncioId, Instant novaDataHora, String justificativa,
+    public ReagendamentoConsultado executar(UUID usuarioId, UUID anuncioId, Instant novaDataHora, String justificativa,
             String ip) {
         trava.travar(EscopoTrava.ANUNCIO, anuncioId.toString());
 
         Anuncio anuncio = anuncioService.buscarPorId(anuncioId)
                 .filter(encontrado -> ehParteDoServico(encontrado, usuarioId))
                 .orElseThrow(ServicoNaoEncontradoException::new);
-        if (anuncio.situacaoParaCancelarServico() != SituacaoCancelamentoServico.CANCELAVEL) {
+        if (!anuncio.permiteReagendar()) {
             throw new ServicoEstadoInvalidoException();
         }
         Aplicacao escolhida = aplicacaoService.buscarEscolhidaDoAnuncioParaAtualizar(anuncioId)
@@ -118,7 +119,7 @@ public class ProporReagendamentoUseCase {
         eventos.publishEvent(new ReagendamentoPropostoEvent(proposta.getId(), anuncioId, anuncio.getTitulo(),
                 anuncio.getContratanteId(), escolhida.getPrestadorId(), usuarioId, dataVigente, novaDataHora,
                 proposta.getExpiraEm(), agora));
-        return proposta;
+        return new ReagendamentoConsultado(proposta, anuncio.getDataHoraPretendida());
     }
 
     /**
@@ -130,13 +131,10 @@ public class ProporReagendamentoUseCase {
         return fimDoPrazo.isBefore(novaDataHora) ? fimDoPrazo : novaDataHora;
     }
 
-    /**
-     * O Empregador do anúncio ou o Prestador escolhido, inclusive depois do check-out ou do cancelamento do serviço:
-     * esses casos caem em 409 (estado) adiante, não em 404.
-     */
+    /** Regra única em {@link PropostaSobTravaHelper#ehParteDoServico}; aqui só resolve o Prestador escolhido. */
     private boolean ehParteDoServico(Anuncio anuncio, UUID usuarioId) {
-        return anuncio.pertenceA(usuarioId)
-                || aplicacaoService.buscarPrestadorEscolhido(anuncio.getId()).filter(usuarioId::equals).isPresent();
+        return PropostaSobTravaHelper.ehParteDoServico(anuncio,
+                aplicacaoService.buscarPrestadorEscolhido(anuncio.getId()).orElse(null), usuarioId);
     }
 
     private void registrarAuditoria(Reagendamento proposta, String ip) {

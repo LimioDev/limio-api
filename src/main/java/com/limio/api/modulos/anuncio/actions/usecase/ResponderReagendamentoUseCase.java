@@ -14,18 +14,16 @@ import com.limio.api.comum.auditoria.LogAuditoriaService;
 import com.limio.api.comum.auditoria.enums.TipoAcaoAuditoria;
 import com.limio.api.comum.eventos.ReagendamentoAceitoEvent;
 import com.limio.api.comum.eventos.ReagendamentoRecusadoEvent;
-import com.limio.api.comum.persistencia.TravaTransacional;
-import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioService;
+import com.limio.api.modulos.anuncio.actions.helper.PropostaSobTravaHelper;
+import com.limio.api.modulos.anuncio.actions.helper.PropostaSobTravaHelper.PropostaCarregada;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoService;
 import com.limio.api.modulos.anuncio.enums.DecisaoReagendamento;
-import com.limio.api.modulos.anuncio.enums.SituacaoCancelamentoServico;
 import com.limio.api.modulos.anuncio.excecao.DataNoPassadoException;
 import com.limio.api.modulos.anuncio.excecao.ProponenteNaoRespondeException;
 import com.limio.api.modulos.anuncio.excecao.PropostaEncerradaException;
 import com.limio.api.modulos.anuncio.excecao.PropostaExpiradaException;
-import com.limio.api.modulos.anuncio.excecao.ReagendamentoNaoEncontradoException;
 import com.limio.api.modulos.anuncio.excecao.ServicoEstadoInvalidoException;
 import com.limio.api.modulos.anuncio.reagendamento.Reagendamento;
 import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
@@ -46,8 +44,7 @@ import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
  *   <li>{@code RECUSAR}: a proposta é encerrada e a data original continua vigente.
  * </ul>
  *
- * <p>Trava: o {@code anuncioId} sai de uma consulta escalar, a trava advisory {@code ANUNCIO} é tomada, e só então a
- * proposta é lida — aceitar, recusar, cancelar, expirar e cancelar ou iniciar o serviço se serializam nela, e quem
+ * <p>Trava: {@link PropostaSobTravaHelper} toma a trava advisory {@code ANUNCIO} antes de ler a proposta — aceitar, recusar, cancelar, expirar e cancelar ou iniciar o serviço se serializam nela, e quem
  * perde a corrida vê a proposta já encerrada.
  */
 @Service
@@ -60,35 +57,29 @@ public class ResponderReagendamentoUseCase {
     private final ReagendamentoService reagendamentoService;
     private final LogAuditoriaService logAuditoriaService;
     private final ApplicationEventPublisher eventos;
-    private final TravaTransacional trava;
+    private final PropostaSobTravaHelper propostaSobTrava;
     private final Clock relogio;
 
     public ResponderReagendamentoUseCase(AnuncioService anuncioService, AplicacaoService aplicacaoService,
             ReagendamentoService reagendamentoService, LogAuditoriaService logAuditoriaService,
-            ApplicationEventPublisher eventos, TravaTransacional trava, Clock relogio) {
+            ApplicationEventPublisher eventos, PropostaSobTravaHelper propostaSobTrava, Clock relogio) {
         this.anuncioService = anuncioService;
         this.aplicacaoService = aplicacaoService;
         this.reagendamentoService = reagendamentoService;
         this.logAuditoriaService = logAuditoriaService;
         this.eventos = eventos;
-        this.trava = trava;
+        this.propostaSobTrava = propostaSobTrava;
         this.relogio = relogio;
     }
 
     @Transactional
     public Reagendamento executar(UUID usuarioId, UUID reagendamentoId, DecisaoReagendamento decisao, String ip) {
-        UUID anuncioId = reagendamentoService.buscarAnuncioId(reagendamentoId)
-                .orElseThrow(ReagendamentoNaoEncontradoException::new);
-        trava.travar(EscopoTrava.ANUNCIO, anuncioId.toString());
+        PropostaCarregada carregada = propostaSobTrava.carregarParaParte(usuarioId, reagendamentoId);
+        Reagendamento proposta = carregada.proposta();
+        Anuncio anuncio = carregada.anuncio();
+        UUID anuncioId = anuncio.getId();
+        UUID prestadorId = carregada.prestadorId();
 
-        Reagendamento proposta = reagendamentoService.buscarPorId(reagendamentoId)
-                .orElseThrow(ReagendamentoNaoEncontradoException::new);
-        Anuncio anuncio = anuncioService.buscarPorId(anuncioId).orElseThrow(ReagendamentoNaoEncontradoException::new);
-        UUID prestadorId = aplicacaoService.buscarPrestadorEscolhido(anuncioId).orElse(null);
-
-        if (!anuncio.pertenceA(usuarioId) && !usuarioId.equals(prestadorId)) {
-            throw new ReagendamentoNaoEncontradoException();
-        }
         if (proposta.foiProposta(usuarioId)) {
             throw new ProponenteNaoRespondeException();
         }
@@ -145,9 +136,9 @@ public class ResponderReagendamentoUseCase {
                 proposta.getDataProposta(), agora));
     }
 
-    /** "Combinado" é {@code PUBLICADO} com a candidatura {@code ESCOLHIDA}, a mesma regra de propor e de cancelar. */
+    /** "Combinado" pra reagendar: {@link Anuncio#permiteReagendar} e a candidatura {@code ESCOLHIDA}, como em propor. */
     private void exigirServicoCombinado(Anuncio anuncio) {
-        boolean combinado = anuncio.situacaoParaCancelarServico() == SituacaoCancelamentoServico.CANCELAVEL
+        boolean combinado = anuncio.permiteReagendar()
                 && aplicacaoService.buscarEscolhidaDoAnuncioParaAtualizar(anuncio.getId()).isPresent();
         if (!combinado) {
             throw new ServicoEstadoInvalidoException();

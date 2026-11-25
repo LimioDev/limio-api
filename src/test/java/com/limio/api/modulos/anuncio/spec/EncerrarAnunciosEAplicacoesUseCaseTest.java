@@ -2,7 +2,6 @@ package com.limio.api.modulos.anuncio.spec;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.inOrder;
@@ -27,6 +26,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import com.limio.api.comum.auditoria.LogAuditoriaService;
 import com.limio.api.comum.auditoria.enums.TipoAcaoAuditoria;
@@ -71,12 +71,15 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
     @Mock
     private TravaTransacional trava;
 
+    @Mock
+    private PlatformTransactionManager gerenteTransacao;
+
     private EncerrarAnunciosEAplicacoesUseCase useCase;
 
     @BeforeEach
     void montarUseCase() {
         useCase = new EncerrarAnunciosEAplicacoesUseCase(anuncioService, aplicacaoService, reagendamentoService,
-                logAuditoriaService, eventPublisher, trava);
+                logAuditoriaService, eventPublisher, trava, gerenteTransacao);
     }
 
     private Anuncio anuncio(StatusAnuncio status, Instant dataHoraPretendida) {
@@ -105,9 +108,10 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
     @Test
     void dadoAnuncioAbertoSemCandidaturaEscolhida_quandoContaDoContratanteEncerra_entaoSoEncerraOAnuncio() {
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO, Instant.now().plus(Duration.ofDays(10)));
-        when(anuncioService.buscarAbertosDoContratante(CONTRATANTE_ID)).thenReturn(List.of(anuncio));
-        when(aplicacaoService.buscarAbertasDoPrestador(CONTRATANTE_ID)).thenReturn(List.of());
-        when(aplicacaoService.buscarAbertasDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of());
+        when(anuncioService.buscarIdsAbertosDoContratante(CONTRATANTE_ID)).thenReturn(List.of(ANUNCIO_ID));
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
+        when(aplicacaoService.buscarIdsAbertasDoPrestador(CONTRATANTE_ID)).thenReturn(List.of());
+        when(aplicacaoService.buscarAbertasDoAnuncio(ANUNCIO_ID)).thenReturn(List.of());
 
         useCase.aoEncerrarConta(new ContaEncerradaEvent(CONTRATANTE_ID, Instant.now()));
 
@@ -121,9 +125,10 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
     void dadoAnuncioComCandidaturaEscolhidaForaDaJanelaDe24h_quandoContratanteEncerraConta_entaoAvisaSemAuditoria() {
         Anuncio anuncio = anuncio(StatusAnuncio.EM_ANDAMENTO, Instant.now().plus(Duration.ofDays(5)));
         Aplicacao escolhida = aplicacao(ANUNCIO_ID, PRESTADOR_ID, StatusAplicacao.ESCOLHIDA);
-        when(anuncioService.buscarAbertosDoContratante(CONTRATANTE_ID)).thenReturn(List.of(anuncio));
-        when(aplicacaoService.buscarAbertasDoPrestador(CONTRATANTE_ID)).thenReturn(List.of());
-        when(aplicacaoService.buscarAbertasDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of(escolhida));
+        when(anuncioService.buscarIdsAbertosDoContratante(CONTRATANTE_ID)).thenReturn(List.of(ANUNCIO_ID));
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
+        when(aplicacaoService.buscarIdsAbertasDoPrestador(CONTRATANTE_ID)).thenReturn(List.of());
+        when(aplicacaoService.buscarAbertasDoAnuncio(ANUNCIO_ID)).thenReturn(List.of(escolhida));
 
         useCase.aoEncerrarConta(new ContaEncerradaEvent(CONTRATANTE_ID, Instant.now()));
 
@@ -141,9 +146,10 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
         // desse status (achado de review corrigido em Anuncio.estaAMenosDe).
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO, Instant.now().plus(Duration.ofHours(10)));
         Aplicacao escolhida = aplicacao(ANUNCIO_ID, PRESTADOR_ID, StatusAplicacao.ESCOLHIDA);
-        when(anuncioService.buscarAbertosDoContratante(CONTRATANTE_ID)).thenReturn(List.of(anuncio));
-        when(aplicacaoService.buscarAbertasDoPrestador(CONTRATANTE_ID)).thenReturn(List.of());
-        when(aplicacaoService.buscarAbertasDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of(escolhida));
+        when(anuncioService.buscarIdsAbertosDoContratante(CONTRATANTE_ID)).thenReturn(List.of(ANUNCIO_ID));
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
+        when(aplicacaoService.buscarIdsAbertasDoPrestador(CONTRATANTE_ID)).thenReturn(List.of());
+        when(aplicacaoService.buscarAbertasDoAnuncio(ANUNCIO_ID)).thenReturn(List.of(escolhida));
 
         useCase.aoEncerrarConta(new ContaEncerradaEvent(CONTRATANTE_ID, Instant.now()));
 
@@ -159,9 +165,10 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO, Instant.now().plus(Duration.ofDays(10)));
         Aplicacao escolhida = aplicacao(ANUNCIO_ID, PRESTADOR_ID, StatusAplicacao.ESCOLHIDA);
         Aplicacao enviada = aplicacao(ANUNCIO_ID, OUTRO_PRESTADOR_ID, StatusAplicacao.ENVIADA);
-        when(anuncioService.buscarAbertosDoContratante(CONTRATANTE_ID)).thenReturn(List.of(anuncio));
-        when(aplicacaoService.buscarAbertasDoPrestador(CONTRATANTE_ID)).thenReturn(List.of());
-        when(aplicacaoService.buscarAbertasDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of(escolhida, enviada));
+        when(anuncioService.buscarIdsAbertosDoContratante(CONTRATANTE_ID)).thenReturn(List.of(ANUNCIO_ID));
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
+        when(aplicacaoService.buscarIdsAbertasDoPrestador(CONTRATANTE_ID)).thenReturn(List.of());
+        when(aplicacaoService.buscarAbertasDoAnuncio(ANUNCIO_ID)).thenReturn(List.of(escolhida, enviada));
 
         useCase.aoEncerrarConta(new ContaEncerradaEvent(CONTRATANTE_ID, Instant.now()));
 
@@ -181,9 +188,10 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
     void dadoAnuncioComCandidaturaAguardandoValidacao_quandoContratanteEncerraConta_entaoEncerraEAvisaIgualEscolhida() {
         Anuncio anuncio = anuncio(StatusAnuncio.AGUARDANDO_VALIDACAO, Instant.now().minus(Duration.ofHours(2)));
         Aplicacao aguardando = aplicacao(ANUNCIO_ID, PRESTADOR_ID, StatusAplicacao.AGUARDANDO_VALIDACAO);
-        when(anuncioService.buscarAbertosDoContratante(CONTRATANTE_ID)).thenReturn(List.of(anuncio));
-        when(aplicacaoService.buscarAbertasDoPrestador(CONTRATANTE_ID)).thenReturn(List.of());
-        when(aplicacaoService.buscarAbertasDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of(aguardando));
+        when(anuncioService.buscarIdsAbertosDoContratante(CONTRATANTE_ID)).thenReturn(List.of(ANUNCIO_ID));
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
+        when(aplicacaoService.buscarIdsAbertasDoPrestador(CONTRATANTE_ID)).thenReturn(List.of());
+        when(aplicacaoService.buscarAbertasDoAnuncio(ANUNCIO_ID)).thenReturn(List.of(aguardando));
 
         useCase.aoEncerrarConta(new ContaEncerradaEvent(CONTRATANTE_ID, Instant.now()));
 
@@ -195,9 +203,10 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
     @Test
     void dadoReagendamentoPendenteDoAnuncio_quandoContratanteEncerraConta_entaoCancelaSemEfeito() {
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO, Instant.now().plus(Duration.ofDays(10)));
-        when(anuncioService.buscarAbertosDoContratante(CONTRATANTE_ID)).thenReturn(List.of(anuncio));
-        when(aplicacaoService.buscarAbertasDoPrestador(CONTRATANTE_ID)).thenReturn(List.of());
-        when(aplicacaoService.buscarAbertasDosAnuncios(List.of(ANUNCIO_ID))).thenReturn(List.of());
+        when(anuncioService.buscarIdsAbertosDoContratante(CONTRATANTE_ID)).thenReturn(List.of(ANUNCIO_ID));
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
+        when(aplicacaoService.buscarIdsAbertasDoPrestador(CONTRATANTE_ID)).thenReturn(List.of());
+        when(aplicacaoService.buscarAbertasDoAnuncio(ANUNCIO_ID)).thenReturn(List.of());
 
         useCase.aoEncerrarConta(new ContaEncerradaEvent(CONTRATANTE_ID, Instant.now()));
 
@@ -209,8 +218,10 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
     @Test
     void dadoCandidaturaEnviadaNaoEscolhida_quandoPrestadorEncerraConta_entaoSoEncerraACandidatura() {
         Aplicacao enviada = aplicacao(ANUNCIO_ID, PRESTADOR_ID, StatusAplicacao.ENVIADA);
-        when(anuncioService.buscarAbertosDoContratante(PRESTADOR_ID)).thenReturn(List.of());
-        when(aplicacaoService.buscarAbertasDoPrestador(PRESTADOR_ID)).thenReturn(List.of(enviada));
+        when(anuncioService.buscarIdsAbertosDoContratante(PRESTADOR_ID)).thenReturn(List.of());
+        when(aplicacaoService.buscarIdsAbertasDoPrestador(PRESTADOR_ID)).thenReturn(List.of(enviada.getId()));
+        when(aplicacaoService.buscarAnuncioId(enviada.getId())).thenReturn(Optional.of(ANUNCIO_ID));
+        when(aplicacaoService.buscarPorId(enviada.getId())).thenReturn(Optional.of(enviada));
 
         useCase.aoEncerrarConta(new ContaEncerradaEvent(PRESTADOR_ID, Instant.now()));
 
@@ -225,8 +236,10 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
     void dadoCandidaturaEscolhida_quandoPrestadorEncerraConta_entaoTravaOAnuncioAntesDeEscreverEEncerrarPendentes() {
         Aplicacao escolhida = aplicacao(ANUNCIO_ID, PRESTADOR_ID, StatusAplicacao.ESCOLHIDA);
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO, Instant.now().plus(Duration.ofDays(5)));
-        when(anuncioService.buscarAbertosDoContratante(PRESTADOR_ID)).thenReturn(List.of());
-        when(aplicacaoService.buscarAbertasDoPrestador(PRESTADOR_ID)).thenReturn(List.of(escolhida));
+        when(anuncioService.buscarIdsAbertosDoContratante(PRESTADOR_ID)).thenReturn(List.of());
+        when(aplicacaoService.buscarIdsAbertasDoPrestador(PRESTADOR_ID)).thenReturn(List.of(escolhida.getId()));
+        when(aplicacaoService.buscarAnuncioId(escolhida.getId())).thenReturn(Optional.of(ANUNCIO_ID));
+        when(aplicacaoService.buscarPorId(escolhida.getId())).thenReturn(Optional.of(escolhida));
         when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
         when(aplicacaoService.buscarAbertasDoAnuncio(ANUNCIO_ID)).thenReturn(List.of());
 
@@ -242,8 +255,10 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
     void dadoCandidaturaEscolhida_quandoPrestadorEncerraConta_entaoEncerraCandidaturaEOAnuncioEAvisaContratante() {
         Aplicacao escolhida = aplicacao(ANUNCIO_ID, PRESTADOR_ID, StatusAplicacao.ESCOLHIDA);
         Anuncio anuncio = anuncio(StatusAnuncio.EM_ANDAMENTO, Instant.now().plus(Duration.ofDays(5)));
-        when(anuncioService.buscarAbertosDoContratante(PRESTADOR_ID)).thenReturn(List.of());
-        when(aplicacaoService.buscarAbertasDoPrestador(PRESTADOR_ID)).thenReturn(List.of(escolhida));
+        when(anuncioService.buscarIdsAbertosDoContratante(PRESTADOR_ID)).thenReturn(List.of());
+        when(aplicacaoService.buscarIdsAbertasDoPrestador(PRESTADOR_ID)).thenReturn(List.of(escolhida.getId()));
+        when(aplicacaoService.buscarAnuncioId(escolhida.getId())).thenReturn(Optional.of(ANUNCIO_ID));
+        when(aplicacaoService.buscarPorId(escolhida.getId())).thenReturn(Optional.of(escolhida));
         when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
         when(aplicacaoService.buscarAbertasDoAnuncio(ANUNCIO_ID)).thenReturn(List.of());
 
@@ -263,8 +278,10 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
     void dadoCandidaturaAguardandoValidacao_quandoPrestadorEncerraConta_entaoEncerraOAnuncioIgualEscolhida() {
         Aplicacao aguardando = aplicacao(ANUNCIO_ID, PRESTADOR_ID, StatusAplicacao.AGUARDANDO_VALIDACAO);
         Anuncio anuncio = anuncio(StatusAnuncio.AGUARDANDO_VALIDACAO, Instant.now().minus(Duration.ofHours(1)));
-        when(anuncioService.buscarAbertosDoContratante(PRESTADOR_ID)).thenReturn(List.of());
-        when(aplicacaoService.buscarAbertasDoPrestador(PRESTADOR_ID)).thenReturn(List.of(aguardando));
+        when(anuncioService.buscarIdsAbertosDoContratante(PRESTADOR_ID)).thenReturn(List.of());
+        when(aplicacaoService.buscarIdsAbertasDoPrestador(PRESTADOR_ID)).thenReturn(List.of(aguardando.getId()));
+        when(aplicacaoService.buscarAnuncioId(aguardando.getId())).thenReturn(Optional.of(ANUNCIO_ID));
+        when(aplicacaoService.buscarPorId(aguardando.getId())).thenReturn(Optional.of(aguardando));
         when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
         when(aplicacaoService.buscarAbertasDoAnuncio(ANUNCIO_ID)).thenReturn(List.of());
 
@@ -279,8 +296,10 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
         Aplicacao escolhida = aplicacao(ANUNCIO_ID, PRESTADOR_ID, StatusAplicacao.ESCOLHIDA);
         Aplicacao enviadaDeOutroPrestador = aplicacao(ANUNCIO_ID, OUTRO_PRESTADOR_ID, StatusAplicacao.ENVIADA);
         Anuncio anuncio = anuncio(StatusAnuncio.EM_ANDAMENTO, Instant.now().plus(Duration.ofDays(5)));
-        when(anuncioService.buscarAbertosDoContratante(PRESTADOR_ID)).thenReturn(List.of());
-        when(aplicacaoService.buscarAbertasDoPrestador(PRESTADOR_ID)).thenReturn(List.of(escolhida));
+        when(anuncioService.buscarIdsAbertosDoContratante(PRESTADOR_ID)).thenReturn(List.of());
+        when(aplicacaoService.buscarIdsAbertasDoPrestador(PRESTADOR_ID)).thenReturn(List.of(escolhida.getId()));
+        when(aplicacaoService.buscarAnuncioId(escolhida.getId())).thenReturn(Optional.of(ANUNCIO_ID));
+        when(aplicacaoService.buscarPorId(escolhida.getId())).thenReturn(Optional.of(escolhida));
         when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncio));
         when(aplicacaoService.buscarAbertasDoAnuncio(ANUNCIO_ID)).thenReturn(List.of(enviadaDeOutroPrestador));
 
@@ -300,8 +319,10 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
     void dadoCandidaturaEscolhidaMasAnuncioJaConcluido_quandoPrestadorEncerraConta_entaoNaoMexeNoAnuncioDeNovo() {
         Aplicacao escolhida = aplicacao(ANUNCIO_ID, PRESTADOR_ID, StatusAplicacao.ESCOLHIDA);
         Anuncio concluido = anuncio(StatusAnuncio.CONCLUIDO, Instant.now().minus(Duration.ofDays(1)));
-        when(anuncioService.buscarAbertosDoContratante(PRESTADOR_ID)).thenReturn(List.of());
-        when(aplicacaoService.buscarAbertasDoPrestador(PRESTADOR_ID)).thenReturn(List.of(escolhida));
+        when(anuncioService.buscarIdsAbertosDoContratante(PRESTADOR_ID)).thenReturn(List.of());
+        when(aplicacaoService.buscarIdsAbertasDoPrestador(PRESTADOR_ID)).thenReturn(List.of(escolhida.getId()));
+        when(aplicacaoService.buscarAnuncioId(escolhida.getId())).thenReturn(Optional.of(ANUNCIO_ID));
+        when(aplicacaoService.buscarPorId(escolhida.getId())).thenReturn(Optional.of(escolhida));
         when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(concluido));
 
         useCase.aoEncerrarConta(new ContaEncerradaEvent(PRESTADOR_ID, Instant.now()));
@@ -314,8 +335,10 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
     @Test
     void dadoAnuncioLigadoInexistente_quandoPrestadorEncerraConta_entaoCandidaturaFechaMasAnuncioEPulado() {
         Aplicacao escolhida = aplicacao(ANUNCIO_ID, PRESTADOR_ID, StatusAplicacao.ESCOLHIDA);
-        when(anuncioService.buscarAbertosDoContratante(PRESTADOR_ID)).thenReturn(List.of());
-        when(aplicacaoService.buscarAbertasDoPrestador(PRESTADOR_ID)).thenReturn(List.of(escolhida));
+        when(anuncioService.buscarIdsAbertosDoContratante(PRESTADOR_ID)).thenReturn(List.of());
+        when(aplicacaoService.buscarIdsAbertasDoPrestador(PRESTADOR_ID)).thenReturn(List.of(escolhida.getId()));
+        when(aplicacaoService.buscarAnuncioId(escolhida.getId())).thenReturn(Optional.of(ANUNCIO_ID));
+        when(aplicacaoService.buscarPorId(escolhida.getId())).thenReturn(Optional.of(escolhida));
         when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.empty());
 
         useCase.aoEncerrarConta(new ContaEncerradaEvent(PRESTADOR_ID, Instant.now()));
@@ -339,15 +362,47 @@ class EncerrarAnunciosEAplicacoesUseCaseTest {
                 .build();
         ReflectionTestUtils.setField(anuncioOk, "id", outroAnuncioId);
 
-        when(anuncioService.buscarAbertosDoContratante(CONTRATANTE_ID)).thenReturn(List.of(anuncioQuebrado, anuncioOk));
-        when(aplicacaoService.buscarAbertasDoPrestador(CONTRATANTE_ID)).thenReturn(List.of());
-        when(aplicacaoService.buscarAbertasDosAnuncios(anyList()))
-                .thenReturn(List.of(aplicacao(ANUNCIO_ID, PRESTADOR_ID, StatusAplicacao.ESCOLHIDA)));
+        when(anuncioService.buscarIdsAbertosDoContratante(CONTRATANTE_ID))
+                .thenReturn(List.of(ANUNCIO_ID, outroAnuncioId));
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(anuncioQuebrado));
+        when(anuncioService.buscarPorId(outroAnuncioId)).thenReturn(Optional.of(anuncioOk));
+        when(aplicacaoService.buscarIdsAbertasDoPrestador(CONTRATANTE_ID)).thenReturn(List.of());
+        when(aplicacaoService.buscarAbertasDoAnuncio(outroAnuncioId)).thenReturn(List.of());
         Mockito.doThrow(new RuntimeException("falha simulada")).when(anuncioService).salvar(anuncioQuebrado);
 
         useCase.aoEncerrarConta(new ContaEncerradaEvent(CONTRATANTE_ID, Instant.now()));
 
         assertThat(anuncioOk.getStatus()).isEqualTo(StatusAnuncio.ENCERRADO);
         verify(anuncioService).salvar(anuncioOk);
+    }
+
+    @Test
+    void dadoAnuncioQueJaFechouQuandoATravaFoiObtida_quandoContratanteEncerraConta_entaoPulaSemGravarNada() {
+        Anuncio jaEncerrado = anuncio(StatusAnuncio.ENCERRADO, Instant.now().plus(Duration.ofDays(5)));
+        when(anuncioService.buscarIdsAbertosDoContratante(CONTRATANTE_ID)).thenReturn(List.of(ANUNCIO_ID));
+        when(anuncioService.buscarPorId(ANUNCIO_ID)).thenReturn(Optional.of(jaEncerrado));
+        when(aplicacaoService.buscarIdsAbertasDoPrestador(CONTRATANTE_ID)).thenReturn(List.of());
+
+        useCase.aoEncerrarConta(new ContaEncerradaEvent(CONTRATANTE_ID, Instant.now()));
+
+        verify(trava).travar(EscopoTrava.ANUNCIO, ANUNCIO_ID.toString());
+        verify(anuncioService, never()).salvar(any());
+        verifyNoInteractions(reagendamentoService, eventPublisher);
+    }
+
+    @Test
+    void dadoCandidaturaQueDeixouDeEstarAbertaQuandoATravaFoiObtida_quandoPrestadorEncerraConta_entaoPulaSemGravarNada() {
+        Aplicacao recusada = aplicacao(ANUNCIO_ID, PRESTADOR_ID, StatusAplicacao.RECUSADA);
+        when(anuncioService.buscarIdsAbertosDoContratante(PRESTADOR_ID)).thenReturn(List.of());
+        when(aplicacaoService.buscarIdsAbertasDoPrestador(PRESTADOR_ID)).thenReturn(List.of(recusada.getId()));
+        when(aplicacaoService.buscarAnuncioId(recusada.getId())).thenReturn(Optional.of(ANUNCIO_ID));
+        when(aplicacaoService.buscarPorId(recusada.getId())).thenReturn(Optional.of(recusada));
+
+        useCase.aoEncerrarConta(new ContaEncerradaEvent(PRESTADOR_ID, Instant.now()));
+
+        verify(trava).travar(EscopoTrava.ANUNCIO, ANUNCIO_ID.toString());
+        assertThat(recusada.getStatus()).isEqualTo(StatusAplicacao.RECUSADA);
+        verify(aplicacaoService, never()).salvar(any());
+        verify(anuncioService, never()).salvar(any());
     }
 }
