@@ -11,8 +11,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -60,7 +62,7 @@ class DecidirDenunciaUseCaseTest {
     private final ApplicationEventPublisher eventos = mock(ApplicationEventPublisher.class);
 
     private final DecidirDenunciaUseCase useCase = new DecidirDenunciaUseCase(denunciaService, decisaoService,
-            avaliacaoService, auditoria, eventos);
+            avaliacaoService, auditoria, eventos, Clock.systemUTC());
 
     private Denuncia denuncia;
 
@@ -110,6 +112,31 @@ class DecidirDenunciaUseCaseTest {
         verify(eventos).publishEvent(evento.capture());
         assertThat(evento.getValue().usuarioId()).isEqualTo(DENUNCIADO_ID);
         assertThat(evento.getValue().suspensaAte()).isEqualTo(fim);
+    }
+
+    @Test
+    void suspensaoComecaNaHoraDaDecisao() {
+        Instant agora = Instant.parse("2026-11-25T12:00:00Z");
+        DecidirDenunciaUseCase comRelogio = new DecidirDenunciaUseCase(denunciaService, decisaoService,
+                avaliacaoService, auditoria, eventos, Clock.fixed(agora, ZoneOffset.UTC));
+
+        DenunciaDecidida decidida = comRelogio.executar(DENUNCIA_ID, ADMIN_ID, new PedidoDeDecisao(
+                VereditoModeracao.PROCEDENTE, "Fundamento.", TipoSancao.SUSPENSAO,
+                agora.plus(Duration.ofMinutes(2)), agora.plus(Duration.ofDays(7)), null, false), "10.0.0.1");
+
+        assertThat(decidida.sancoes().getFirst().getInicioEm())
+                .as("o instante em que a conta bloqueou, não o relógio do navegador").isEqualTo(agora);
+    }
+
+    @Test
+    void suspensaoComInicioNoFuturoERecusada() {
+        Instant inicio = Instant.now().plus(Duration.ofDays(7));
+
+        assertThatThrownBy(() -> decidir(new PedidoDeDecisao(VereditoModeracao.PROCEDENTE, "Fundamento.",
+                TipoSancao.SUSPENSAO, inicio, inicio.plus(Duration.ofDays(7)), null, false)))
+                .isInstanceOf(DecisaoInvalidaException.class)
+                .hasMessageContaining("começa na hora da decisão");
+        verifyNoInteractions(eventos);
     }
 
     @Test

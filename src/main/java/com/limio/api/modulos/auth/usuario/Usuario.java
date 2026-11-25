@@ -113,24 +113,11 @@ public class Usuario extends BaseEntity {
      * o valor original). Não mexe em {@code senhaHash} (login já recusa a conta
      * encerrada antes de olhar a senha) nem em {@code papelAtivo}/{@code statusConta}
      * (encerrada é só {@code anonimizadoEm} preenchido — {@link #isEncerrada()}).
+     * Limpa o prazo de uma suspensão em curso (ETI-116): a rotina de fim de
+     * suspensão não devolve a {@code ATIVA} uma conta encerrada.
      * Quem chama ainda precisa gravar {@link com.limio.api.modulos.auth.cpfbloqueado.CpfBloqueado}
      * com o CPF original, antes de chamar isto.
      */
-    /**
-     * Suspensão pela moderação (ETI-116): {@code BLOQUEADA} até {@code ate}. Uma suspensão nova substitui o prazo da
-     * anterior. Quem chama também encerra as sessões.
-     */
-    public void suspender(Instant ate) {
-        this.statusConta = StatusConta.BLOQUEADA;
-        this.suspensaAte = ate;
-    }
-
-    /** Prazo da suspensão vencido: a conta volta a {@code ATIVA}. Só a rotina de {@code auth} chama. */
-    public void encerrarSuspensao() {
-        this.statusConta = StatusConta.ATIVA;
-        this.suspensaAte = null;
-    }
-
     public void encerrar(Instant agora) {
         this.nomeCompleto = NomeHelper.CONTA_ENCERRADA;
         this.email = "encerrada+" + getId() + "@anonimizado.limio";
@@ -139,5 +126,34 @@ public class Usuario extends BaseEntity {
         this.dataNascimento = null;
         this.cidadeUf = null;
         this.anonimizadoEm = agora;
+        this.suspensaAte = null;
+    }
+
+    /**
+     * Suspensão pela moderação (ETI-116): {@code BLOQUEADA} até {@code ate}. Nunca encurta o que já vale: o bloqueio
+     * sem prazo ({@code BLOQUEADA} sem {@code suspensaAte}, posto à mão) continua sem prazo, e uma suspensão que já
+     * vai além de {@code ate} fica com o prazo dela. Quem chama também encerra as sessões.
+     */
+    public void suspender(Instant ate) {
+        boolean bloqueioSemPrazo = statusConta == StatusConta.BLOQUEADA && suspensaAte == null;
+        if (bloqueioSemPrazo) {
+            return;
+        }
+        this.statusConta = StatusConta.BLOQUEADA;
+        if (suspensaAte == null || ate.isAfter(suspensaAte)) {
+            this.suspensaAte = ate;
+        }
+    }
+
+    /** A suspensão pela moderação já venceu e a conta segue aberta: a rotina de {@code auth} pode reativá-la. */
+    public boolean suspensaoVenceuEm(Instant agora) {
+        return statusConta == StatusConta.BLOQUEADA && suspensaAte != null && !suspensaAte.isAfter(agora)
+                && !isEncerrada();
+    }
+
+    /** Prazo da suspensão vencido: a conta volta a {@code ATIVA}. Só a rotina de {@code auth} chama. */
+    public void encerrarSuspensao() {
+        this.statusConta = StatusConta.ATIVA;
+        this.suspensaAte = null;
     }
 }

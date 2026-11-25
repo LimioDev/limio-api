@@ -278,3 +278,14 @@ O token do administrador não sai deste módulo: é outro ator, com o principal 
 `EncerrarContaUseCase.aoDecidirEncerramento` faz o encerramento do ETI-36 quando a moderação decide, com a auditoria na
 origem `moderacao-decidir-denuncia`. Porta nova `ConsultaContasParaModeracao` (nome, papel e situação, inclusive conta
 encerrada, sem contato). Detalhe em `moderacao/docs/features/ETI-116-analisar-denuncia-e-aplicar-sancao.md`.
+
+## 2026-11-25 — ETI-116 (review da PR #53): ciclo de vida da suspensão
+
+- **`Usuario.suspender` nunca encurta um bloqueio.** O bloqueio sem prazo (`BLOQUEADA` sem `suspensa_ate`) continua sem
+  prazo, e sobre uma suspensão em curso fica o maior dos dois prazos. Antes, a suspensão nova trocava o prazo: dava
+  prazo a um bloqueio indefinido e liberava antes da hora quem já estava suspenso por mais tempo.
+- **A rotina de fim de suspensão trava e confere de novo.** `UsuarioService.buscarIdsComSuspensaoVencida` traz só ids
+  (sem as contas encerradas); cada conta abre a própria transação, é travada com `buscarParaAtualizarOuFalhar` e só
+  volta a `ATIVA` se `Usuario.suspensaoVenceuEm` ainda vale. Uma suspensão aplicada no meio da rotina não é desfeita,
+  e uma falha numa conta não desfaz o lote. A rotina usa o `Clock`.
+- **`Usuario.encerrar` limpa `suspensa_ate`.** Conta suspensa que depois é encerrada não volta a `ATIVA` pela rotina.

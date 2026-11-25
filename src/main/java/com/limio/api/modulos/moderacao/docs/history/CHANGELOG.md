@@ -50,3 +50,14 @@ deixou de contar em todas as consultas de avaliação. Detalhe em `../features/E
 - **Denúncia repetida não vira outra.** Mesmo denunciante, mesmo alvo (denunciado e contexto) e mesmo motivo com uma
   denúncia ainda em aberto devolvem a existente, sem gravar nem enviar foto. A trava `EscopoTrava.DENUNCIA` por
   denunciante cobre dois envios simultâneos (toque duplo). Limite de denúncias diferentes por par fica com o PO.
+
+## 2026-11-25 — ETI-116 (review da PR #53): início e ciclo de vida da suspensão
+
+- **A suspensão começa na decisão.** `DecidirDenunciaUseCase` recusa `inicioEm` no futuro (5 min de tolerância para o
+  relógio do navegador) e grava na `Sancao` o instante da decisão como início. Antes, uma suspensão marcada para a
+  semana seguinte bloqueava a conta na hora e a sanção registrava outro período. O usecase passou a usar o `Clock`.
+- **Tipo do alvo e chat da análise na hora da denúncia.** `AnalisarDenunciaUseCase` usa `ConsultaServico.buscarPartes`
+  (`PartesAnuncio` ganhou `escolhidoEm`): `SERVICO` só se a escolha já tinha acontecido quando a denúncia foi feita.
+- **`StatusResolucao.isEmAberto`** (do ETI-114) trata `PROCEDENTE` e `IMPROCEDENTE` como fechadas, e
+  `Denuncia.isAberta` usa a mesma regra.
+- Do lado de `auth` e `anuncio`: ver os CHANGELOGs desses módulos.

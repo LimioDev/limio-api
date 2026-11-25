@@ -44,6 +44,7 @@ public class Anuncio extends BaseEntity {
     public static final Duration PRAZO_CANCELAMENTO_SERVICO = Duration.ofHours(24);
 
     private static final String MOTIVO_EXCLUSAO_DE_CONTA ="Cancelado por saída de conta";
+    private static final String MOTIVO_SUSPENSAO_DE_CONTA = "Cancelado por suspensão de conta";
     private static final String MOTIVO_CANCELAMENTO_PELO_EMPREGADOR = "Cancelado pelo Empregador";
     private static final String MOTIVO_SERVICO_CANCELADO = "Serviço cancelado pelo Empregador";
     private static final String MOTIVO_SERVICO_CANCELADO_NA_CARENCIA = "Serviço cancelado pelo Empregador na carência pós-reagendamento";
@@ -260,6 +261,11 @@ public class Anuncio extends BaseEntity {
     /** UC16 (encerrar conta do contratante): tira do mural, não conclui. */
     public void encerrarPorExclusaoDeConta(Instant agora) {
         encerrar(agora, MOTIVO_EXCLUSAO_DE_CONTA);
+    }
+
+    /** ETI-116: a moderação suspendeu uma das partes. Tira do mural como a saída de conta, com o motivo próprio. */
+    public void encerrarPorSuspensaoDeConta(Instant agora) {
+        encerrar(agora, MOTIVO_SUSPENSAO_DE_CONTA);
     }
 
     /** ETI-63: Empregador cancela antes de escolher alguém. Quem chama já validou o estado do anúncio. */

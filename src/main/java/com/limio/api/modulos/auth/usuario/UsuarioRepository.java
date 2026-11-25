@@ -28,7 +28,10 @@ public interface UsuarioRepository extends BaseRepository<Usuario, UUID> {
 
     long countByAnonimizadoEmIsNull();
 
-    List<Usuario> findByStatusContaAndSuspensaAteLessThanEqual(StatusConta statusConta, Instant limite);
+    /** Só os ids: a rotina trava e relê cada conta na transação dela. A conta encerrada fica de fora. */
+    @Query("select u.id from Usuario u where u.statusConta = :status and u.suspensaAte <= :limite"
+            + " and u.anonimizadoEm is null")
+    List<UUID> findIdsComSuspensaoVencida(@Param("status") StatusConta status, @Param("limite") Instant limite);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from Usuario u where u.id = :id")

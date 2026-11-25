@@ -1,5 +1,7 @@
 package com.limio.api.modulos.moderacao.actions.usecase;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -40,6 +42,10 @@ import com.limio.api.modulos.moderacao.excecao.DenunciaNaoEncontradaException;
  * sem a avaliação oculta ({@link AvaliacaoOcultadaEvent}). Os ouvintes de {@code auth} e {@code perfil} rodam na mesma
  * transação: se um falhar, a decisão desfaz. Os anúncios encerram depois do commit.
  *
+ * <p>A suspensão começa na hora da decisão: a conta bloqueia já, então um {@code inicioEm} no futuro é recusado (com
+ * {@link #TOLERANCIA_RELOGIO} para o relógio do navegador do painel) e a {@code Sancao} grava como início o instante
+ * da decisão, o mesmo em que a conta bloqueou.
+ *
  * <p>Dinheiro não passa por aqui (UC): o administrador nunca marca o serviço como pago e não transfere valores.
  */
 @Component
@@ -47,25 +53,30 @@ public class DecidirDenunciaUseCase {
 
     private static final String ORIGEM = "moderacao-decidir-denuncia";
 
+    /** O painel manda o "agora" do navegador no {@code inicioEm}: um relógio um pouco adiantado não é recusado. */
+    static final Duration TOLERANCIA_RELOGIO = Duration.ofMinutes(5);
+
     private final DenunciaService denunciaService;
     private final DecisaoModeracaoService decisaoModeracaoService;
     private final AvaliacaoService avaliacaoService;
     private final LogAuditoriaService logAuditoriaService;
     private final ApplicationEventPublisher eventos;
+    private final Clock relogio;
 
     public DecidirDenunciaUseCase(DenunciaService denunciaService, DecisaoModeracaoService decisaoModeracaoService,
             AvaliacaoService avaliacaoService, LogAuditoriaService logAuditoriaService,
-            ApplicationEventPublisher eventos) {
+            ApplicationEventPublisher eventos, Clock relogio) {
         this.denunciaService = denunciaService;
         this.decisaoModeracaoService = decisaoModeracaoService;
         this.avaliacaoService = avaliacaoService;
         this.logAuditoriaService = logAuditoriaService;
         this.eventos = eventos;
+        this.relogio = relogio;
     }
 
     @Transactional
     public DenunciaDecidida executar(UUID denunciaId, UUID administradorId, PedidoDeDecisao pedido, String ip) {
-        Instant agora = Instant.now();
+        Instant agora = Instant.now(relogio);
         Denuncia denuncia = denunciaService.buscarParaDecidir(denunciaId)
                 .orElseThrow(DenunciaNaoEncontradaException::new);
         if (!denuncia.isAberta()) {
@@ -106,6 +117,8 @@ public class DecidirDenunciaUseCase {
         exigir(suspensao || !temPeriodo, "Início e fim só valem para a suspensão.");
         if (suspensao) {
             exigir(pedido.inicioEm() != null && pedido.fimEm() != null, "A suspensão precisa de início e fim.");
+            exigir(!pedido.inicioEm().isAfter(agora.plus(TOLERANCIA_RELOGIO)),
+                    "A suspensão começa na hora da decisão.");
             exigir(pedido.fimEm().isAfter(pedido.inicioEm()), "O fim da suspensão precisa ser depois do início.");
             exigir(pedido.fimEm().isAfter(agora), "O fim da suspensão precisa estar no futuro.");
         }
@@ -135,8 +148,9 @@ public class DecidirDenunciaUseCase {
             case ENCERRAMENTO_DE_CONTA ->
                 eventos.publishEvent(new EncerramentoDeContaDecididoEvent(denunciadoId, agora));
         }
+        Instant inicioEm = pedido.sancao() == TipoSancao.SUSPENSAO ? agora : null;
         return decisaoModeracaoService.salvarSancao(Sancao.aplicar(decisao, denunciadoId, pedido.sancao(),
-                pedido.inicioEm(), pedido.fimEm(), pedido.avaliacaoId()));
+                inicioEm, pedido.fimEm(), pedido.avaliacaoId()));
     }
 
     /** Mesma trava e mesmo recálculo da publicação (ETI-107): a média no perfil sai sem a avaliação oculta. */

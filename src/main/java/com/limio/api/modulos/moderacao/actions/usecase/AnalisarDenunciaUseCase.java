@@ -17,6 +17,7 @@ import com.limio.api.comum.portas.ConsultaContasParaModeracao;
 import com.limio.api.comum.portas.ConsultaServico;
 import com.limio.api.comum.portas.ContaParaModeracao;
 import com.limio.api.comum.portas.MensagemOriginal;
+import com.limio.api.comum.portas.PartesAnuncio;
 import com.limio.api.comum.portas.ResumoServico;
 import com.limio.api.modulos.moderacao.AnaliseDaDenuncia;
 import com.limio.api.modulos.moderacao.denuncia.DecisaoModeracao;
@@ -32,6 +33,9 @@ import com.limio.api.modulos.moderacao.excecao.DenunciaNaoEncontradaException;
  * situação, nunca contato nem documento), o alvo, a foto de comprovação, o chat com o texto original, as fotos do
  * check-out e o histórico do denunciado (outras denúncias e sanções). Serve também para a denúncia já decidida, com a
  * decisão.
+ *
+ * <p>O tipo do alvo e o chat mostrado saem do que o anúncio era na hora da denúncia, não do estado atual: uma denúncia
+ * feita com o anúncio no mural continua {@code ANUNCIO} depois da escolha, sem o chat do Prestador escolhido depois.
  */
 @Component
 public class AnalisarDenunciaUseCase {
@@ -61,19 +65,22 @@ public class AnalisarDenunciaUseCase {
         Denuncia denuncia = denunciaService.buscarPorId(denunciaId).orElseThrow(DenunciaNaoEncontradaException::new);
         Optional<ResumoServico> servico = Optional.ofNullable(denuncia.getAnuncioId())
                 .flatMap(consultaServico::buscarPorId);
+        Optional<PartesAnuncio> servicoNaDenuncia = Optional.ofNullable(denuncia.getAnuncioId())
+                .flatMap(consultaServico::buscarPartes)
+                .filter(partes -> partes.eraServicoEm(denuncia.getCriadoEm()));
         Map<UUID, ContaParaModeracao> contas = consultaContas.buscarPorIds(
                 List.of(denuncia.getDenuncianteId(), denuncia.getDenunciadoId()));
         Optional<DecisaoModeracao> decisao = decisaoModeracaoService.buscarDaDenuncia(denunciaId);
 
         return new AnaliseDaDenuncia(
                 denuncia,
-                tipoAlvo(denuncia, servico),
+                tipoAlvo(denuncia, servicoNaDenuncia.isPresent()),
                 servico.map(ResumoServico::titulo).orElse(null),
                 contas.get(denuncia.getDenuncianteId()),
                 contas.get(denuncia.getDenunciadoId()),
                 evidencia(denuncia),
                 fotosCheckout(denuncia),
-                chat(denuncia, servico),
+                chat(denuncia, servicoNaDenuncia),
                 denunciaService.buscarOutrasContraODenunciado(denuncia),
                 sancoesAnteriores(denuncia, decisao),
                 decisao.orElse(null),
@@ -81,7 +88,7 @@ public class AnalisarDenunciaUseCase {
     }
 
     /** A mensagem é o alvo mais específico; a denúncia de mensagem também guarda a candidatura e o anúncio. */
-    private static TipoAlvoDenuncia tipoAlvo(Denuncia denuncia, Optional<ResumoServico> servico) {
+    private static TipoAlvoDenuncia tipoAlvo(Denuncia denuncia, boolean eraServico) {
         if (denuncia.getMensagemId() != null) {
             return TipoAlvoDenuncia.MENSAGEM;
         }
@@ -89,8 +96,7 @@ public class AnalisarDenunciaUseCase {
             return TipoAlvoDenuncia.CANDIDATURA;
         }
         if (denuncia.getAnuncioId() != null) {
-            return servico.map(ResumoServico::prestadorId).isPresent() ? TipoAlvoDenuncia.SERVICO
-                    : TipoAlvoDenuncia.ANUNCIO;
+            return eraServico ? TipoAlvoDenuncia.SERVICO : TipoAlvoDenuncia.ANUNCIO;
         }
         return TipoAlvoDenuncia.PERFIL;
     }
@@ -112,13 +118,16 @@ public class AnalisarDenunciaUseCase {
                 .toList();
     }
 
-    /** O chat da candidatura do contexto ou, na denúncia de serviço, as conversas do Prestador escolhido. */
-    private List<MensagemOriginal> chat(Denuncia denuncia, Optional<ResumoServico> servico) {
+    /**
+     * O chat da candidatura do contexto ou, na denúncia de serviço, as conversas do Prestador escolhido (mesmo com o
+     * serviço cancelado depois).
+     */
+    private List<MensagemOriginal> chat(Denuncia denuncia, Optional<PartesAnuncio> servicoNaDenuncia) {
         if (denuncia.getCandidaturaId() != null) {
             return consultaChat.listarMensagensOriginais(denuncia.getCandidaturaId());
         }
-        return servico.filter(resumo -> resumo.prestadorId() != null)
-                .map(resumo -> consultaChat.listarMensagensOriginaisDoServico(resumo.anuncioId(), resumo.prestadorId()))
+        return servicoNaDenuncia
+                .map(partes -> consultaChat.listarMensagensOriginaisDoServico(partes.anuncioId(), partes.escolhidoId()))
                 .orElse(List.of());
     }
 

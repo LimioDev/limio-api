@@ -80,9 +80,21 @@ administrador e regra de acesso a `/admin/**`).
     na publicação (ETI-107).
 - **Fim da suspensão:** `usuario.suspensa_ate` (V44). A rotina `SuspenderContaUseCase.encerrarSuspensoesVencidas`
   (`auth.suspensao.cron`, a cada 10 minutos) volta para `ATIVA` as contas com o prazo vencido. `BLOQUEADA` sem
-  `suspensa_ate` (bloqueio sem prazo, feito à mão) não é tocada.
-- **A suspensão começa na decisão.** `inicioEm` é gravado na sanção, mas a conta bloqueia na hora, qualquer que seja o
-  início informado.
+  `suspensa_ate` (bloqueio sem prazo, feito à mão) não é tocada. A busca traz só os ids; cada conta é travada
+  (`FOR UPDATE`, a mesma trava da suspensão) e conferida de novo na própria transação (`TransactionTemplate`), como em
+  `ExpirarAnunciosSemCandidatosUseCase`. Uma suspensão aplicada no meio da rotina não é desfeita, e uma falha numa
+  conta não desfaz as outras.
+- **Suspensão nunca encurta um bloqueio que já vale (`Usuario.suspender`):** o bloqueio sem prazo continua sem prazo, e
+  sobre uma suspensão em curso fica o maior dos dois prazos.
+- **Conta suspensa e depois encerrada:** `Usuario.encerrar` limpa `suspensa_ate`, e a rotina ignora conta encerrada.
+  Ela não volta a `ATIVA`.
+- **A suspensão começa na decisão.** A conta bloqueia na hora, então `inicioEm` no futuro é recusado (400, com 5 min
+  de tolerância para o relógio do navegador) e a `Sancao` grava como início o instante da decisão, não o valor
+  enviado.
+- **O tipo do alvo na análise é o da hora da denúncia:** `SERVICO` só se o anúncio já tinha Prestador escolhido
+  quando a denúncia foi feita (`PartesAnuncio.eraServicoEm`, pelo `escolhidaEm`). Uma denúncia feita com o anúncio no
+  mural continua `ANUNCIO` e não mostra o chat do Prestador escolhido depois. O escolhido vem de `escolhidaEm`, então a
+  denúncia de um serviço cancelado depois continua `SERVICO`, com o chat.
 - **Avaliação oculta some de tudo:** contagem, média, avaliações recentes do perfil público e resumo dos candidatos
   filtram `oculta_em is null`.
 - **Chat:** porta `ConsultaChat` ganhou `listarMensagensOriginais(candidaturaId)` e
@@ -99,8 +111,8 @@ administrador e regra de acesso a `/admin/**`).
   `CORS_ORIGENS_PERMITIDAS`).
 - **Motivo da suspensão = fundamento:** decisão do card, a confirmar com o tech lead.
 - **Severidade:** tabela provisória, a confirmar com o PO.
-- **Início da suspensão no futuro:** hoje a suspensão começa na decisão. Se o painel precisar agendar, entra uma rotina
-  de início.
+- **Início da suspensão no futuro:** recusado (a suspensão começa na decisão). Se o painel precisar agendar, entra uma
+  rotina de início em `auth`.
 - **Chat da conta suspensa:** os chats continuam abertos (só o encerramento de conta os deixa somente leitura). Como a
   conta não loga, ela não escreve; se o grupo quiser fechar os chats, o lugar é `DeixarChatSomenteLeituraUseCase`.
 - **Avisos ao denunciado e ao denunciante:** o card não pede notificação da decisão.

@@ -1,6 +1,7 @@
 package com.limio.api.modulos.moderacao.story;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -20,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -362,6 +364,8 @@ class ModerarDenunciaStoryTest {
         assertThat(statusAplicacao(enviada)).isEqualTo("ENCERRADA");
         assertThat(jdbc.queryForObject("select status from anuncio where id = ?", String.class, servicoDaMaria.getId()))
                 .isEqualTo("ENCERRADO");
+        assertThat(jdbc.queryForObject("select motivo_encerramento from anuncio where id = ?", String.class,
+                servicoDaMaria.getId())).isEqualTo("Cancelado por suspensão de conta");
         assertThat(jdbc.queryForObject("select status from anuncio where id = ?", String.class, outroDaMaria.getId()))
                 .as("anúncio de outra pessoa em que ele só se candidatou continua").isEqualTo("PUBLICADO");
     }
@@ -378,6 +382,78 @@ class ModerarDenunciaStoryTest {
 
         assertThat(statusConta(carlos)).isEqualTo("ATIVA");
         login(carlos).andExpect(status().isOk());
+    }
+
+    @Test
+    void suspensaoComInicioNoFuturoERecusadaESemFuturoGravaOInicioDaDecisao() throws Exception {
+        Denuncia denuncia = denuncia(maria, carlos, MotivoDenuncia.SUSPEITA_DE_FRAUDE, Duration.ofHours(72));
+
+        decidir(denuncia, suspensao(Instant.now().plus(Duration.ofDays(6)), Instant.now().plus(Duration.ofDays(8))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo", is("VALIDACAO_FALHOU")));
+        assertThat(statusConta(carlos)).isEqualTo("ATIVA");
+
+        Instant antes = Instant.now();
+        decidir(denuncia, suspensao(Instant.now().minus(Duration.ofDays(1)), Instant.now().plus(Duration.ofDays(8))))
+                .andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("select inicio_em from sancao", Instant.class)).isAfterOrEqualTo(antes);
+    }
+
+    @Test
+    void suspensaoNaoEncurtaASuspensaoMaisLongaNemDaPrazoAoBloqueioSemPrazo() throws Exception {
+        Instant longa = Instant.now().plus(Duration.ofDays(60));
+        decidir(denuncia(maria, carlos, MotivoDenuncia.SUSPEITA_DE_FRAUDE, Duration.ofHours(72)),
+                suspensao(Instant.now(), longa)).andExpect(status().isOk());
+        decidir(denuncia(joana, carlos, MotivoDenuncia.COMPORTAMENTO_INADEQUADO, Duration.ofHours(72)),
+                suspensao(Instant.now(), Instant.now().plus(Duration.ofDays(10)))).andExpect(status().isOk());
+
+        assertThat(suspensaAte(carlos)).isCloseTo(longa, within(1, ChronoUnit.SECONDS));
+
+        jdbc.update("update usuario set status_conta = 'BLOQUEADA', suspensa_ate = null where id = ?", joana.getId());
+        decidir(denuncia(maria, joana, MotivoDenuncia.SUSPEITA_DE_FRAUDE, Duration.ofHours(72)),
+                suspensao(Instant.now(), Instant.now().plus(Duration.ofDays(1)))).andExpect(status().isOk());
+        jdbc.update("update usuario set suspensa_ate = now() - interval '1 minute' where id = ?", carlos.getId());
+
+        suspenderContaUseCase.encerrarSuspensoesVencidas();
+
+        assertThat(statusConta(joana)).as("bloqueio sem prazo continua").isEqualTo("BLOQUEADA");
+        assertThat(suspensaAte(joana)).isNull();
+        assertThat(statusConta(carlos)).isEqualTo("ATIVA");
+    }
+
+    @Test
+    void contaSuspensaEDepoisEncerradaNaoVoltaAAtiva() throws Exception {
+        decidir(denuncia(maria, carlos, MotivoDenuncia.SUSPEITA_DE_FRAUDE, Duration.ofHours(72)),
+                suspensao(Instant.now(), Instant.now().plus(Duration.ofDays(1)))).andExpect(status().isOk());
+        decidir(denuncia(joana, carlos, MotivoDenuncia.SUSPEITA_DE_FRAUDE, Duration.ofHours(72)),
+                Map.of("veredito", "PROCEDENTE", "fundamento", "Fraudes repetidas.", "sancao", "ENCERRAMENTO_DE_CONTA"))
+                .andExpect(status().isOk());
+
+        assertThat(suspensaAte(carlos)).isNull();
+        suspenderContaUseCase.encerrarSuspensoesVencidas();
+
+        assertThat(statusConta(carlos)).isEqualTo("BLOQUEADA");
+    }
+
+    @Test
+    void denunciaDeAnuncioFeitaAntesDaEscolhaContinuaAnuncioSemOChatDoEscolhido() throws Exception {
+        Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO);
+        Denuncia denuncia = denunciaRepository.saveAndFlush(Denuncia.registrar(joana.getId(),
+                new AlvoDenuncia(maria.getId(), anuncio.getId(), null, null), MotivoDenuncia.SUSPEITA_DE_FRAUDE,
+                "Pede pagamento adiantado.", null, Instant.now().plus(Duration.ofHours(72))));
+        UUID escolhida = aplicacaoRepository.save(Aplicacao.builder()
+                .anuncioId(anuncio.getId())
+                .prestadorId(carlos.getId())
+                .status(StatusAplicacao.ESCOLHIDA)
+                .dataAplicacao(Instant.now())
+                .escolhidaEm(Instant.now().plus(Duration.ofSeconds(1)))
+                .build()).getId();
+        mensagem(chat(anuncio, escolhida), maria, "Combinado", "Combinado");
+
+        comoAdmin(get("/admin/denuncias/{id}", denuncia.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.alvo.tipo", is("ANUNCIO")))
+                .andExpect(jsonPath("$.chat", hasSize(0)));
     }
 
     @Test
@@ -495,6 +571,15 @@ class ModerarDenunciaStoryTest {
         return denunciaRepository.saveAndFlush(Denuncia.registrar(denunciante.getId(),
                 new AlvoDenuncia(denunciado.getId(), null, null, null), motivo, "O que aconteceu.", null,
                 Instant.now().plus(prazo)));
+    }
+
+    private static Map<String, Object> suspensao(Instant inicio, Instant fim) {
+        return Map.of("veredito", "PROCEDENTE", "fundamento", "Golpe confirmado.", "sancao", "SUSPENSAO",
+                "inicioEm", inicio.toString(), "fimEm", fim.toString());
+    }
+
+    private Instant suspensaAte(Usuario usuario) {
+        return jdbc.queryForObject("select suspensa_ate from usuario where id = ?", Instant.class, usuario.getId());
     }
 
     private String statusConta(Usuario usuario) {

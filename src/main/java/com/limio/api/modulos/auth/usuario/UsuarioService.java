@@ -98,8 +98,11 @@ public class UsuarioService extends BaseService<Usuario, UUID, UsuarioRepository
         return repository.countByAnonimizadoEmIsNull();
     }
 
-    /** Contas suspensas pela moderação cujo prazo já passou ({@code suspensaAte <= agora}). */
-    public List<Usuario> buscarComSuspensaoVencida(Instant agora) {
-        return repository.findByStatusContaAndSuspensaAteLessThanEqual(StatusConta.BLOQUEADA, agora);
+    /**
+     * Ids das contas suspensas pela moderação cujo prazo já passou ({@code suspensaAte <= agora}), sem as encerradas.
+     * É só a pré-seleção da rotina: a decisão é tomada com a linha travada ({@link #buscarParaAtualizarOuFalhar}).
+     */
+    public List<UUID> buscarIdsComSuspensaoVencida(Instant agora) {
+        return repository.findIdsComSuspensaoVencida(StatusConta.BLOQUEADA, agora);
     }
 }

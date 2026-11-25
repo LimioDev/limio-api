@@ -41,10 +41,12 @@ public class ConsultaServicoService implements ConsultaServico {
     @Override
     @Transactional(readOnly = true)
     public Optional<PartesAnuncio> buscarPartes(UUID anuncioId) {
-        return anuncioService.buscarPorId(anuncioId)
-                .map(anuncio -> new PartesAnuncio(anuncio.getId(), anuncio.getContratanteId(),
-                        aplicacaoService.buscarEscolhidaDoAnuncio(anuncio.getId())
-                                .map(Aplicacao::getPrestadorId).orElse(null),
-                        anuncio.getStatus() == StatusAnuncio.PUBLICADO));
+        return anuncioService.buscarPorId(anuncioId).map(anuncio -> {
+            Optional<Aplicacao> escolhida = aplicacaoService.buscarEscolhidaDoAnuncio(anuncio.getId());
+            return new PartesAnuncio(anuncio.getId(), anuncio.getContratanteId(),
+                    escolhida.map(Aplicacao::getPrestadorId).orElse(null),
+                    escolhida.map(Aplicacao::getEscolhidaEm).orElse(null),
+                    anuncio.getStatus() == StatusAnuncio.PUBLICADO);
+        });
     }
 }

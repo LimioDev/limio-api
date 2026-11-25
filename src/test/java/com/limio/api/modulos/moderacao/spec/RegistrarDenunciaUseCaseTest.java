@@ -312,7 +312,8 @@ class RegistrarDenunciaUseCaseTest {
 
     private void anuncio(UUID escolhidoId, boolean noMural) {
         when(consultaServico.buscarPartes(ANUNCIO_ID))
-                .thenReturn(Optional.of(new PartesAnuncio(ANUNCIO_ID, MARIA, escolhidoId, noMural)));
+                .thenReturn(Optional.of(new PartesAnuncio(ANUNCIO_ID, MARIA, escolhidoId,
+                        escolhidoId == null ? null : AGORA.minus(Duration.ofDays(1)), noMural)));
     }
 
     private void mensagemDeCarlos() {
