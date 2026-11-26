@@ -106,3 +106,7 @@ transação de cada operação. Ainda não há ouvinte em `RegistrarAvisosUseCas
 para decidir o destinatário: o aceite avisa as duas partes; proposta e cancelamento, a contraparte; recusa, o
 proponente; expiração, as duas. Detalhe em `anuncio/docs/features/ETI-99-reagendar-o-servico.md`.
 
+## 2026-11-25 — aviso de conclusão distingue o silêncio (ETI-98)
+
+`ServicoConcluidoEvent` ganhou `origem`; na conclusão automática o aviso diz "foi concluído automaticamente". Mesmo
+tipo (`SERVICO_CONCLUIDO`) e mesmos destinatários.

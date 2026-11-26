@@ -434,3 +434,13 @@ Pendências: a conclusão por silêncio (ETI-98) deve checar `existePendente` de
 do serviço pelo Prestador (ETI-96/97) deve chamar o ponto único de encerramento; os eventos de reagendamento ainda não
 têm ouvinte em `notificacao` (US56).
 
+## 2026-11-25 — ETI-98: conclusão automática por silêncio
+
+Job que conclui o serviço combinado 24h depois da data vigente sem check-out, validação nem cancelamento, e o que ficou
+24h em `AGUARDANDO_VALIDACAO` depois do check-out. Não conclui com proposta de reagendamento pendente (o gancho deixado
+pela ETI-99) nem quando uma das partes encerrou a conta. Detalhe completo em
+`docs/features/ETI-98-conclusao-por-silencio.md`.
+
+A conclusão grava `validadoEm` (é dele que `moderacao` abre a janela de avaliação) e `encerradoEm`, que a validação
+manual não preenche. O `ServicoConcluidoEvent` ganhou `origem` (`VALIDACAO` ou `SILENCIO`) para o aviso distinguir os
+dois casos. Sem migration. Na primeira subida, os serviços antigos já vencidos são concluídos em lotes.

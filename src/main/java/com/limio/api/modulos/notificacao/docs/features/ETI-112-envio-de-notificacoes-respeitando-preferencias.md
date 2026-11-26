@@ -62,11 +62,11 @@ As duas rotas exigem login.
 | `PrestadorEscolhidoEvent` | Cada não escolhido (`ConsultaCandidatura.buscarPrestadoresIds`, uma consulta só) | `CANDIDATURA_ENCERRADA` | "Vaga preenchida" — proposta |
 | `ServicoIniciadoEvent` | Empregador | `SERVICO_INICIADO` | "Serviço iniciado" — proposta |
 | `CheckoutEnviadoEvent` | Empregador | `CHECKOUT_ENVIADO` | "Check-out enviado" — "(nome) enviou a foto de '(anúncio)'. Valide para finalizar o serviço." (card) |
-| `ServicoConcluidoEvent` | As duas partes | `SERVICO_CONCLUIDO` | "Serviço concluído" — "'(anúncio)' foi concluído. Avalie a outra parte." |
+| `ServicoConcluidoEvent` | As duas partes | `SERVICO_CONCLUIDO` | "Serviço concluído" — "'(anúncio)' foi concluído. Avalie a outra parte." Por silêncio (ETI-98): "foi concluído automaticamente" — proposta |
 | `AvisoDeAnuncioEvent` | Quem o evento indicar | `AVISO_DE_ANUNCIO` | o assunto do evento |
 
-Nomes abreviados como na lista de candidatos ("Rafael S.", `NomeHelper`). O `ServicoConcluidoEvent` não diz se foi
-validação ou silêncio de 24h, então o texto não diz "automaticamente".
+Nomes abreviados como na lista de candidatos ("Rafael S.", `NomeHelper`). O `ServicoConcluidoEvent` traz `origem`
+(validação ou silêncio, ETI-98), e só no silêncio o texto diz "automaticamente".
 
 **Fora desta entrega** (decisão de 2026-11-16): `ServicoCanceladoEvent` (#38) e `AnuncioExpiradoEvent` (#39) ganham
 ouvinte num ajuste curto depois que as PRs entrarem. Reagendamento e cobrança GOLD ainda não publicam evento entre
