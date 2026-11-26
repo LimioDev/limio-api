@@ -80,8 +80,8 @@ public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository
     }
 
     public List<UUID> buscarIdsParaConcluirPorSilencio(Instant agora, Instant limiteAgenda, int prazoValidacaoHoras,
-            int lote) {
-        return repository.buscarIdsParaConcluirPorSilencio(agora, limiteAgenda, prazoValidacaoHoras, lote);
+            int lote, int pular) {
+        return repository.buscarIdsParaConcluirPorSilencio(agora, limiteAgenda, prazoValidacaoHoras, lote, pular);
     }
 
     /**

@@ -391,6 +391,23 @@ class ConcluirServicosPorSilencioStoryTest {
     }
 
     @Test
+    void dadoUmLoteInteiroDeContaEncerradaMaisAntigo_quandoRodaOJob_entaoOElegivelNaoFicaDeFora() {
+        Usuario encerrada = usuario("Ana Lima", "ana@example.com", "39053344705", PapelUsuario.EMPREGADOR);
+        encerrada.setAnonimizadoEm(Instant.now());
+        usuarioRepository.save(encerrada);
+        for (int i = 0; i < lote; i++) {
+            comEscolhido(anuncio(StatusAnuncio.PUBLICADO, ha(UM_DIA.multipliedBy(30)))
+                    .contratanteId(encerrada.getId()));
+        }
+        Anuncio elegivel = vencido();
+
+        job.executar();
+
+        assertConcluido(elegivel);
+        assertThat(eventos.stream(ServicoConcluidoEvent.class)).hasSize(1);
+    }
+
+    @Test
     void dadaFalhaAoGravar_quandoRodaOJob_entaoNadaMudaENadaEPublicado() {
         Anuncio anuncio = vencido();
         doThrow(new IllegalStateException("falha simulada")).when(anuncioService).salvar(any());

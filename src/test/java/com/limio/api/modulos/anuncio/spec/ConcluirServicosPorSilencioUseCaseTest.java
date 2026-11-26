@@ -107,7 +107,7 @@ class ConcluirServicosPorSilencioUseCaseTest {
     }
 
     private void candidatos(UUID... ids) {
-        when(anuncioService.buscarIdsParaConcluirPorSilencio(AGORA, LIMITE_AGENDA, 24, LOTE))
+        when(anuncioService.buscarIdsParaConcluirPorSilencio(AGORA, LIMITE_AGENDA, 24, LOTE, 0))
                 .thenReturn(List.of(ids));
     }
 

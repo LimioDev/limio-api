@@ -53,6 +53,7 @@ public class ConcluirServicosPorSilencioUseCase {
     private final TransactionTemplate transacao;
     private final Clock relogio;
     private final Duration prazoPosAgenda;
+    private final int prazoValidacaoHoras;
     private final Duration prazoValidacaoPadrao;
     private final int lote;
 
@@ -73,29 +74,47 @@ public class ConcluirServicosPorSilencioUseCase {
         this.transacao = transacao;
         this.relogio = relogio;
         this.prazoPosAgenda = Duration.ofHours(prazoPosAgendaHoras);
+        this.prazoValidacaoHoras = prazoValidacaoHoras;
         this.prazoValidacaoPadrao = Duration.ofHours(prazoValidacaoHoras);
         this.lote = lote;
     }
 
+    /**
+     * Conclui até {@code lote} serviços. Anúncio que não conclui (conta encerrada, falha) continua na pré-seleção, e
+     * como ela vem do mais antigo para o mais novo, a busca avança além dele para não travar os demais.
+     */
     @Scheduled(cron = "${anuncio.conclusao-silencio.cron}")
     public void executar() {
         Instant agora = relogio.instant();
-        List<UUID> candidatos = anuncioService.buscarIdsParaConcluirPorSilencio(agora, agora.minus(prazoPosAgenda),
-                Math.toIntExact(prazoValidacaoPadrao.toHours()), lote);
-
         int concluidos = 0;
-        for (UUID anuncioId : candidatos) {
-            try {
-                if (Boolean.TRUE.equals(transacao.execute(status -> concluirUm(anuncioId, agora)))) {
-                    concluidos++;
+        int naoConcluidos = 0;
+        List<UUID> candidatos;
+        do {
+            candidatos = anuncioService.buscarIdsParaConcluirPorSilencio(agora, agora.minus(prazoPosAgenda),
+                    prazoValidacaoHoras, lote, naoConcluidos);
+            for (UUID anuncioId : candidatos) {
+                if (concluidos == lote) {
+                    break;
                 }
-            } catch (RuntimeException e) {
-                log.error("falha ao concluir por silêncio o anúncio {}; os demais continuam", anuncioId, e);
+                if (tentarConcluir(anuncioId, agora)) {
+                    concluidos++;
+                } else {
+                    naoConcluidos++;
+                }
             }
-        }
+        } while (candidatos.size() == lote && concluidos < lote);
 
-        if (!candidatos.isEmpty()) {
-            log.info("conclusão por silêncio: {} concluídos de {} candidatos", concluidos, candidatos.size());
+        if (concluidos + naoConcluidos > 0) {
+            log.info("conclusão por silêncio: {} concluídos e {} não concluídos", concluidos, naoConcluidos);
+        }
+    }
+
+    private boolean tentarConcluir(UUID anuncioId, Instant agora) {
+        try {
+            return Boolean.TRUE.equals(transacao.execute(status -> concluirUm(anuncioId, agora)));
+        } catch (RuntimeException e) {
+            log.error("falha ao concluir por silêncio o anúncio {}; os demais continuam", anuncioId, e);
+            return false;
         }
     }
 

@@ -35,11 +35,11 @@ public interface AnuncioRepository extends BaseRepository<Anuncio, UUID> {
                           AND ap.status IN ('ESCOLHIDA', 'AGUARDANDO_VALIDACAO'))
               AND NOT EXISTS (SELECT 1 FROM reagendamento r WHERE r.anuncio_id = a.id AND r.status = 'PENDENTE')
             ORDER BY COALESCE(a.checkout_em, a.data_hora_pretendida), a.id
-            LIMIT :lote
+            LIMIT :lote OFFSET :pular
             """, nativeQuery = true)
     List<UUID> buscarIdsParaConcluirPorSilencio(@Param("agora") Instant agora,
             @Param("limiteAgenda") Instant limiteAgenda, @Param("prazoValidacaoHoras") int prazoValidacaoHoras,
-            @Param("lote") int lote);
+            @Param("lote") int lote, @Param("pular") int pular);
 
     /** Só os ids, de propósito: nada fica gerenciado antes da trava do anúncio (ver {@code AnuncioService}). */
     @Query("select a.id from Anuncio a where a.contratanteId = :contratanteId and a.status in :status")

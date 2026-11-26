@@ -2,6 +2,7 @@ package com.limio.api.modulos.anuncio.spec;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -18,6 +19,7 @@ import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
 class CheckoutDominioTest {
 
     private static final Instant AGORA = Instant.parse("2026-11-07T12:00:00Z");
+    private static final Duration PRAZO_PADRAO = Duration.ofHours(12);
 
     private static Anuncio anuncio(StatusAnuncio status, Integer prazoHoras) {
         return Anuncio.builder().status(status).prazoValidacaoHoras(prazoHoras).build();
@@ -72,7 +74,7 @@ class CheckoutDominioTest {
         Anuncio anuncio = anuncio(StatusAnuncio.EM_ANDAMENTO, 24);
         anuncio.registrarCheckout(AGORA, null);
 
-        assertThat(anuncio.prazoDeValidacao()).contains(Instant.parse("2026-11-08T12:00:00Z"));
+        assertThat(anuncio.prazoDeValidacao(PRAZO_PADRAO)).contains(Instant.parse("2026-11-08T12:00:00Z"));
     }
 
     @Test
@@ -80,20 +82,20 @@ class CheckoutDominioTest {
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO, 48);
         anuncio.registrarCheckout(AGORA, null);
 
-        assertThat(anuncio.prazoDeValidacao()).contains(Instant.parse("2026-11-09T12:00:00Z"));
+        assertThat(anuncio.prazoDeValidacao(PRAZO_PADRAO)).contains(Instant.parse("2026-11-09T12:00:00Z"));
     }
 
     @Test
     void dadoAnuncioSemCheckout_quandoCalculaPrazo_entaoVazio() {
-        assertThat(anuncio(StatusAnuncio.PUBLICADO, 24).prazoDeValidacao()).isEmpty();
+        assertThat(anuncio(StatusAnuncio.PUBLICADO, 24).prazoDeValidacao(PRAZO_PADRAO)).isEmpty();
     }
 
     @Test
-    void dadoAnuncioSemPrazoGravado_quandoCalculaPrazo_entaoVazio() {
+    void dadoAnuncioSemPrazoGravado_quandoCalculaPrazo_entaoUsaOPadrao() {
         Anuncio anuncio = anuncio(StatusAnuncio.PUBLICADO, null);
         anuncio.registrarCheckout(AGORA, null);
 
-        assertThat(anuncio.prazoDeValidacao()).isEmpty();
+        assertThat(anuncio.prazoDeValidacao(PRAZO_PADRAO)).contains(AGORA.plus(PRAZO_PADRAO));
     }
 
     @Test

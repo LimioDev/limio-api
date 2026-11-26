@@ -1,7 +1,9 @@
 package com.limio.api.modulos.anuncio.actions.mapper;
 
+import java.time.Duration;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.limio.api.comum.midia.LinkTemporario;
@@ -19,6 +21,12 @@ import com.limio.api.modulos.anuncio.records.ServicoValidadoResponse;
 
 @Component
 public class ServicoMapper {
+
+    private final Duration prazoValidacaoPadrao;
+
+    public ServicoMapper(@Value("${anuncio.prazo-validacao-horas}") int prazoValidacaoHoras) {
+        this.prazoValidacaoPadrao = Duration.ofHours(prazoValidacaoHoras);
+    }
 
     public ServicoIniciadoResponse toIniciadoResponse(Anuncio anuncio) {
         return new ServicoIniciadoResponse(anuncio.getStatus(), anuncio.getIniciadoEm());
@@ -41,7 +49,7 @@ public class ServicoMapper {
 
     public CheckoutResponse toCheckoutResponse(Anuncio anuncio) {
         return new CheckoutResponse(anuncio.getStatus(), anuncio.getCheckoutEm(),
-                anuncio.prazoDeValidacao().orElse(null));
+                anuncio.prazoDeValidacao(prazoValidacaoPadrao).orElse(null));
     }
 
     public CancelamentoServicoResponse toCancelamentoResponse(CancelamentoServico cancelamento) {

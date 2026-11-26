@@ -44,7 +44,7 @@ Proposta recusada, cancelada ou expirada não muda nada: vale a data original. A
 |---|---|---|---|
 | `anuncio.prazo-pos-agenda-horas` | `ANUNCIO_PRAZO_POS_AGENDA_HORAS` | 24 | prazo do caso A |
 | `anuncio.conclusao-silencio.cron` | `ANUNCIO_CONCLUSAO_SILENCIO_CRON` | `0 */5 * * * *` | cron da rotina (`-` desliga; é o usado nos testes) |
-| `anuncio.conclusao-silencio.lote` | `ANUNCIO_CONCLUSAO_SILENCIO_LOTE` | 100 | anúncios por execução |
+| `anuncio.conclusao-silencio.lote` | `ANUNCIO_CONCLUSAO_SILENCIO_LOTE` | 100 | serviços concluídos por execução, no máximo; também é o tamanho de cada página da pré-seleção |
 
 **Primeira subida em produção:** todo serviço antigo já vencido passa a ser concluído, um lote por execução, com aviso
 às duas partes e a janela de avaliação contando a partir dali. Para segurar, subir com o cron em `-`.
@@ -57,6 +57,9 @@ Proposta recusada, cancelada ou expirada não muda nada: vale a data original. A
 - **Trava `ANUNCIO` e releitura.** A query só escolhe quem olhar; a decisão é refeita sob a trava com o estado atual.
   Isso cobre duas instâncias e as corridas com validação, check-out, cancelamento e reagendamento, e torna a rotina
   idempotente. Todo escritor novo do anúncio precisa tomar a mesma trava (não há `@Version`).
+- **A rotina avança além do que não concluiu.** Anúncio de conta encerrada ou com falha continua na pré-seleção; a
+  busca seguinte o pula (`OFFSET`), para ele não travar os mais novos. Filtrar a conta encerrada na SQL exigiria o
+  `anuncio` ler a tabela do `auth`.
 - **A query repete os filtros de candidatura e de proposta pendente** para anúncios que nunca serão concluídos não
   ocuparem o lote.
 - **A origem vai no evento** (`comum/eventos/enums/OrigemConclusao`), reaproveitando o `ServicoConcluidoEvent` em vez
@@ -68,8 +71,8 @@ Proposta recusada, cancelada ou expirada não muda nada: vale a data original. A
 
 - Conta suspensa pela moderação não bloqueia a conclusão; só a encerrada.
 - `auth` não toma a trava `ANUNCIO`: uma conta encerrada entre a checagem e o commit deixa o serviço concluído.
-- Anúncio aberto de conta encerrada continua sendo pré-selecionado a cada execução (aparece como `log.warn`). Com um
-  lote inteiro deles, ocuparia a vez dos demais.
+- Anúncio aberto de conta encerrada continua sendo pré-selecionado e relido a cada execução (aparece como
+  `log.warn`). Não bloqueia os demais, mas o custo da execução cresce com a quantidade deles.
 - O aviso pode se perder se a aplicação cair entre o commit e o listener (`notificacao` não tem outbox).
 - A consulta não tem índice próprio.
 
