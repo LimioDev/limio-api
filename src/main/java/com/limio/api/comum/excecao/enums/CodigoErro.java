@@ -75,6 +75,7 @@ public enum CodigoErro {
     PAGAMENTO_RECUSADO("Pagamento recusado. Verifique os dados do cartão e tente novamente."),
     GATEWAY_INDISPONIVEL("Não foi possível processar o pagamento agora. Tente novamente em instantes."),
     CARTAO_INVALIDO("Dados do cartão inválidos. Confira número, validade e CVV."),
+    WEBHOOK_INVALIDO("Aviso do gateway de pagamento sem autenticação válida."),
     NOTIFICACAO_NAO_ENCONTRADA("Notificação não encontrada."),
     ALVO_NAO_ACESSIVEL("Não é possível denunciar este conteúdo."),
     ERRO_INTERNO("Ocorreu um erro inesperado. Tente novamente mais tarde.");

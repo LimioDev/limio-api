@@ -1,7 +1,7 @@
 # Manual de funcionamento — financeiro
 
-> Status: **implementado (ETI-81)**. Código em `modulos/financeiro/`. Especificação em
-> `docs/features/ETI-81-assinar-gold.md`. O usuário logado chega ao controller como
+> Status: **implementado (ETI-81, ETI-85)**. Código em `modulos/financeiro/`. Especificação em
+> `docs/features/ETI-81-assinar-gold.md` e `docs/features/ETI-85-renovar-gold.md`. O usuário logado chega ao controller como
 > `UsuarioAutenticado` (`@AuthenticationPrincipal`), lido do token pelo `JwtAuthFilter`.
 
 ## `GET /financeiro/gold` (ETI-81 — consultar o plano)
@@ -29,7 +29,7 @@
    - **passo 2, fora de transação:** chama `GatewayPagamento.cobrar(...)` (hoje
      `GatewayPagamentoSimulado`) com a chave de idempotência do passo 1; gateway fora do ar →
      `GatewayIndisponivelException` (503) propagada direto — a pendência fica `PENDENTE` pra reconciliar
-     depois (webhook só loga hoje, sem reconciliação automática);
+     depois pelo aviso do gateway (ETI-85);
    - **passo 3, `confirmar` (segunda transação curta):** recusado → `AssinaturaGold` vira `CANCELADA`,
      `Cobranca` vira `RECUSADA`, lança 402 `PAGAMENTO_RECUSADO`; aprovado → grava/atualiza
      `MeioPagamento` (bandeira/últimos4 vêm do gateway), `AssinaturaGold` vira `ATIVA`, `Cobranca` vira
@@ -48,6 +48,28 @@
    um token fake, o Asaas delega pro `AsaasClient` via `ClienteAsaasResolver`. Salva o token em
    `MeioPagamento`. A rota em si segue condicional no controller — é decisão de produto (teste contra o
    sandbox Asaas sem tela de cadastro de cartão), não limitação da porta.
+
+## Rotina de renovação (ETI-85)
+
+1. `RenovarGoldUseCase.executar()` (`@Scheduled`, `financeiro.gold.renovacao.cron`) busca as assinaturas `ATIVA` com
+   o ciclo vencido e sem nova tentativa marcada para depois (`AssinaturaGoldService.buscarIdsParaRenovar`).
+2. Para cada uma, transação curta sob a trava `ASSINATURA_GOLD`: relê a assinatura; renovação cancelada → `encerrar`
+   (FREE), fim. Cobrança anterior ainda `PENDENTE` e recente → espera o aviso do gateway. Senão grava a `Cobranca`
+   de renovação `PENDENTE` (`inicioCicloCobrado` = `dataFimCiclo`, `tentativa` = recusadas do ciclo + 1).
+3. Fora de transação, cobra o cartão salvo (`GatewayPagamento.cobrar`). Sem cartão = recusada sem chamar o gateway.
+4. Segunda transação curta sob a trava: se a cobrança ainda está sem resultado, `ResolverCobrancaGoldHelper` aplica
+   aprovação (avança o ciclo, recibo, `CobrancaGoldAprovadaEvent`), recusa (nova tentativa ou `ENCERRADA`,
+   `CobrancaGoldRecusadaEvent`) ou falha do gateway (`FALHOU`, nova tentativa).
+
+## `POST /financeiro/gold/webhook/asaas` (ETI-85 — aviso do gateway)
+
+1. `AsaasWebhookController` confere `asaas-access-token` (`WebhookTokenHelper`); errado ou ausente → 401
+   `WEBHOOK_INVALIDO`.
+2. `AvisoPagamentoMapper.toAviso` traduz o evento do Asaas em `AvisoPagamento` (aprovado/recusado); outros eventos →
+   200 sem efeito.
+3. `ProcessarAvisoPagamentoUseCase` acha a cobrança pela chave de idempotência (ou pelo id no gateway), trava pelo
+   usuário e, se a cobrança ainda está sem resultado, aplica pelo `ResolverCobrancaGoldHelper`. Cobrança já resolvida
+   (aviso repetido) → nada. 200.
 
 ## Classes envolvidas
 
@@ -71,5 +93,10 @@
 | `GoldAssinadoEvent` / `ReciboEventosService` | Evento interno + envio do recibo pós-commit |
 | `ReciboGoldEmailService` (financeiro) | Envio do e-mail do recibo via Resend (nome próprio, não o de `auth`) |
 | `AsaasWebhookController` / `WebhookTokenHelper` | Recebe eventos do Asaas; token comparado em tempo constante |
+| `AvisoPagamentoMapper` / `AvisoPagamento` / `ResultadoAvisoPagamento` | Webhook do Asaas ⇄ aviso de domínio (ETI-85) |
+| `ProcessarAvisoPagamentoUseCase` | Regra: aplicar o aviso do gateway a uma cobrança sem resultado, idempotente (ETI-85) |
+| `RenovarGoldUseCase` | Rotina: renovar, tentar de novo, encerrar no fim do ciclo (ETI-85) |
+| `ResolverCobrancaGoldHelper` | Efeito do resultado de uma cobrança na assinatura, comum à rotina e ao webhook (ETI-85) |
+| `CobrancaGoldAprovadaEvent` / `CobrancaGoldRecusadaEvent` (`comum/eventos`) | Pedem os avisos da tela 43 (US56); o aprovado também dispara o recibo |
 
 Atualize esta página sempre que uma classe mudar de responsabilidade.
