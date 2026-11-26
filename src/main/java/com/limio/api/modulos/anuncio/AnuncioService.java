@@ -79,6 +79,11 @@ public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository
         return repository.buscarIdsParaExpirar(agora, lote);
     }
 
+    public List<UUID> buscarIdsParaConcluirPorSilencio(Instant agora, Instant limiteAgenda, int prazoValidacaoHoras,
+            int lote) {
+        return repository.buscarIdsParaConcluirPorSilencio(agora, limiteAgenda, prazoValidacaoHoras, lote);
+    }
+
     /**
      * Página do mural: anúncios PUBLICADO, sem candidatura ESCOLHIDA, de outro contratante, compatíveis com
      * o {@code criterio} (especialidade/"Outros" e raio) e dentro dos filtros opcionais. Distância, filtros,
