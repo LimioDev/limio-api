@@ -258,6 +258,24 @@ public class Anuncio extends BaseEntity {
         return Optional.of(checkoutEm.plus(Duration.ofHours(prazoValidacaoHoras)));
     }
 
+    public boolean permiteConclusaoPorSilencio(Instant agora, Duration prazoPosAgenda, Duration prazoValidacaoPadrao) {
+        return switch (status) {
+            case PUBLICADO, EM_ANDAMENTO -> !dataHoraPretendida.plus(prazoPosAgenda).isAfter(agora);
+            case AGUARDANDO_VALIDACAO -> checkoutEm != null
+                    && !prazoDeValidacao().orElseGet(() -> checkoutEm.plus(prazoValidacaoPadrao)).isAfter(agora);
+            case CONCLUIDO, ENCERRADO -> false;
+        };
+    }
+
+    public void concluirPorSilencio(Instant agora) {
+        if (!isAberto()) {
+            throw new IllegalStateException("Só um serviço em aberto pode ser concluído por silêncio, mas está " + status);
+        }
+        this.status = StatusAnuncio.CONCLUIDO;
+        this.validadoEm = agora;
+        this.encerradoEm = agora;
+    }
+
     /** UC16 (encerrar conta do contratante): tira do mural, não conclui. */
     public void encerrarPorExclusaoDeConta(Instant agora) {
         encerrar(agora, MOTIVO_EXCLUSAO_DE_CONTA);
