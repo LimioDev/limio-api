@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.limio.api.comum.eventos.ServicoConcluidoEvent;
+import com.limio.api.comum.eventos.enums.OrigemConclusao;
 import com.limio.api.comum.persistencia.TravaTransacional;
 import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
@@ -23,9 +24,8 @@ import com.limio.api.modulos.anuncio.reagendamento.ReagendamentoService;
 /**
  * UC — Empregador valida o serviço, presencial ou pela foto (ETI-92): o anúncio vai pra {@code CONCLUIDO}
  * e {@code validadoEm} é preenchido. Não registra nem confere pagamento (UC) — isso fica fora do LIMIO.
- * {@link ServicoConcluidoEvent} é publicado; o único consumidor previsto, ainda não implementado, é
- * {@code notificacao} (avisar o Prestador, ETI-112). {@code moderacao} (ETI-107, já na develop) não escuta
- * este evento — lê {@code validadoEm} direto pela porta {@code ConsultaServico}/{@code ResumoServico}.
+ * {@link ServicoConcluidoEvent} é publicado e {@code notificacao} avisa as duas partes (ETI-112).
+ * {@code moderacao} (ETI-107) não escuta este evento — lê {@code validadoEm} direto pela porta {@code ConsultaServico}/{@code ResumoServico}.
  *
  * A trava {@link EscopoTrava#ANUNCIO} (advisory lock, a mesma de editar, cancelar, iniciar, candidatar-se,
  * desistir, recusar e escolher candidato, ETI-61/ETI-69) vem antes de ler o anúncio: barra o clique duplo (a
@@ -76,8 +76,8 @@ public class ValidarServicoUseCase {
         anuncio.validar(agora);
         Anuncio salvo = anuncioService.salvar(anuncio);
 
-        eventos.publishEvent(
-                new ServicoConcluidoEvent(anuncioId, anuncio.getTitulo(), contratanteId, prestadorId, agora));
+        eventos.publishEvent(new ServicoConcluidoEvent(anuncioId, anuncio.getTitulo(), contratanteId, prestadorId,
+                OrigemConclusao.VALIDACAO, agora));
         return salvo;
     }
 

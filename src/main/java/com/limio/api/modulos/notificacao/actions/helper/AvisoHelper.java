@@ -3,6 +3,7 @@ package com.limio.api.modulos.notificacao.actions.helper;
 import java.util.Locale;
 import java.util.UUID;
 
+import com.limio.api.comum.eventos.enums.OrigemConclusao;
 import com.limio.api.modulos.notificacao.Aviso;
 import com.limio.api.modulos.notificacao.enums.TipoNotificacao;
 
@@ -65,13 +66,14 @@ public final class AvisoHelper {
                 nomePrestador + " enviou a foto de '" + anuncio + "'. Valide para finalizar o serviço.", anuncioId);
     }
 
-    /**
-     * ETI-92, pras duas partes. O evento não diz se foi validação ou silêncio de 24h, então o texto não diz
-     * "automaticamente" (o card só define o texto do silêncio).
-     */
-    public static Aviso servicoConcluido(UUID destinatarioId, UUID anuncioId, String anuncio) {
+    /** ETI-92 e ETI-98, pras duas partes (texto a definir no card). */
+    public static Aviso servicoConcluido(UUID destinatarioId, UUID anuncioId, String anuncio, OrigemConclusao origem) {
+        String conclusao = switch (origem) {
+            case VALIDACAO -> "foi concluído";
+            case SILENCIO -> "foi concluído automaticamente";
+        };
         return new Aviso(destinatarioId, TipoNotificacao.SERVICO_CONCLUIDO, "Serviço concluído",
-                "'" + anuncio + "' foi concluído. Avalie a outra parte.", anuncioId);
+                "'" + anuncio + "' " + conclusao + ". Avalie a outra parte.", anuncioId);
     }
 
     /** TICKET-0049: aviso genérico de anúncio (hoje, só o encerramento por exclusão de conta). */

@@ -29,6 +29,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.limio.api.comum.eventos.ServicoConcluidoEvent;
+import com.limio.api.comum.eventos.enums.OrigemConclusao;
 import com.limio.api.comum.persistencia.TravaTransacional;
 import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.anuncio.Anuncio;
@@ -116,6 +117,7 @@ class ValidarServicoUseCaseTest {
         assertThat(evento.getValue().anuncioTitulo()).isEqualTo("Instalar 3 tomadas");
         assertThat(evento.getValue().contratanteId()).isEqualTo(CONTRATANTE_ID);
         assertThat(evento.getValue().prestadorId()).isEqualTo(PRESTADOR_ID);
+        assertThat(evento.getValue().origem()).isEqualTo(OrigemConclusao.VALIDACAO);
         assertThat(evento.getValue().ocorridoEm()).isEqualTo(validado.getValidadoEm());
     }
 
