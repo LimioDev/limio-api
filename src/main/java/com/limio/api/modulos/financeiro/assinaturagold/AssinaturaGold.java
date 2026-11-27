@@ -74,7 +74,10 @@ public class AssinaturaGold extends BaseEntity {
         this.status = StatusAssinatura.ATIVA;
     }
 
-    /** Pagamento recusado: a pendência não vira assinatura — a linha fica como se nunca tivesse sido ativada. */
+    /**
+     * Pagamento recusado ou gateway fora do ar antes de cobrar: a pendência não vira assinatura — a linha fica
+     * como se nunca tivesse sido ativada.
+     */
     public void cancelarPendencia() {
         this.status = StatusAssinatura.CANCELADA;
     }

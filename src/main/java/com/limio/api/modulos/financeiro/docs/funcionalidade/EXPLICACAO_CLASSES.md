@@ -15,24 +15,27 @@
 
 ## `POST /financeiro/gold/assinatura` (ETI-81 — assinar)
 
-1. Controller desserializa em `AssinarGoldRequest` (`codigoPlano`, `gatewayToken`). Bean Validation
-   exige os dois não-vazios; falha → 400.
+1. Controller desserializa em `AssinarGoldRequest` (`codigoPlano`, `gatewayToken` opcional). Bean
+   Validation exige `codigoPlano` não-vazio; falha → 400.
 2. `AssinarGoldUseCase.executar(usuarioId, papelAtivo, codigoPlano, gatewayToken)` — a cobrança é efeito
    externo irreversível, então nunca roda dentro de transação; o fluxo é em três passos:
    - papel diferente de `PRESTADOR` → 403 `ACESSO_NEGADO`, sem tocar em nada mais;
    - **passo 1, `reservar` (transação curta):** trava por usuário (`TravaTransacional`,
      `EscopoTrava.ASSINATURA_GOLD`); plano de `codigoPlano` precisa existir e estar ativo, senão 404
      `PLANO_NAO_ENCONTRADO`; já tem `AssinaturaGold` `ATIVA`? 409 `ASSINATURA_JA_ATIVA`; já tem
-     `PENDENTE` (cobrança em andamento de uma tentativa anterior)? 409 `COBRANCA_EM_ANDAMENTO`; senão
-     cria/reinicia `AssinaturaGold` e `Cobranca`, ambas `PENDENTE`, com uma chave de idempotência nova —
+     `PENDENTE` (cobrança em andamento de uma tentativa anterior)? 409 `COBRANCA_EM_ANDAMENTO`; escolhe o
+     cartão: o `gatewayToken` da requisição ou, sem ele, o do `MeioPagamento` salvo (sem nenhum dos dois,
+     422 `CARTAO_NAO_CADASTRADO`); então cria/reinicia `AssinaturaGold` e `Cobranca`, ambas `PENDENTE`, com uma chave de idempotência nova —
      a transação comita e solta o lock aqui, antes de chamar o gateway;
    - **passo 2, fora de transação:** chama `GatewayPagamento.cobrar(...)` (hoje
      `GatewayPagamentoSimulado`) com a chave de idempotência do passo 1; gateway fora do ar →
-     `GatewayIndisponivelException` (503) propagada direto — a pendência fica `PENDENTE` pra reconciliar
-     depois (webhook só loga hoje, sem reconciliação automática);
+     `GatewayIndisponivelException` (503). Se o gateway não recebeu a cobrança, `desfazerReserva` (transação
+     curta) passa `AssinaturaGold` pra `CANCELADA` e `Cobranca` pra `FALHOU`; se o resultado é incerto
+     (`cobrancaPodeTerOcorrido`), a pendência fica `PENDENTE` pra reconciliar depois (webhook só loga hoje);
    - **passo 3, `confirmar` (segunda transação curta):** recusado → `AssinaturaGold` vira `CANCELADA`,
-     `Cobranca` vira `RECUSADA`, lança 402 `PAGAMENTO_RECUSADO`; aprovado → grava/atualiza
-     `MeioPagamento` (bandeira/últimos4 vêm do gateway), `AssinaturaGold` vira `ATIVA`, `Cobranca` vira
+     `Cobranca` vira `RECUSADA`, e o 402 `PAGAMENTO_RECUSADO` é lançado só depois do commit (dentro da
+     transação, desfaria o cancelamento); aprovado → grava/atualiza `MeioPagamento` só se o token veio na
+     requisição (bandeira/últimos4 vêm do gateway), `AssinaturaGold` vira `ATIVA`, `Cobranca` vira
      `APROVADA`, grava `DocumentoFiscal`, publica `GoldAssinadoEvent`.
 3. `ReciboEventosService` (`@TransactionalEventListener(AFTER_COMMIT)`) escuta `GoldAssinadoEvent`,
    busca o e-mail do usuário via `ConsultaDadosUsuario` (porta de `auth`) e manda o recibo

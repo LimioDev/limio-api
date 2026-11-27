@@ -66,4 +66,9 @@ public class Cobranca extends BaseEntity {
     public void confirmarRecusada() {
         this.status = StatusCobranca.RECUSADA;
     }
+
+    /** Gateway fora do ar antes de receber a cobrança: nada foi cobrado, a pendência é desfeita. */
+    public void registrarFalha() {
+        this.status = StatusCobranca.FALHOU;
+    }
 }

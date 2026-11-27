@@ -47,8 +47,10 @@ import com.limio.api.modulos.financeiro.assinaturagold.AssinaturaGold;
 import com.limio.api.modulos.financeiro.assinaturagold.AssinaturaGoldRepository;
 import com.limio.api.modulos.financeiro.assinaturagold.cobranca.CobrancaRepository;
 import com.limio.api.modulos.financeiro.assinaturagold.cobranca.documentofiscal.DocumentoFiscalRepository;
+import com.limio.api.modulos.financeiro.assinaturagold.cobranca.enums.StatusCobranca;
 import com.limio.api.modulos.financeiro.assinaturagold.enums.StatusAssinatura;
 import com.limio.api.modulos.financeiro.eventos.GoldAssinadoEvent;
+import com.limio.api.modulos.financeiro.meiopagamento.MeioPagamento;
 import com.limio.api.modulos.financeiro.meiopagamento.MeioPagamentoRepository;
 import com.limio.api.modulos.financeiro.plano.Plano;
 import com.limio.api.modulos.financeiro.plano.PlanoRepository;
@@ -224,21 +226,91 @@ class GoldStoryTest {
                 .andExpect(status().is(402))
                 .andExpect(jsonPath("$.codigo", is("PAGAMENTO_RECUSADO")));
 
+        // Gravado de fato no banco: a recusa não pode desfazer o cancelamento da pendência.
         AssinaturaGold assinatura = assinaturaGoldRepository.findByUsuarioId(rafael.getId()).orElseThrow();
-        assertThat(assinatura.estaAtiva()).isFalse();
-        assertThat(cobrancaRepository.findAll()).hasSize(1);
+        assertThat(assinatura.getStatus()).isEqualTo(StatusAssinatura.CANCELADA);
+        assertThat(cobrancaRepository.findAll()).singleElement()
+                .extracting(c -> c.getStatus()).isEqualTo(StatusCobranca.RECUSADA);
         assertThat(meioPagamentoRepository.findByUsuarioId(rafael.getId())).isEmpty();
         assertThat(documentoFiscalRepository.findAll()).isEmpty();
     }
 
     @Test
-    void dadoGatewayIndisponivel_quandoAssina_entao503() throws Exception {
-        prestador("Rafael Souza", "rafael@example.com", "11144477735");
+    void dadoPagamentoRecusado_quandoTentaDeNovoComOutroCartao_entao201() throws Exception {
+        Usuario rafael = prestador("Rafael Souza", "rafael@example.com", "11144477735");
+        String token = logar("rafael@example.com");
+        assinar(token, TOKEN_RECUSADO).andExpect(status().is(402));
+
+        assinar(token, TOKEN_APROVADO)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status", is("ATIVA")));
+
+        assertThat(assinaturaGoldRepository.findByUsuarioId(rafael.getId()).orElseThrow().getStatus())
+                .isEqualTo(StatusAssinatura.ATIVA);
+        assertThat(cobrancaRepository.findAll()).hasSize(2);
+    }
+
+    @Test
+    void dadoGatewayIndisponivel_quandoAssina_entao503ECancelaAPendencia() throws Exception {
+        Usuario rafael = prestador("Rafael Souza", "rafael@example.com", "11144477735");
         String token = logar("rafael@example.com");
 
         assinar(token, TOKEN_INDISPONIVEL)
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.codigo", is("GATEWAY_INDISPONIVEL")));
+
+        assertThat(assinaturaGoldRepository.findByUsuarioId(rafael.getId()).orElseThrow().getStatus())
+                .isEqualTo(StatusAssinatura.CANCELADA);
+        assertThat(cobrancaRepository.findAll()).singleElement()
+                .extracting(c -> c.getStatus()).isEqualTo(StatusCobranca.FALHOU);
+    }
+
+    @Test
+    void dadoGatewayIndisponivel_quandoTentaDeNovo_entao201() throws Exception {
+        prestador("Rafael Souza", "rafael@example.com", "11144477735");
+        String token = logar("rafael@example.com");
+        assinar(token, TOKEN_INDISPONIVEL).andExpect(status().isServiceUnavailable());
+
+        assinar(token, TOKEN_APROVADO)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status", is("ATIVA")));
+    }
+
+    @Test
+    void dadoCartaoSalvo_quandoAssinaSemGatewayToken_entao201CobrandoOCartaoSalvo() throws Exception {
+        Usuario rafael = prestador("Rafael Souza", "rafael@example.com", "11144477735");
+        meioPagamentoRepository.save(MeioPagamento.novo(rafael.getId(), TOKEN_APROVADO, "MASTERCARD", "4419"));
+        String token = logar("rafael@example.com");
+
+        assinar(token, null)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status", is("ATIVA")));
+
+        MeioPagamento salvo = meioPagamentoRepository.findByUsuarioId(rafael.getId()).orElseThrow();
+        assertThat(salvo.getBandeira()).isEqualTo("MASTERCARD");
+        assertThat(salvo.getUltimos4()).isEqualTo("4419");
+    }
+
+    @Test
+    void dadoCartaoSalvoRecusado_quandoAssinaSemGatewayToken_entao402() throws Exception {
+        Usuario rafael = prestador("Rafael Souza", "rafael@example.com", "11144477735");
+        meioPagamentoRepository.save(MeioPagamento.novo(rafael.getId(), TOKEN_RECUSADO, "VISA", "0002"));
+
+        assinar(logar("rafael@example.com"), null)
+                .andExpect(status().is(402))
+                .andExpect(jsonPath("$.codigo", is("PAGAMENTO_RECUSADO")));
+    }
+
+    @Test
+    void dadoSemCartaoSalvo_quandoAssinaSemGatewayToken_entao422SemCriarPendencia() throws Exception {
+        Usuario rafael = prestador("Rafael Souza", "rafael@example.com", "11144477735");
+
+        assinar(logar("rafael@example.com"), null)
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.codigo", is("CARTAO_NAO_CADASTRADO")));
+
+        assertThat(assinaturaGoldRepository.findByUsuarioId(rafael.getId())).isEmpty();
+        assertThat(cobrancaRepository.findAll()).isEmpty();
     }
 
     @Test
