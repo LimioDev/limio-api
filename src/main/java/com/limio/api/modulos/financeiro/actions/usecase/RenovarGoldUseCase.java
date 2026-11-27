@@ -1,6 +1,7 @@
 package com.limio.api.modulos.financeiro.actions.usecase;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -48,7 +49,7 @@ import com.limio.api.modulos.financeiro.plano.PlanoService;
  * aviso do gateway já resolveu a cobrança nesse meio tempo.
  *
  * <p>Uma cobrança anterior ainda {@code PENDENTE} (o processo caiu entre cobrar e confirmar) espera o aviso do
- * gateway por um intervalo de tentativa; depois disso vira {@code FALHOU} e a renovação segue.
+ * gateway por {@code espera-aviso-gateway}; depois disso vira {@code FALHOU} e a renovação segue.
  *
  * <p>{@link #executar()} não é transacional: falha numa assinatura é logada sem impedir as outras. Processa até
  * {@code lote} por execução; sobrando, a execução seguinte continua. Sem ShedLock: a trava e a releitura bastam com
@@ -69,11 +70,13 @@ public class RenovarGoldUseCase {
     private final TransactionOperations transacao;
     private final Clock relogio;
     private final int lote;
+    private final Duration esperaAvisoGateway;
 
     public RenovarGoldUseCase(AssinaturaGoldService assinaturaGoldService, CobrancaService cobrancaService,
             PlanoService planoService, MeioPagamentoService meioPagamentoService, GatewayPagamento gatewayPagamento,
             ResolverCobrancaGoldHelper resolverCobranca, TravaTransacional trava, TransactionOperations transacao,
-            Clock relogio, @Value("${financeiro.gold.renovacao.lote}") int lote) {
+            Clock relogio, @Value("${financeiro.gold.renovacao.lote}") int lote,
+            @Value("${financeiro.gold.renovacao.espera-aviso-gateway}") Duration esperaAvisoGateway) {
         this.assinaturaGoldService = assinaturaGoldService;
         this.cobrancaService = cobrancaService;
         this.planoService = planoService;
@@ -84,6 +87,7 @@ public class RenovarGoldUseCase {
         this.transacao = transacao;
         this.relogio = relogio;
         this.lote = lote;
+        this.esperaAvisoGateway = esperaAvisoGateway;
     }
 
     @Scheduled(cron = "${financeiro.gold.renovacao.cron}")
@@ -105,7 +109,7 @@ public class RenovarGoldUseCase {
     }
 
     private void renovarUma(UUID assinaturaId, Instant agora) {
-        Optional<Reserva> reserva = transacao.execute(status -> reservar(assinaturaId, agora));
+        Optional<Reserva> reserva = transacao.execute(status -> prepararRenovacao(assinaturaId, agora));
         if (reserva == null || reserva.isEmpty()) {
             return;
         }
@@ -121,7 +125,12 @@ public class RenovarGoldUseCase {
         transacao.executeWithoutResult(status -> confirmar(reserva.get(), resultado, agora));
     }
 
-    private Optional<Reserva> reservar(UUID assinaturaId, Instant agora) {
+    /**
+     * Passo 1, sob a trava: decide o que fazer com a assinatura vencida. Renovação cancelada encerra; cobrança anterior
+     * ainda sem resposta adia (ou, passada a espera, é dada como falha); senão reserva a cobrança do próximo ciclo.
+     * Vazio quando não há nada para cobrar agora.
+     */
+    private Optional<Reserva> prepararRenovacao(UUID assinaturaId, Instant agora) {
         Optional<UUID> usuarioId = assinaturaGoldService.buscarUsuarioId(assinaturaId);
         if (usuarioId.isEmpty()) {
             return Optional.empty();
@@ -136,46 +145,52 @@ public class RenovarGoldUseCase {
         AssinaturaGold assinatura = vencida.get();
 
         if (assinatura.renovacaoCancelada()) {
-            assinatura.encerrar(agora);
-            assinaturaGoldService.salvar(assinatura);
-            log.info("assinatura GOLD {} encerrada no fim do ciclo: renovação cancelada", assinaturaId);
-            return Optional.empty();
-        }
-        if (!liberarCobrancaSemResposta(assinatura, agora)) {
+            encerrarNoFimDoCiclo(assinatura, agora);
             return Optional.empty();
         }
 
+        Optional<Cobranca> pendente = cobrancaService.buscarPendente(assinaturaId);
+        if (pendente.isPresent()) {
+            Instant esperaAte = pendente.get().getCriadoEm().plus(esperaAvisoGateway);
+            if (esperaAte.isAfter(agora)) {
+                adiarAteOAvisoDoGateway(assinatura, esperaAte);
+                return Optional.empty();
+            }
+            desistirDaCobrancaSemResposta(pendente.get());
+        }
+
+        return Optional.of(reservarCobranca(assinatura, usuarioId.get()));
+    }
+
+    private void encerrarNoFimDoCiclo(AssinaturaGold assinatura, Instant agora) {
+        assinatura.encerrar(agora);
+        assinaturaGoldService.salvar(assinatura);
+        log.info("assinatura GOLD {} encerrada no fim do ciclo: renovação cancelada", assinatura.getId());
+    }
+
+    /** A cobrança anterior ainda pode ter sido feita: não cobra de novo o mesmo ciclo antes do aviso do gateway. */
+    private void adiarAteOAvisoDoGateway(AssinaturaGold assinatura, Instant esperaAte) {
+        assinatura.agendarNovaTentativa(esperaAte);
+        assinaturaGoldService.salvar(assinatura);
+    }
+
+    private void desistirDaCobrancaSemResposta(Cobranca pendente) {
+        pendente.marcarFalha();
+        cobrancaService.salvar(pendente);
+    }
+
+    private Reserva reservarCobranca(AssinaturaGold assinatura, UUID usuarioId) {
         Plano plano = planoService.buscarPorIdOuFalhar(assinatura.getPlanoId());
-        int tentativa = cobrancaService.contarRecusadasDoCiclo(assinaturaId, assinatura.getDataFimCiclo()) + 1;
+        int tentativa = cobrancaService.contarRecusadasDoCiclo(assinatura.getId(), assinatura.getDataFimCiclo()) + 1;
         String chaveIdempotencia = UUID.randomUUID().toString();
-        Cobranca cobranca = cobrancaService.salvar(Cobranca.renovacao(assinaturaId, plano.getPrecoCentavos(),
+        Cobranca cobranca = cobrancaService.salvar(Cobranca.renovacao(assinatura.getId(), plano.getPrecoCentavos(),
                 chaveIdempotencia, assinatura.getDataFimCiclo(), tentativa));
-        String gatewayToken = meioPagamentoService.buscarPorUsuario(usuarioId.get())
+        String gatewayToken = meioPagamentoService.buscarPorUsuario(usuarioId)
                 .map(MeioPagamento::getGatewayToken)
                 .orElse(null);
 
-        return Optional.of(new Reserva(assinaturaId, cobranca.getId(), usuarioId.get(), gatewayToken,
-                plano.getPrecoCentavos(), plano.getMoeda(), chaveIdempotencia));
-    }
-
-    /**
-     * {@code false} quando uma cobrança anterior ainda sem resposta deve continuar esperando o aviso do gateway: a
-     * renovação fica para depois, para não cobrar duas vezes o mesmo ciclo.
-     */
-    private boolean liberarCobrancaSemResposta(AssinaturaGold assinatura, Instant agora) {
-        Optional<Cobranca> pendente = cobrancaService.buscarPendente(assinatura.getId());
-        if (pendente.isEmpty()) {
-            return true;
-        }
-        Instant esperaAte = resolverCobranca.proximaTentativa(pendente.get().getCriadoEm());
-        if (esperaAte.isAfter(agora)) {
-            assinatura.agendarNovaTentativa(esperaAte);
-            assinaturaGoldService.salvar(assinatura);
-            return false;
-        }
-        pendente.get().marcarFalha();
-        cobrancaService.salvar(pendente.get());
-        return true;
+        return new Reserva(assinatura.getId(), cobranca.getId(), usuarioId, gatewayToken, plano.getPrecoCentavos(),
+                plano.getMoeda(), chaveIdempotencia);
     }
 
     private ResultadoCobranca cobrar(Reserva reserva) {

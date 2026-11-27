@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionOperations;
 
+import com.limio.api.comum.excecao.EntidadeNaoEncontradaException;
 import com.limio.api.comum.persistencia.TravaTransacional;
 import com.limio.api.comum.persistencia.enums.EscopoTrava;
 import com.limio.api.modulos.financeiro.actions.helper.ResolverCobrancaGoldHelper;
@@ -69,8 +70,10 @@ public class ProcessarAvisoPagamentoUseCase {
     private void processar(UUID cobrancaId, AvisoPagamento aviso, Instant agora) {
         // Ids por consulta escalar e trava antes de ler a cobrança: senão a leitura seguinte devolveria a cópia de
         // antes da trava (mesmo cuidado de ExpirarReagendamentosUseCase).
-        UUID assinaturaId = cobrancaService.buscarAssinaturaId(cobrancaId).orElseThrow();
-        UUID usuarioId = assinaturaGoldService.buscarUsuarioId(assinaturaId).orElseThrow();
+        UUID assinaturaId = cobrancaService.buscarAssinaturaId(cobrancaId)
+                .orElseThrow(EntidadeNaoEncontradaException::new);
+        UUID usuarioId = assinaturaGoldService.buscarUsuarioId(assinaturaId)
+                .orElseThrow(EntidadeNaoEncontradaException::new);
         trava.travar(EscopoTrava.ASSINATURA_GOLD, usuarioId.toString());
 
         Cobranca cobranca = cobrancaService.buscarPorIdOuFalhar(cobrancaId);

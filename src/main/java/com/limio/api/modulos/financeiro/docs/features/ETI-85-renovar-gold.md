@@ -59,8 +59,9 @@ assinatura recorrente no gateway. Por isso a renovação também é uma cobranç
   cobrança. Se for uma aprovação, o log pede para conferir estorno.
 - **Concorrência**: rotina, webhook e assinar usam a trava `ASSINATURA_GOLD` do usuário e releem o estado depois dela.
   A confirmação da rotina não aplica nada se o aviso já resolveu a cobrança nesse meio tempo.
-- **Cobrança da renovação sem resposta** (o processo caiu entre cobrar e confirmar): espera o aviso do gateway por um
-  intervalo de tentativa. Depois disso vira `FALHOU` e a renovação cobra de novo.
+- **Cobrança da renovação sem resposta** (o processo caiu entre cobrar e confirmar): espera o aviso do gateway por
+  `financeiro.gold.renovacao.espera-aviso-gateway` (padrão `1d`). Depois disso vira `FALHOU` e a renovação cobra de
+  novo.
 - **Depois de voltar para FREE**: só as novas escolhas contam no teto de 4. Já era assim: escolha feita com GOLD
   ativo não consome cota (`aplicacao.cota_consumida`, ETI-69/ETI-94), e a cota volta a ser lida pela porta
   `ConsultaPlanoPrestador`, que devolve FREE para `ENCERRADA`.

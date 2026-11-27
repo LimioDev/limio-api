@@ -72,7 +72,7 @@ public class ResolverCobrancaGoldHelper {
     }
 
     /** Quando a próxima tentativa sai, contando de {@code agora}. */
-    public Instant proximaTentativa(Instant agora) {
+    private Instant proximaTentativa(Instant agora) {
         return agora.plus(intervaloTentativa);
     }
 

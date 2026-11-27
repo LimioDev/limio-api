@@ -17,10 +17,6 @@ public class CobrancaService extends BaseService<Cobranca, UUID, CobrancaReposit
         super(repository);
     }
 
-    public Optional<Cobranca> buscarPorId(UUID id) {
-        return repository.findById(id);
-    }
-
     /**
      * A cobrança de um aviso do gateway: pela chave de idempotência (o {@code externalReference} que o LIMIO mandou)
      * e, sem ela, pelo id da cobrança no gateway.

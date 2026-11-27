@@ -85,7 +85,7 @@ class RenovarGoldUseCaseTest {
     void montar() {
         useCase = new RenovarGoldUseCase(assinaturaGoldService, cobrancaService, planoService, meioPagamentoService,
                 gatewayPagamento, resolverCobranca, trava, TransactionOperations.withoutTransaction(),
-                Clock.fixed(AGORA, ZoneOffset.UTC), 100);
+                Clock.fixed(AGORA, ZoneOffset.UTC), 100, Duration.ofDays(1));
 
         assinatura = AssinaturaGold.nova(USUARIO_ID, PLANO_ID, FIM.minus(Duration.ofDays(31)), FIM);
         assinatura.confirmarAtiva();
@@ -225,7 +225,6 @@ class RenovarGoldUseCaseTest {
         Instant criadaEm = AGORA.minus(Duration.ofHours(2));
         ReflectionTestUtils.setField(pendente, "criadoEm", criadaEm);
         when(cobrancaService.buscarPendente(assinatura.getId())).thenReturn(Optional.of(pendente));
-        when(resolverCobranca.proximaTentativa(criadaEm)).thenReturn(criadaEm.plus(Duration.ofDays(1)));
 
         useCase.executar();
 
@@ -242,7 +241,6 @@ class RenovarGoldUseCaseTest {
         ReflectionTestUtils.setField(pendente, "criadoEm", criadaEm);
         prepararCobranca(cartaoSalvo());
         when(cobrancaService.buscarPendente(assinatura.getId())).thenReturn(Optional.of(pendente));
-        when(resolverCobranca.proximaTentativa(criadaEm)).thenReturn(criadaEm.plus(Duration.ofDays(1)));
         when(gatewayPagamento.cobrar(any(), any(), any(Long.class), any(), any()))
                 .thenReturn(new ResultadoCobranca(true, "pay_2", "VISA", "1234"));
 
