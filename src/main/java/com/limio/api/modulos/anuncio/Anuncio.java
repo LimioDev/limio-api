@@ -270,10 +270,34 @@ public class Anuncio extends BaseEntity {
         this.observacaoCheckout = (observacao == null || observacao.isBlank()) ? null : observacao.strip();
     }
 
-    public Optional<Instant> prazoDeValidacao() {
-        if (checkoutEm == null || prazoValidacaoHoras == null)
+    /**
+     * Até quando o Empregador pode validar; vazio sem check-out. Vale o prazo gravado no anúncio e, na falta dele,
+     * {@code padrao}. A resposta do check-out e a conclusão por silêncio leem daqui.
+     */
+    public Optional<Instant> prazoDeValidacao(Duration padrao) {
+        if (checkoutEm == null)
             return Optional.empty();
-        return Optional.of(checkoutEm.plus(Duration.ofHours(prazoValidacaoHoras)));
+        Duration prazo = prazoValidacaoHoras == null ? padrao : Duration.ofHours(prazoValidacaoHoras);
+        return Optional.of(checkoutEm.plus(prazo));
+    }
+
+    public boolean permiteConclusaoPorSilencio(Instant agora, Duration prazoPosAgenda, Duration prazoValidacaoPadrao) {
+        return switch (status) {
+            case PUBLICADO, EM_ANDAMENTO -> !dataHoraPretendida.plus(prazoPosAgenda).isAfter(agora);
+            case AGUARDANDO_VALIDACAO -> prazoDeValidacao(prazoValidacaoPadrao)
+                    .filter(prazo -> !prazo.isAfter(agora))
+                    .isPresent();
+            case CONCLUIDO, ENCERRADO -> false;
+        };
+    }
+
+    public void concluirPorSilencio(Instant agora) {
+        if (!isAberto()) {
+            throw new IllegalStateException("Só um serviço em aberto pode ser concluído por silêncio, mas está " + status);
+        }
+        this.status = StatusAnuncio.CONCLUIDO;
+        this.validadoEm = agora;
+        this.encerradoEm = agora;
     }
 
     /** UC16 (encerrar conta do contratante): tira do mural, não conclui. */

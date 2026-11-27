@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementado, com uma pendência de integração que depende do ETI-98 (conclusão por silêncio, ainda inexistente).
+Implementado. A integração com a conclusão por silêncio foi feita no ETI-98.
 
 ## Link do card
 
@@ -136,17 +136,8 @@ Erros novos em `CodigoErro`: `DATA_IGUAL_A_VIGENTE` (422), `REAGENDAMENTO_NAO_EN
 
 ## Pendências
 
-- **Conclusão por silêncio (ETI-98), a integração que fica para esse card.** Nada neste card impede um job de
-  concluir o serviço: o job ainda não existe. O contrato a respeitar: depois da trava `ANUNCIO` e antes de
-  `Anuncio.validar`, o job deve checar `ReagendamentoService.existePendente(anuncioId)` e não concluir se for
-  verdadeiro. A retomada é automática: ao aceitar, recusar, cancelar ou expirar, a pendente deixa de existir, e a data
-  de referência é a `dataHoraPretendida` que o anúncio tiver (a nova, se o aceite a trocou).
-  `ReagendamentoPendenteGanchoStoryTest` fixa o contrato do gancho. Os cenários 29 a 32 do plano (pendente impede a
-  conclusão, aceite, recusa e cancelamento retomam) só podem ser testados ponta a ponta com o job.
-- **Decisões do ETI-98 que este card deixa em aberto:** qual é a data de referência do silêncio (hoje o único prazo
-  modelado é `checkoutEm + prazoValidacaoHoras`, mas o card fala em silêncio depois da data vigente, sem check-out) e se
-  uma proposta pendente já vencida, que o job de expiração ainda não encerrou, continua bloqueando a conclusão (atraso
-  máximo igual ao cron, 5 minutos por padrão).
+- **Conclusão por silêncio:** resolvida no ETI-98. A rotina não conclui com proposta pendente, mesmo já vencida, e usa
+  a data vigente (ou o check-out) como referência. Ver `ETI-98-conclusao-por-silencio.md`.
 - **Leitura da regra "proposta depois da data vigente" (a confirmar com o PO).** O card diz que, com a data vigente já
   passada, só se aceita proposta se não houve proposta recusada ou expirada no serviço. A implementação lê de outro
   jeito: a única proposta permitida é a **primeira feita depois da data vigente** (marca `proposta_apos_data_vigente`),

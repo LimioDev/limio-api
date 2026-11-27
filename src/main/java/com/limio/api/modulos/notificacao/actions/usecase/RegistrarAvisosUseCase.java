@@ -116,8 +116,10 @@ public class RegistrarAvisosUseCase {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void aoConcluirServico(ServicoConcluidoEvent evento) {
-        registrar(AvisoHelper.servicoConcluido(evento.contratanteId(), evento.anuncioId(), evento.anuncioTitulo()));
-        registrar(AvisoHelper.servicoConcluido(evento.prestadorId(), evento.anuncioId(), evento.anuncioTitulo()));
+        registrar(AvisoHelper.servicoConcluido(evento.contratanteId(), evento.anuncioId(), evento.anuncioTitulo(),
+                evento.origem()));
+        registrar(AvisoHelper.servicoConcluido(evento.prestadorId(), evento.anuncioId(), evento.anuncioTitulo(),
+                evento.origem()));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)

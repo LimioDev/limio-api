@@ -18,7 +18,7 @@ class CheckoutContratoTest {
 
     private static final Instant AGORA = Instant.parse("2026-11-07T12:00:00Z");
 
-    private final ServicoMapper mapper = new ServicoMapper();
+    private final ServicoMapper mapper = new ServicoMapper(12);
 
     @Test
     void dadoCheckoutRegistrado_quandoMapeia_entaoTrazStatusCheckoutEPrazo() {
@@ -33,11 +33,11 @@ class CheckoutContratoTest {
     }
 
     @Test
-    void dadoAnuncioSemPrazoGravado_quandoMapeia_entaoPrazoNulo() {
+    void dadoAnuncioSemPrazoGravado_quandoMapeia_entaoTrazOPrazoPadrao() {
         Anuncio anuncio = Anuncio.builder().status(StatusAnuncio.PUBLICADO).build();
         anuncio.registrarCheckout(AGORA, null);
 
-        assertThat(mapper.toCheckoutResponse(anuncio).prazoValidacaoEm()).isNull();
+        assertThat(mapper.toCheckoutResponse(anuncio).prazoValidacaoEm()).isEqualTo(Instant.parse("2026-11-08T00:00:00Z"));
     }
 
     @Test

@@ -26,6 +26,22 @@ public interface AnuncioRepository extends BaseRepository<Anuncio, UUID> {
             """, nativeQuery = true)
     List<UUID> buscarIdsParaExpirar(@Param("agora") Instant agora, @Param("lote") int lote);
 
+    @Query(value = """
+            SELECT a.id FROM anuncio a
+            WHERE ((a.status IN ('PUBLICADO', 'EM_ANDAMENTO') AND a.data_hora_pretendida <= :limiteAgenda)
+                OR (a.status = 'AGUARDANDO_VALIDACAO'
+                    AND a.checkout_em + COALESCE(a.prazo_validacao_horas, :prazoValidacaoHoras) * INTERVAL '1 hour'
+                        <= :agora))
+              AND EXISTS (SELECT 1 FROM aplicacao ap WHERE ap.anuncio_id = a.id
+                          AND ap.status IN ('ESCOLHIDA', 'AGUARDANDO_VALIDACAO'))
+              AND NOT EXISTS (SELECT 1 FROM reagendamento r WHERE r.anuncio_id = a.id AND r.status = 'PENDENTE')
+            ORDER BY COALESCE(a.checkout_em, a.data_hora_pretendida), a.id
+            LIMIT :lote OFFSET :pular
+            """, nativeQuery = true)
+    List<UUID> buscarIdsParaConcluirPorSilencio(@Param("agora") Instant agora,
+            @Param("limiteAgenda") Instant limiteAgenda, @Param("prazoValidacaoHoras") int prazoValidacaoHoras,
+            @Param("lote") int lote, @Param("pular") int pular);
+
     /** Só os ids, de propósito: nada fica gerenciado antes da trava do anúncio (ver {@code AnuncioService}). */
     @Query("select a.id from Anuncio a where a.contratanteId = :contratanteId and a.status in :status")
     List<UUID> findIdsByContratanteIdAndStatusIn(@Param("contratanteId") UUID contratanteId,

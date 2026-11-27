@@ -65,6 +65,10 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
         return repository.existsByAnuncioIdAndPrestadorIdAndStatusIn(anuncioId, prestadorId, STATUS_ESCOLHIDA);
     }
 
+    public Optional<Aplicacao> buscarEscolhidaVigente(UUID anuncioId) {
+        return repository.findFirstByAnuncioIdAndStatusIn(anuncioId, STATUS_ESCOLHIDA);
+    }
+
     /** Candidaturas ainda sem resposta do Empregador, da mais antiga pra mais nova. */
     public List<Aplicacao> buscarEnviadasDoAnuncio(UUID anuncioId) {
         return repository.findByAnuncioIdAndStatusOrderByDataAplicacaoAscIdAsc(anuncioId, StatusAplicacao.ENVIADA);

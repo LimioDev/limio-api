@@ -15,6 +15,8 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -22,6 +24,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.limio.api.comum.eventos.PrestadorEscolhidoEvent;
+import com.limio.api.comum.eventos.ServicoConcluidoEvent;
+import com.limio.api.comum.eventos.enums.OrigemConclusao;
 import com.limio.api.comum.portas.ConsultaCandidatura;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.modulos.notificacao.Notificacao;
@@ -73,6 +77,29 @@ class RegistrarAvisosUseCaseTest {
                         tuple(naoEscolhido2, TipoNotificacao.CANDIDATURA_ENCERRADA));
         verify(eventos, times(3)).publishEvent(any(NotificacaoRegistradaEvent.class));
         verify(consultaCandidatura, times(1)).buscarPrestadoresIds(candidaturasNaoEscolhidas);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', quoteCharacter = '"', value = {
+            "VALIDACAO | 'Troca' foi concluído. Avalie a outra parte.",
+            "SILENCIO | 'Troca' foi concluído automaticamente. Avalie a outra parte." })
+    void dadaConclusao_quandoRegistra_entaoAvisaAsDuasPartesComOTextoDaOrigem(OrigemConclusao origem, String texto) {
+        UUID contratante = UUID.randomUUID();
+        UUID prestador = UUID.randomUUID();
+        when(notificacaoService.salvar(any())).thenAnswer(chamada -> comId(chamada.getArgument(0)));
+        RegistrarAvisosUseCase useCase = new RegistrarAvisosUseCase(notificacaoService, consultaDadosUsuario,
+                consultaCandidatura, eventos, RELOGIO);
+
+        useCase.aoConcluirServico(
+                new ServicoConcluidoEvent(ANUNCIO_ID, "Troca", contratante, prestador, origem, AGORA));
+
+        ArgumentCaptor<Notificacao> salvas = ArgumentCaptor.forClass(Notificacao.class);
+        verify(notificacaoService, times(2)).salvar(salvas.capture());
+        assertThat(salvas.getAllValues())
+                .extracting(Notificacao::getUsuarioId, Notificacao::getTipo, Notificacao::getCorpo)
+                .containsExactly(
+                        tuple(contratante, TipoNotificacao.SERVICO_CONCLUIDO, texto),
+                        tuple(prestador, TipoNotificacao.SERVICO_CONCLUIDO, texto));
     }
 
     private static Notificacao comId(Notificacao notificacao) {

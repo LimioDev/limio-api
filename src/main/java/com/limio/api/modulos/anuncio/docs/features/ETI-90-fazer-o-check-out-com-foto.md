@@ -49,8 +49,9 @@ Empregador (ETI-112, só o evento é publicado aqui), UI. O Prestador nunca marc
   `StatusAplicacao` e que `isEscolhida()` já cobre). O horário fica só em `Anuncio.checkoutEm`.
 - **Observação em coluna nova.** O card não diz onde guardar. `anuncio.observacao_checkout` é `TEXT`, sem
   limite definido pelo PO, e fica `null` quando vazia ou só espaços.
-- **Prazo é derivado.** `Anuncio.prazoDeValidacao()` soma `prazoValidacaoHoras`, retrato gravado na
-  publicação. Sem coluna nova. Anúncio sem prazo gravado devolve `prazoValidacaoEm` nulo, sem fallback.
+- **Prazo é derivado.** `Anuncio.prazoDeValidacao(padrao)` soma `prazoValidacaoHoras`, retrato gravado na
+  publicação. Sem coluna nova. Anúncio sem prazo gravado usa `anuncio.prazo-validacao-horas`, o mesmo prazo da
+  conclusão por silêncio (ETI-98).
 - **Trava no anúncio contra clique duplo.** `TravaTransacional` com `EscopoTrava.ANUNCIO` (advisory lock por id
   do anúncio, solto no fim da transação), tomada antes de ler o anúncio. A segunda requisição espera o lock, vê
   `AGUARDANDO_VALIDACAO` e recebe 409, sem duplicar fotos nem evento.
@@ -71,7 +72,7 @@ Empregador (ETI-112, só o evento é publicado aqui), UI. O Prestador nunca marc
 | Tipo e tamanho como as fotos do anúncio | `ImagemHelper` e `anuncio.foto.*`; recusa com 422 `FOTO_INVALIDA`. |
 | Fotos como `Midia` `EVIDENCIA_CHECKOUT` com `anuncio_id` | `Midia.evidenciaCheckout`; chave `fotos-checkout/{anuncioId}/{uuid}.ext`. |
 | Anúncio vai para `AGUARDANDO_VALIDACAO` com `checkoutEm` | `Anuncio.registrarCheckout(agora, observacao)`. |
-| Prazo de validação | `Anuncio.prazoDeValidacao` = `checkoutEm + prazoValidacaoHoras` (padrão 24h). |
+| Prazo de validação | `Anuncio.prazoDeValidacao` = `checkoutEm + prazoValidacaoHoras` (sem valor gravado, 24h). |
 | Nunca `CONCLUIDO` | Nenhum caminho do check-out muda `validadoEm` nem conclui. |
 | Publica `CheckoutEnviado` | `CheckoutEnviadoEvent`, só em operação bem-sucedida. |
 
