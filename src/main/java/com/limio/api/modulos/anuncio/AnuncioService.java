@@ -10,11 +10,14 @@ import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import com.limio.api.comum.base.BaseService;
+import com.limio.api.modulos.anuncio.enums.CausaEncerramento;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
+import com.limio.api.modulos.anuncio.enums.StatusHistorico;
 
 /** Camada técnica de persistência de {@link Anuncio} — CRUD genérico (herdado) + finder da entity. */
 @Component
@@ -73,6 +76,39 @@ public class AnuncioService extends BaseService<Anuncio, UUID, AnuncioRepository
     /** Quantos anúncios {@code contratanteId} já concluiu como contratante (histórico do perfil público, ETI-105). */
     public long contarConcluidosDoContratante(UUID contratanteId) {
         return repository.countByContratanteIdAndStatus(contratanteId, StatusAnuncio.CONCLUIDO);
+    }
+
+    public Page<Anuncio> buscarHistoricoDoContratante(UUID contratanteId, CriterioDoHistorico criterio, int pagina,
+            int tamanho) {
+        return buscarHistorico(repository::buscarHistoricoDoContratante, contratanteId, criterio, pagina, tamanho);
+    }
+
+    public Page<Anuncio> buscarHistoricoDoPrestador(UUID prestadorId, CriterioDoHistorico criterio, int pagina,
+            int tamanho) {
+        return buscarHistorico(repository::buscarHistoricoDoPrestador, prestadorId, criterio, pagina, tamanho);
+    }
+
+    /**
+     * Traduz o {@code criterio} nos parâmetros da consulta. Ponta do período ausente vai como flag ligada mais um
+     * instante qualquer ({@link Instant#EPOCH}, ignorado pela query): evita parâmetro nulo tipado no Postgres.
+     */
+    private static Page<Anuncio> buscarHistorico(ConsultaDoHistorico consulta, UUID usuarioId,
+            CriterioDoHistorico criterio, int pagina, int tamanho) {
+        boolean semInicio = criterio.de() == null;
+        boolean semFim = criterio.ate() == null;
+        return consulta.buscar(usuarioId, StatusHistorico.statusAceitos(criterio.status()),
+                StatusHistorico.causasAceitas(criterio.status()),
+                semInicio, semInicio ? Instant.EPOCH : criterio.de(),
+                semFim, semFim ? Instant.EPOCH : criterio.ate(),
+                PageRequest.of(pagina, tamanho));
+    }
+
+    /** Assinatura comum das duas consultas de histórico do {@link AnuncioRepository}. */
+    @FunctionalInterface
+    private interface ConsultaDoHistorico {
+
+        Page<Anuncio> buscar(UUID usuarioId, Collection<StatusAnuncio> status, Collection<CausaEncerramento> causas,
+                boolean semInicio, Instant de, boolean semFim, Instant ate, Pageable pageable);
     }
 
     public List<UUID> buscarIdsParaExpirar(Instant agora, int lote) {

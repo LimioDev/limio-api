@@ -1,5 +1,6 @@
 package com.limio.api.comum.portas;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -36,4 +37,19 @@ public interface ConsultaAvaliacoes {
      * @return lista vazia se o usuário nunca foi avaliado nesse papel
      */
     List<AvaliacaoRecente> listarRecentes(UUID avaliadoId, PapelUsuario papel, int limite);
+
+    /**
+     * Pra cada serviço concluído, a nota que {@code usuarioId} recebeu da outra parte e se ele ainda pode avaliá-la
+     * (histórico com filtros — ETI-71). Em lote, pra não consultar um serviço por vez. A regra dos 7 dias e a de
+     * "já avaliou" ficam em {@code modulos.moderacao}: quem chama só informa quando cada serviço foi concluído.
+     *
+     * <p>Quem chama só deve enviar serviços em que {@code usuarioId} é parte (dono ou Prestador escolhido); esta
+     * porta não confere participação.
+     *
+     * @param usuarioId quem consulta (o autenticado)
+     * @param concluidoEmPorAnuncio id do anúncio concluído → quando foi concluído ({@code null} = sem data de
+     *        conclusão, então a janela não abre e {@code podeAvaliar} é {@code false})
+     * @return uma entrada por anúncio recebido; mapa vazio se {@code concluidoEmPorAnuncio} for vazio
+     */
+    Map<UUID, SituacaoAvaliacao> situacaoPorServico(UUID usuarioId, Map<UUID, Instant> concluidoEmPorAnuncio);
 }

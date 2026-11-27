@@ -214,6 +214,14 @@ public class AplicacaoService extends BaseService<Aplicacao, UUID, AplicacaoRepo
     }
 
     /**
+     * A candidatura escolhida de cada um desses anúncios, mesmo depois de concluídos ou cancelados ({@code escolhidaEm}
+     * nunca é limpo — ETI-86), em lote. Anúncio em que ninguém foi escolhido fica de fora (ETI-71, histórico).
+     */
+    public List<Aplicacao> buscarEscolhidasDosAnuncios(Collection<UUID> anuncioIds) {
+        return anuncioIds.isEmpty() ? List.of() : repository.findByAnuncioIdInAndEscolhidaEmIsNotNull(anuncioIds);
+    }
+
+    /**
      * Busca com {@code SELECT ... FOR UPDATE}: quem muda o status de uma candidatura segura a linha até o fim da
      * transação. É a 2ª etapa da ordem do agregado: o usecase já tomou o advisory lock {@code
      * EscopoTrava.ANUNCIO} (a escolha, ETI-69, usa o mesmo mecanismo) e só então trava e relê a linha. Sozinho

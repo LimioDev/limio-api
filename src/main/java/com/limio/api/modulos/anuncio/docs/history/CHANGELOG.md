@@ -434,3 +434,12 @@ Pendências: a conclusão por silêncio (ETI-98) deve checar `existePendente` de
 do serviço pelo Prestador (ETI-96/97) deve chamar o ponto único de encerramento; os eventos de reagendamento ainda não
 têm ouvinte em `notificacao` (US56).
 
+
+## 2026-11-21 — ETI-71: histórico de anúncios e serviços com filtros
+
+Novo `GET /anuncios/historico`, que lista anúncios em estado final (concluído, cancelado, expirado) pelo papel ativo do
+token, com filtros de status e período e paginação. Cancelado e expirado são ambos `ENCERRADO`, então `anuncio` ganhou
+a coluna `causa_encerramento` (V41, enum `CausaEncerramento`, com backfill pelo motivo), gravada em `Anuncio.encerrar`.
+O período usa a data do desfecho, `coalesce(validadoEm, encerradoEm)`, em dias de Brasília. A nota recebida e o
+"pode avaliar" vêm da porta `ConsultaAvaliacoes` (ver o CHANGELOG de `moderacao`). Detalhe e dúvidas em aberto em
+`../features/ETI-71-consultar-historico-com-filtros.md`.

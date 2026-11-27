@@ -30,6 +30,7 @@ import com.limio.api.modulos.anuncio.AnuncioService;
 import com.limio.api.modulos.anuncio.CriterioDoMural;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoRepository;
+import com.limio.api.modulos.anuncio.enums.CausaEncerramento;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
 
@@ -91,6 +92,7 @@ class ConsultaDoMuralStoryTest {
                 .latitudeSnapshot(LAT + kmAoNorte * GRAU_POR_KM)
                 .longitudeSnapshot(LON)
                 .status(status)
+                .causaEncerramento(status == StatusAnuncio.ENCERRADO ? CausaEncerramento.CANCELAMENTO : null)
                 .build());
     }
 

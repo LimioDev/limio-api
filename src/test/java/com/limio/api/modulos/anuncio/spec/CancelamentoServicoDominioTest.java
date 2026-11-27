@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import com.limio.api.comum.eventos.enums.TipoCancelamento;
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
+import com.limio.api.modulos.anuncio.enums.CausaEncerramento;
 import com.limio.api.modulos.anuncio.enums.SituacaoCancelamentoServico;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
@@ -106,6 +107,42 @@ class CancelamentoServicoDominioTest {
 
         assertThat(anuncio.getStatus()).isEqualTo(StatusAnuncio.ENCERRADO);
         assertThat(anuncio.getTipoCancelamento()).isNull();
+    }
+
+    @Test
+    void cancelarAntesDaEscolhaGravaACausaCancelamento() {
+        Anuncio anuncio = anuncioParaDaquiA(Duration.ofDays(3));
+
+        anuncio.cancelarPeloEmpregador(AGORA);
+
+        assertThat(anuncio.getCausaEncerramento()).isEqualTo(CausaEncerramento.CANCELAMENTO);
+    }
+
+    @Test
+    void cancelarServicoCombinadoGravaACausaCancelamentoNosDoisTipos() {
+        Anuncio normal = anuncioParaDaquiA(Duration.ofDays(3));
+        Anuncio tardio = anuncioParaDaquiA(Duration.ofDays(3));
+
+        normal.cancelarServicoCombinado(AGORA, TipoCancelamento.NORMAL);
+        tardio.cancelarServicoCombinado(AGORA, TipoCancelamento.TARDIO);
+
+        assertThat(normal.getCausaEncerramento()).isEqualTo(CausaEncerramento.CANCELAMENTO);
+        assertThat(tardio.getCausaEncerramento()).isEqualTo(CausaEncerramento.CANCELAMENTO);
+    }
+
+    @Test
+    void encerrarPorExclusaoDeContaGravaACausaCancelamento() {
+        Anuncio anuncio = anuncioParaDaquiA(Duration.ofDays(3));
+
+        anuncio.encerrarPorExclusaoDeConta(AGORA);
+
+        assertThat(anuncio.getStatus()).isEqualTo(StatusAnuncio.ENCERRADO);
+        assertThat(anuncio.getCausaEncerramento()).isEqualTo(CausaEncerramento.CANCELAMENTO);
+    }
+
+    @Test
+    void anuncioNaoEncerradoNaoTemCausaDeEncerramento() {
+        assertThat(anuncioParaDaquiA(Duration.ofDays(3)).getCausaEncerramento()).isNull();
     }
 
     @Test
