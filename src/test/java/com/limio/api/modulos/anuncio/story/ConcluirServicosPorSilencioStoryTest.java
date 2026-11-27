@@ -37,6 +37,7 @@ import com.limio.api.modulos.anuncio.actions.usecase.ConcluirServicosPorSilencio
 import com.limio.api.modulos.anuncio.actions.usecase.ExpirarReagendamentosUseCase;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoRepository;
+import com.limio.api.modulos.anuncio.enums.CausaEncerramento;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
 import com.limio.api.modulos.anuncio.enums.StatusReagendamento;
@@ -141,7 +142,9 @@ class ConcluirServicosPorSilencioStoryTest {
                 .dataHoraPretendida(dataHoraPretendida)
                 .bairroRegiaoSnapshot("Pinheiros")
                 .prazoValidacaoHoras(24)
-                .status(status);
+                .status(status)
+                // V41: todo ENCERRADO tem causa, e só ENCERRADO tem
+                .causaEncerramento(status == StatusAnuncio.ENCERRADO ? CausaEncerramento.CANCELAMENTO : null);
     }
 
     private Anuncio comEscolhido(Anuncio.AnuncioBuilder construtor) {
