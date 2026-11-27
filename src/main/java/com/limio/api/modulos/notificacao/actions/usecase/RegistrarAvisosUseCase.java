@@ -41,7 +41,8 @@ import com.limio.api.modulos.notificacao.eventos.NotificacaoRegistradaEvent;
  *
  * <p>Fora desta entrega (decisão de 2026-11-16): {@code ServicoCanceladoEvent} (#38) e {@code AnuncioExpiradoEvent}
  * (#39) ganham ouvinte quando as PRs deles entrarem; reagendamento (ETI-99) já publica os eventos, mas o ouvinte de
- * cada um é da US56; cobrança GOLD ainda não publica evento entre módulos.
+ * cada um é da US56; a renovação do GOLD (ETI-85) publica {@code CobrancaGoldAprovadaEvent} e {@code
+ * CobrancaGoldRecusadaEvent}, e o ouvinte de cada um também é da US56.
  */
 @Service
 public class RegistrarAvisosUseCase {

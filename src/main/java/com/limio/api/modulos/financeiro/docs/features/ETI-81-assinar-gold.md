@@ -42,8 +42,8 @@ PRESTADOR).
   reserva; depois que ela comita e solta o lock, uma segunda tentativa encontra a linha `PENDENTE`/`ATIVA`
   e é recusada sem chamar o gateway de novo. `cobranca.chave_idempotencia` (índice único) é a rede de
   segurança se essa checagem falhar sob corrida real.
-- **Pendência sem reconciliação automática**: uma falha entre cobrar e confirmar deixa a linha
-  `PENDENTE` — o webhook do Asaas só loga hoje, reconciliação é manual.
+- **Pendência**: uma falha entre cobrar e confirmar deixa a linha `PENDENTE` até o aviso do gateway resolver
+  (webhook do Asaas, desde a ETI-85 — ver `ETI-85-renovar-gold.md`).
 - **Gateway**: simulado por padrão (`GatewayPagamentoSimulado`) ou Asaas
   (`financeiro.gateway.provedor=asaas`, `GatewayPagamentoAsaas`). No simulado, tokens
   `financeiro.gateway.token-recusado` e `financeiro.gateway.token-indisponivel` controlam o resultado nos

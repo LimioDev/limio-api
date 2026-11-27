@@ -15,6 +15,7 @@
  * </ul>
  *
  * <p>Implementa a porta {@code comum/portas/ConsultaPlanoPrestador} (ETI-79) a partir do status real da
- * assinatura. Detalhe em {@code docs/features/ETI-81-assinar-gold.md}.
+ * assinatura. Renovação mensal, novas tentativas e aviso do gateway: ETI-85. Detalhe em {@code
+ * docs/features/ETI-81-assinar-gold.md} e {@code docs/features/ETI-85-renovar-gold.md}.
  */
 package com.limio.api.modulos.financeiro;

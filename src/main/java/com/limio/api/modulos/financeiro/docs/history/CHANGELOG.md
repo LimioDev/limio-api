@@ -93,3 +93,30 @@ Achados de code review no próprio PR, corrigidos antes do merge:
   (`AsaasWebhookPayload` → `AsaasWebhookRequest`) saiu do controller pra `records/`, padrão do projeto.
 - **`EmailService` renomeado pra `ReciboGoldEmailService`** — nome específico em vez do qualificador
   `@Component("financeiroEmailService")` pra evitar colisão com o bean de `auth`.
+
+## 2026-11 — ETI-85: renovação mensal do GOLD
+
+Rotina `RenovarGoldUseCase` cobra o próximo ciclo no cartão salvo quando `data_fim_ciclo` passa, e o webhook do Asaas
+deixou de só logar: `ProcessarAvisoPagamentoUseCase` resolve a cobrança sem resultado. Migration V45. Detalhe em
+`docs/features/ETI-85-renovar-gold.md`.
+
+Decisões:
+
+- **Renovação pelo LIMIO, não assinatura recorrente do Asaas.** A ETI-81 cobra com cobrança avulsa e token salvo;
+  passar a usar a assinatura do Asaas mudaria o fluxo de assinar. A "fila" das novas tentativas é
+  `assinatura_gold.proxima_tentativa_em`, lida pela rotina (mesmo padrão das outras rotinas do projeto, sem
+  infraestrutura de fila).
+- **O Prestador segue GOLD durante as novas tentativas.** A assinatura continua `ATIVA` até a última recusa, quando
+  vira `ENCERRADA` (status novo, com `encerrada_em`). `CANCELADA` continua só para a cobrança da assinatura recusada.
+- **Gateway sem resposta não conta como tentativa** (status novo `FALHOU` em `cobranca`, o mesmo nome que a PR #50
+  usa). O aviso do gateway ainda pode resolver essa cobrança, porque ele pode ter cobrado sem responder.
+- **Tentativas em propriedade**, não em `Parametro` (sugestão do card): a tabela não existe.
+- **Idempotência pela cobrança**: o aviso acha a cobrança pela `chave_idempotencia` (o `externalReference` mandado ao
+  Asaas) e só muda cobrança ainda sem resultado. Não há tabela de eventos recebidos.
+- **Avisos ao Prestador** saem como `CobrancaGoldAprovadaEvent` e `CobrancaGoldRecusadaEvent` em `comum/eventos`. O
+  ouvinte é da US56. O recibo por e-mail da renovação reaproveita `ReciboEventosService`.
+- **`renovacao_cancelada_em` nasce aqui, sem quem grave**: o card "Gerenciar a assinatura GOLD" grava; este só lê no
+  fim do ciclo.
+- **`AssinarGoldUseCase` não mudou**, para não conflitar com a PR #50; só `AssinaturaGold.reiniciarPendencia` limpa
+  os campos novos ao assinar de novo.
+

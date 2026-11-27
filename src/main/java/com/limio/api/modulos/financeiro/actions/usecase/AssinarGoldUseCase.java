@@ -53,9 +53,8 @@ import com.limio.api.modulos.financeiro.plano.PlanoService;
  * </ol>
  *
  * <p>Uma falha entre o passo 2 e o 3 (o processo cai, por exemplo) deixa {@code AssinaturaGold} e
- * {@code Cobranca} em {@code PENDENTE} — pendência conhecida, sem reconciliação automática ainda (o
- * webhook do Asaas só loga hoje). Até reconciliar manualmente, novas tentativas do mesmo usuário recebem
- * {@link CobrancaEmAndamentoException}.
+ * {@code Cobranca} em {@code PENDENTE} até o aviso do gateway resolver ({@code ProcessarAvisoPagamentoUseCase},
+ * ETI-85). Até lá, novas tentativas do mesmo usuário recebem {@link CobrancaEmAndamentoException}.
  */
 @Service
 public class AssinarGoldUseCase {

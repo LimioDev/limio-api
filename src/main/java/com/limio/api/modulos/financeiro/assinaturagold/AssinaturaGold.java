@@ -26,6 +26,11 @@ import lombok.NoArgsConstructor;
  * tentativa concorrente enquanto a primeira ainda não confirmou. {@link #confirmarAtiva()} e
  * {@link #cancelarPendencia()} resolvem a pendência numa segunda transação curta, fora da chamada ao
  * gateway.
+ *
+ * <p>Renovação (ETI-85): passado {@code dataFimCiclo}, a rotina {@code RenovarGoldUseCase} cobra o próximo ciclo.
+ * Aprovada, {@link #renovar} avança o ciclo. Recusada, {@link #agendarNovaTentativa} guarda quando tentar de novo e a
+ * assinatura continua {@code ATIVA} (o Prestador segue GOLD). Esgotadas as tentativas, ou com a renovação cancelada
+ * ({@code renovacaoCanceladaEm}), {@link #encerrar} volta o Prestador para FREE.
  */
 @Entity
 @Table(name = "assinatura_gold")
@@ -49,6 +54,20 @@ public class AssinaturaGold extends BaseEntity {
     @Column(name = "data_fim_ciclo", nullable = false)
     private Instant dataFimCiclo;
 
+    /** Quando a próxima cobrança da renovação pode sair. Nula = assim que {@code dataFimCiclo} passar. */
+    @Column(name = "proxima_tentativa_em")
+    private Instant proximaTentativaEm;
+
+    /**
+     * O Prestador cancelou a renovação (US27). Quem grava é o card "Gerenciar a assinatura GOLD"; aqui só se lê, para
+     * encerrar no fim do ciclo em vez de cobrar.
+     */
+    @Column(name = "renovacao_cancelada_em")
+    private Instant renovacaoCanceladaEm;
+
+    @Column(name = "encerrada_em")
+    private Instant encerradaEm;
+
     private AssinaturaGold(UUID usuarioId, UUID planoId, Instant dataInicioCiclo, Instant dataFimCiclo) {
         this.usuarioId = usuarioId;
         this.planoId = planoId;
@@ -67,6 +86,9 @@ public class AssinaturaGold extends BaseEntity {
         this.status = StatusAssinatura.PENDENTE;
         this.dataInicioCiclo = dataInicioCiclo;
         this.dataFimCiclo = dataFimCiclo;
+        this.proximaTentativaEm = null;
+        this.renovacaoCanceladaEm = null;
+        this.encerradaEm = null;
     }
 
     /** Pagamento aprovado: a pendência criada por {@link #nova} ou {@link #reiniciarPendencia} confirma. */
@@ -85,5 +107,42 @@ public class AssinaturaGold extends BaseEntity {
 
     public boolean estaPendente() {
         return status == StatusAssinatura.PENDENTE;
+    }
+
+    /** Ativa, ciclo vencido e sem nova tentativa marcada para depois de {@code agora}. */
+    public boolean renovacaoVencida(Instant agora) {
+        return estaAtiva() && !dataFimCiclo.isAfter(agora)
+                && (proximaTentativaEm == null || !proximaTentativaEm.isAfter(agora));
+    }
+
+    public boolean renovacaoCancelada() {
+        return renovacaoCanceladaEm != null;
+    }
+
+    /**
+     * Uma cobrança de renovação só mexe na assinatura se ainda for a do ciclo em aberto: ativa e com {@code
+     * dataFimCiclo} igual ao início que a cobrança paga. Um aviso atrasado de um ciclo já renovado ou encerrado não
+     * avança nem encerra nada.
+     */
+    public boolean aguardaRenovacaoDe(Instant inicioCicloCobrado) {
+        return estaAtiva() && dataFimCiclo.equals(inicioCicloCobrado);
+    }
+
+    /** Renovação aprovada: o ciclo novo começa onde o anterior terminou, mesmo que a aprovação tenha vindo depois. */
+    public void renovar(Instant novoFimCiclo) {
+        this.dataInicioCiclo = this.dataFimCiclo;
+        this.dataFimCiclo = novoFimCiclo;
+        this.proximaTentativaEm = null;
+    }
+
+    public void agendarNovaTentativa(Instant quando) {
+        this.proximaTentativaEm = quando;
+    }
+
+    /** Volta para FREE: tentativas esgotadas ou fim do ciclo com a renovação cancelada. */
+    public void encerrar(Instant agora) {
+        this.status = StatusAssinatura.ENCERRADA;
+        this.encerradaEm = agora;
+        this.proximaTentativaEm = null;
     }
 }
