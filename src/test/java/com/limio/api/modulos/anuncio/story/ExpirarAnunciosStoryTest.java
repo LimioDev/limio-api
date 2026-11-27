@@ -34,6 +34,7 @@ import com.limio.api.modulos.anuncio.actions.usecase.CancelarAnuncioUseCase;
 import com.limio.api.modulos.anuncio.actions.usecase.ExpirarAnunciosSemCandidatosUseCase;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoRepository;
+import com.limio.api.modulos.anuncio.enums.CausaEncerramento;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
 
@@ -87,6 +88,7 @@ class ExpirarAnunciosStoryTest {
                 .dataHoraPretendida(dataHoraPretendida)
                 .bairroRegiaoSnapshot("Pinheiros")
                 .status(status)
+                .causaEncerramento(status == StatusAnuncio.ENCERRADO ? CausaEncerramento.CANCELAMENTO : null)
                 .build());
     }
 

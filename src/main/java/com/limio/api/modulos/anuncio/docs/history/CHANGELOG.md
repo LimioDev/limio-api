@@ -444,3 +444,12 @@ pela ETI-99) nem quando uma das partes encerrou a conta. Detalhe completo em
 A conclusão grava `validadoEm` (é dele que `moderacao` abre a janela de avaliação) e `encerradoEm`, que a validação
 manual não preenche. O `ServicoConcluidoEvent` ganhou `origem` (`VALIDACAO` ou `SILENCIO`) para o aviso distinguir os
 dois casos. Sem migration. Na primeira subida, os serviços antigos já vencidos são concluídos em lotes.
+
+## 2026-11-21 — ETI-71: histórico de anúncios e serviços com filtros
+
+Novo `GET /anuncios/historico`, que lista anúncios em estado final (concluído, cancelado, expirado) pelo papel ativo do
+token, com filtros de status e período e paginação. Cancelado e expirado são ambos `ENCERRADO`, então `anuncio` ganhou
+a coluna `causa_encerramento` (V41, enum `CausaEncerramento`, com backfill pelo motivo), gravada em `Anuncio.encerrar`.
+O período usa a data do desfecho, `coalesce(validadoEm, encerradoEm)`, em dias de Brasília. A nota recebida e o
+"pode avaliar" vêm da porta `ConsultaAvaliacoes` (ver o CHANGELOG de `moderacao`). Detalhe e dúvidas em aberto em
+`../features/ETI-71-consultar-historico-com-filtros.md`.

@@ -9,6 +9,7 @@ import com.limio.api.comum.base.BaseEntity;
 import com.limio.api.comum.eventos.enums.TipoCancelamento;
 import com.limio.api.comum.localizacao.enums.Uf;
 import com.limio.api.comum.portas.EnderecoLocalizado;
+import com.limio.api.modulos.anuncio.enums.CausaEncerramento;
 import com.limio.api.modulos.anuncio.enums.SituacaoCancelamentoServico;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 
@@ -132,6 +133,10 @@ public class Anuncio extends BaseEntity {
     private String motivoEncerramento;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "causa_encerramento", length = 20)
+    private CausaEncerramento causaEncerramento;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "tipo_cancelamento", length = 20)
     private TipoCancelamento tipoCancelamento;
 
@@ -182,6 +187,19 @@ public class Anuncio extends BaseEntity {
         return switch (status) {
             case CONCLUIDO -> validadoEm;
             case PUBLICADO, EM_ANDAMENTO, AGUARDANDO_VALIDACAO, ENCERRADO -> null;
+        };
+    }
+
+    /**
+     * ETI-71: data do desfecho, a que o histórico mostra, filtra e ordena; {@code null} enquanto o anúncio não chegou a
+     * um estado final. A consulta do histórico repete a regra em JPQL, como {@code coalesce(validadoEm, encerradoEm)}
+     * ({@code AnuncioRepository.HISTORICO_FILTROS}): mudou aqui, muda lá.
+     */
+    public Instant desfechoEm() {
+        return switch (status) {
+            case CONCLUIDO -> validadoEm;
+            case ENCERRADO -> encerradoEm;
+            case PUBLICADO, EM_ANDAMENTO, AGUARDANDO_VALIDACAO -> null;
         };
     }
 
@@ -284,24 +302,24 @@ public class Anuncio extends BaseEntity {
 
     /** UC16 (encerrar conta do contratante): tira do mural, não conclui. */
     public void encerrarPorExclusaoDeConta(Instant agora) {
-        encerrar(agora, MOTIVO_EXCLUSAO_DE_CONTA);
+        encerrar(agora, MOTIVO_EXCLUSAO_DE_CONTA, CausaEncerramento.CANCELAMENTO);
     }
 
     /** ETI-63: Empregador cancela antes de escolher alguém. Quem chama já validou o estado do anúncio. */
     public void cancelarPeloEmpregador(Instant agora) {
-        encerrar(agora, MOTIVO_CANCELAMENTO_PELO_EMPREGADOR);
+        encerrar(agora, MOTIVO_CANCELAMENTO_PELO_EMPREGADOR, CausaEncerramento.CANCELAMENTO);
     }
 
     public void cancelarServicoCombinado(Instant agora, TipoCancelamento tipo) {
         encerrar(agora, switch (tipo) {
             case NORMAL -> MOTIVO_SERVICO_CANCELADO;
             case TARDIO -> MOTIVO_SERVICO_CANCELADO_NA_CARENCIA;
-        });
+        }, CausaEncerramento.CANCELAMENTO);
         this.tipoCancelamento = tipo;
     }
 
     public void cancelarServicoPeloPrestador(Instant agora) {
-        encerrar(agora, MOTIVO_SERVICO_CANCELADO_PELO_PRESTADOR);
+        encerrar(agora, MOTIVO_SERVICO_CANCELADO_PELO_PRESTADOR, CausaEncerramento.CANCELAMENTO);
     }
 
     public boolean temAntecedenciaDe(Duration antecedencia, Instant agora) {
@@ -362,13 +380,14 @@ public class Anuncio extends BaseEntity {
     }
 
     public void expirar(Instant agora) {
-        encerrar(agora, MOTIVO_EXPIRACAO);
+        encerrar(agora, MOTIVO_EXPIRACAO, CausaEncerramento.EXPIRACAO);
     }
 
-    private void encerrar(Instant agora, String motivo) {
+    private void encerrar(Instant agora, String motivo, CausaEncerramento causa) {
         this.status = StatusAnuncio.ENCERRADO;
         this.encerradoEm = agora;
         this.motivoEncerramento = motivo;
+        this.causaEncerramento = causa;
     }
 
     /**

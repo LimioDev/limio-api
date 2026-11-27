@@ -36,3 +36,11 @@ admin (US58). Não toca no serviço. Detalhe em `../features/ETI-114-registrar-d
 - **Denúncia repetida não vira outra.** Mesmo denunciante, mesmo alvo (denunciado e contexto) e mesmo motivo com uma
   denúncia ainda em aberto devolvem a existente, sem gravar nem enviar foto. A trava `EscopoTrava.DENUNCIA` por
   denunciante cobre dois envios simultâneos (toque duplo). Limite de denúncias diferentes por par fica com o PO.
+
+## 2026-11-21 — ETI-71: nota recebida e "pode avaliar" por serviço
+
+`ConsultaAvaliacoes` ganhou `situacaoPorServico(usuarioId, concluidoEmPorAnuncio)`, que devolve `SituacaoAvaliacao`
+(`notaRecebida`, `podeAvaliar`) por anúncio, para o histórico do `anuncio`. Faz 2 consultas em lote
+(`AvaliacaoRepository`) e reusa `JanelaAvaliacaoHelper`, então a regra dos 7 dias continua só neste módulo.
+`concluidoEm` nulo = `podeAvaliar` falso. `ConsultaAvaliacoesService` passou a receber o `Clock`. Sem migration.
+Detalhe em `anuncio/docs/features/ETI-71-consultar-historico-com-filtros.md`.

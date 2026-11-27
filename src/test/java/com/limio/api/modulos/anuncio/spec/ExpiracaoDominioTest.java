@@ -9,6 +9,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import com.limio.api.modulos.anuncio.Anuncio;
+import com.limio.api.modulos.anuncio.enums.CausaEncerramento;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 
 /** Regras de domínio da expiração (ETI-66, RF30/RB09), sem Spring nem banco. */
@@ -51,6 +52,7 @@ class ExpiracaoDominioTest {
         assertThat(anuncio.getStatus()).isEqualTo(StatusAnuncio.ENCERRADO);
         assertThat(anuncio.getEncerradoEm()).isEqualTo(AGORA);
         assertThat(anuncio.getMotivoEncerramento()).isEqualTo("Expirado sem candidatos");
+        assertThat(anuncio.getCausaEncerramento()).isEqualTo(CausaEncerramento.EXPIRACAO);
         assertThat(anuncio.getDataHoraPretendida()).isEqualTo(pretendida);
         assertThat(anuncio.isAberto()).isFalse();
     }

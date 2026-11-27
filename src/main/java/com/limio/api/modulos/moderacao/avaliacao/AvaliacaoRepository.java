@@ -15,6 +15,17 @@ public interface AvaliacaoRepository extends BaseRepository<Avaliacao, UUID> {
 
     boolean existsByAnuncioIdAndAvaliadorId(UUID anuncioId, UUID avaliadorId);
 
+    /**
+     * As avaliações que {@code avaliadoId} recebeu nesses serviços, numa consulta só (ETI-71). No máximo uma por
+     * serviço: a outra parte é única e vale {@code uk_avaliacao_anuncio_avaliador}.
+     */
+    List<Avaliacao> findByAvaliadoIdAndAnuncioIdIn(UUID avaliadoId, Collection<UUID> anuncioIds);
+
+    /** Dentre esses serviços, em quais {@code avaliadorId} já avaliou a outra parte — numa consulta só (ETI-71). */
+    @Query("select a.anuncioId from Avaliacao a where a.avaliadorId = :avaliadorId and a.anuncioId in :anuncioIds")
+    List<UUID> findAnuncioIdsAvaliadosPor(@Param("avaliadorId") UUID avaliadorId,
+            @Param("anuncioIds") Collection<UUID> anuncioIds);
+
     long countByAvaliadoIdAndPapelAvaliado(UUID avaliadoId, PapelUsuario papelAvaliado);
 
     /** {@code null} quando o usuário não tem avaliação nesse papel. */

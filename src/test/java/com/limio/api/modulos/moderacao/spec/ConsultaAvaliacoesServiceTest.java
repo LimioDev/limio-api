@@ -1,12 +1,21 @@
 package com.limio.api.modulos.moderacao.spec;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +29,7 @@ import com.limio.api.comum.portas.AvaliacaoRecente;
 import com.limio.api.comum.portas.ConsultaDadosUsuario;
 import com.limio.api.comum.portas.DadosUsuario;
 import com.limio.api.comum.portas.ResumoAvaliacoes;
+import com.limio.api.comum.portas.SituacaoAvaliacao;
 import com.limio.api.comum.seguranca.enums.PapelUsuario;
 import com.limio.api.modulos.moderacao.actions.service.ConsultaAvaliacoesService;
 import com.limio.api.modulos.moderacao.avaliacao.Avaliacao;
@@ -31,6 +41,7 @@ class ConsultaAvaliacoesServiceTest {
 
     private static final UUID AVALIADO_ID = UUID.randomUUID();
     private static final UUID AVALIADOR_ID = UUID.randomUUID();
+    private static final Instant AGORA = Instant.parse("2026-11-20T12:00:00Z");
 
     @Mock
     private AvaliacaoRepository avaliacaoRepository;
@@ -42,7 +53,8 @@ class ConsultaAvaliacoesServiceTest {
 
     @BeforeEach
     void montarService() {
-        service = new ConsultaAvaliacoesService(avaliacaoRepository, consultaDadosUsuario);
+        service = new ConsultaAvaliacoesService(avaliacaoRepository, consultaDadosUsuario,
+                Clock.fixed(AGORA, ZoneOffset.UTC));
     }
 
     private static ResumoAvaliacaoProjecao projecao(UUID avaliadoId, Double media, int qtd) {
@@ -113,6 +125,117 @@ class ConsultaAvaliacoesServiceTest {
         List<AvaliacaoRecente> recentes = service.listarRecentes(AVALIADO_ID, PapelUsuario.EMPREGADOR, 5);
 
         assertThat(recentes).extracting(AvaliacaoRecente::avaliadorNome).containsExactly("Conta encerrada");
+    }
+
+    // ---- situação de avaliação por serviço (ETI-71)
+
+    private static final UUID USUARIO_ID = UUID.randomUUID();
+    private static final UUID ANUNCIO_A = UUID.randomUUID();
+    private static final UUID ANUNCIO_B = UUID.randomUUID();
+
+    private void semAvaliacoes(Collection<UUID> anuncioIds) {
+        when(avaliacaoRepository.findByAvaliadoIdAndAnuncioIdIn(USUARIO_ID, anuncioIds)).thenReturn(List.of());
+        when(avaliacaoRepository.findAnuncioIdsAvaliadosPor(USUARIO_ID, anuncioIds)).thenReturn(List.of());
+    }
+
+    @Test
+    void dadoSemServicos_quandoSituacaoPorServico_entaoMapaVazioSemConsultarBanco() {
+        assertThat(service.situacaoPorServico(USUARIO_ID, Map.of())).isEmpty();
+
+        verifyNoInteractions(avaliacaoRepository);
+    }
+
+    @Test
+    void dadoNotaRecebida_quandoSituacaoPorServico_entaoDevolveANotaDaOutraParte() {
+        Avaliacao recebida = Avaliacao.publicar(ANUNCIO_A, AVALIADOR_ID, USUARIO_ID, PapelUsuario.PRESTADOR, 4, null,
+                AGORA.minusSeconds(60));
+        when(avaliacaoRepository.findByAvaliadoIdAndAnuncioIdIn(USUARIO_ID, Set.of(ANUNCIO_A)))
+                .thenReturn(List.of(recebida));
+        when(avaliacaoRepository.findAnuncioIdsAvaliadosPor(USUARIO_ID, Set.of(ANUNCIO_A))).thenReturn(List.of());
+
+        Map<UUID, SituacaoAvaliacao> situacao = service.situacaoPorServico(USUARIO_ID,
+                Map.of(ANUNCIO_A, AGORA.minus(Duration.ofDays(1))));
+
+        assertThat(situacao.get(ANUNCIO_A).notaRecebida()).isEqualTo(4);
+    }
+
+    @Test
+    void dadoOutraParteQueNaoAvaliou_quandoSituacaoPorServico_entaoNotaNula() {
+        semAvaliacoes(Set.of(ANUNCIO_A));
+
+        Map<UUID, SituacaoAvaliacao> situacao = service.situacaoPorServico(USUARIO_ID,
+                Map.of(ANUNCIO_A, AGORA.minus(Duration.ofDays(1))));
+
+        assertThat(situacao.get(ANUNCIO_A).notaRecebida()).isNull();
+    }
+
+    @Test
+    void dadoJanelaAbertaESemAvaliacaoMinha_quandoSituacaoPorServico_entaoPodeAvaliar() {
+        semAvaliacoes(Set.of(ANUNCIO_A));
+
+        Map<UUID, SituacaoAvaliacao> situacao = service.situacaoPorServico(USUARIO_ID,
+                Map.of(ANUNCIO_A, AGORA.minus(Duration.ofDays(6))));
+
+        assertThat(situacao.get(ANUNCIO_A).podeAvaliar()).isTrue();
+    }
+
+    @Test
+    void dadoExatamenteSeteDiasDepoisDaConclusao_quandoSituacaoPorServico_entaoJanelaFechada() {
+        semAvaliacoes(Set.of(ANUNCIO_A));
+
+        Map<UUID, SituacaoAvaliacao> situacao = service.situacaoPorServico(USUARIO_ID,
+                Map.of(ANUNCIO_A, AGORA.minus(Duration.ofDays(7))));
+
+        assertThat(situacao.get(ANUNCIO_A).podeAvaliar()).isFalse();
+    }
+
+    @Test
+    void dadoUmSegundoAntesDeFecharAJanela_quandoSituacaoPorServico_entaoAindaPodeAvaliar() {
+        semAvaliacoes(Set.of(ANUNCIO_A));
+
+        Map<UUID, SituacaoAvaliacao> situacao = service.situacaoPorServico(USUARIO_ID,
+                Map.of(ANUNCIO_A, AGORA.minus(Duration.ofDays(7)).plusSeconds(1)));
+
+        assertThat(situacao.get(ANUNCIO_A).podeAvaliar()).isTrue();
+    }
+
+    @Test
+    void dadoQueEuJaAvaliei_quandoSituacaoPorServico_entaoNaoPodeAvaliarDeNovo() {
+        when(avaliacaoRepository.findByAvaliadoIdAndAnuncioIdIn(USUARIO_ID, Set.of(ANUNCIO_A))).thenReturn(List.of());
+        when(avaliacaoRepository.findAnuncioIdsAvaliadosPor(USUARIO_ID, Set.of(ANUNCIO_A)))
+                .thenReturn(List.of(ANUNCIO_A));
+
+        Map<UUID, SituacaoAvaliacao> situacao = service.situacaoPorServico(USUARIO_ID,
+                Map.of(ANUNCIO_A, AGORA.minus(Duration.ofDays(1))));
+
+        assertThat(situacao.get(ANUNCIO_A).podeAvaliar()).isFalse();
+    }
+
+    @Test
+    void dadoServicoSemDataDeConclusao_quandoSituacaoPorServico_entaoNaoPodeAvaliar() {
+        Map<UUID, Instant> semData = new HashMap<>();
+        semData.put(ANUNCIO_A, null);
+        semAvaliacoes(Set.of(ANUNCIO_A));
+
+        assertThat(service.situacaoPorServico(USUARIO_ID, semData).get(ANUNCIO_A))
+                .isEqualTo(new SituacaoAvaliacao(null, false));
+    }
+
+    @Test
+    void dadoVariosServicos_quandoSituacaoPorServico_entaoCadaUmTemASuaSituacaoEConsultaEmLote() {
+        Avaliacao recebidaDeB = Avaliacao.publicar(ANUNCIO_B, AVALIADOR_ID, USUARIO_ID, PapelUsuario.EMPREGADOR, 5,
+                "Ótimo", AGORA.minusSeconds(60));
+        Set<UUID> ids = Set.of(ANUNCIO_A, ANUNCIO_B);
+        when(avaliacaoRepository.findByAvaliadoIdAndAnuncioIdIn(USUARIO_ID, ids)).thenReturn(List.of(recebidaDeB));
+        when(avaliacaoRepository.findAnuncioIdsAvaliadosPor(USUARIO_ID, ids)).thenReturn(List.of(ANUNCIO_B));
+
+        Map<UUID, SituacaoAvaliacao> situacao = service.situacaoPorServico(USUARIO_ID,
+                Map.of(ANUNCIO_A, AGORA.minus(Duration.ofDays(2)), ANUNCIO_B, AGORA.minus(Duration.ofDays(2))));
+
+        assertThat(situacao).containsEntry(ANUNCIO_A, new SituacaoAvaliacao(null, true))
+                .containsEntry(ANUNCIO_B, new SituacaoAvaliacao(5, false));
+        verify(avaliacaoRepository, times(1)).findByAvaliadoIdAndAnuncioIdIn(USUARIO_ID, ids);
+        verify(avaliacaoRepository, times(1)).findAnuncioIdsAvaliadosPor(USUARIO_ID, ids);
     }
 
     @Test

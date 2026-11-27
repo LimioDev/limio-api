@@ -34,6 +34,7 @@ import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.AnuncioRepository;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
 import com.limio.api.modulos.anuncio.aplicacao.AplicacaoRepository;
+import com.limio.api.modulos.anuncio.enums.CausaEncerramento;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
 import com.limio.api.modulos.anuncio.enums.StatusReagendamento;
@@ -299,6 +300,7 @@ class ConsultarServicoStoryTest {
     @Test
     void dadoServicoJaCancelado_quandoPrestadorEscolhidoConsulta_entaoAindaAcessaOHistorico() throws Exception {
         anuncio.setStatus(StatusAnuncio.ENCERRADO);
+        anuncio.setCausaEncerramento(CausaEncerramento.CANCELAMENTO);
         anuncio.setMotivoEncerramento("Cancelado pelo Empregador");
         anuncioRepository.save(anuncio);
         String token = logar("rafael@example.com");

@@ -10,6 +10,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import com.limio.api.modulos.anuncio.Anuncio;
 import com.limio.api.modulos.anuncio.aplicacao.Aplicacao;
+import com.limio.api.modulos.anuncio.enums.CausaEncerramento;
 import com.limio.api.modulos.anuncio.enums.StatusAnuncio;
 import com.limio.api.modulos.anuncio.enums.StatusAplicacao;
 
@@ -28,6 +29,7 @@ class CancelamentoServicoPeloPrestadorDominioTest {
         assertThat(anuncio.getStatus()).isEqualTo(StatusAnuncio.ENCERRADO);
         assertThat(anuncio.getEncerradoEm()).isEqualTo(AGORA);
         assertThat(anuncio.getMotivoEncerramento()).isEqualTo("Serviço cancelado pelo Prestador");
+        assertThat(anuncio.getCausaEncerramento()).isEqualTo(CausaEncerramento.CANCELAMENTO);
         assertThat(anuncio.getTipoCancelamento()).isNull();
     }
 
